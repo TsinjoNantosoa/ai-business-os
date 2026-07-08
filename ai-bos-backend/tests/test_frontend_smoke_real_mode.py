@@ -39,6 +39,10 @@ def test_dashboard_data_ok_for_staff() -> None:
         "/api/v1/crm/activities",
         "/api/v1/support/tickets",
         "/api/v1/hr/employees",
+        "/api/v1/tasks",
+        "/api/v1/projects",
+        "/api/v1/calendar/events",
+        "/api/v1/meetings",
     ]:
         res = client.get(path, headers={"Authorization": f"Bearer {token}"})
         assert res.status_code == 200, f"{path} => {res.status_code}"

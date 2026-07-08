@@ -17,6 +17,8 @@ from app.presentation.routes_crm_contacts import build_crm_contacts_router
 from app.presentation.routes_sales_marketing import build_sales_marketing_router
 from app.presentation.routes_finance import build_finance_router
 from app.presentation.routes_bi import build_bi_router
+from app.presentation.routes_tasks import build_tasks_router
+from app.presentation.routes_projects_calendar_meetings import build_projects_calendar_meetings_router
 from app.services.auth_service import AuthService
 from app.services.session_store import InMemoryRefreshSessionStore
 
@@ -44,6 +46,8 @@ app.include_router(build_crm_contacts_router())
 app.include_router(build_sales_marketing_router())
 app.include_router(build_finance_router())
 app.include_router(build_bi_router())
+app.include_router(build_tasks_router())
+app.include_router(build_projects_calendar_meetings_router())
 
 @app.middleware("http")
 async def request_context_middleware(request, call_next):

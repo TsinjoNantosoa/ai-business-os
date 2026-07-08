@@ -1,6 +1,6 @@
 # État d’implémentation — AI BOS
 
-> **Dernière mise à jour :** 2026-07-08 16:05  
+> **Dernière mise à jour :** 2026-07-08 17:10
 > **Projet :** AI BOS (AI Business Operating System)  
 > **But :** Suivre l’avancement global et cocher les étapes terminées.
 
@@ -190,7 +190,7 @@
 
 ### P1 — Important
 
-- 🟡 Remplacer les mocks frontend par endpoints réels module par module (début : CRM contacts, Finance invoices/transactions, Sales orders, Marketing campaigns, BI reports)
+- 🟡 Remplacer les mocks frontend par endpoints réels module par module (début : CRM contacts, Finance invoices/transactions, Sales orders, Marketing campaigns, BI reports, Tasks, Projects, Calendar events, Meetings)
 - [ ] Ajouter tests frontend (Vitest + Playwright) pour AI BOS frontend
 - [ ] Réduire le bundle principal (code splitting)
 
@@ -216,7 +216,7 @@
 | 2026-07-08 | Extraction P0.3 `core/authorization` (RBAC, endpoints rbac, tests 200/403) | ✅ |
 | 2026-07-08 | Extraction P0.4 `core/observability` (correlation ID, metrics, health/details) | ✅ |
 | 2026-07-08 | P0.5 : `VITE_API_URL` + mocks off + smoke login HTTP | ✅ |
-| 2026-07-08 | P1 — Impl. endpoints réels minimaux CRM/Finance/Sales/Marketing/BI (pour navigation front) | 🟡 |
+| 2026-07-08 | P1 — Impl. endpoints réels minimaux CRM/Finance/Sales/Marketing/BI/Tasks/Projects/Calendar/Meetings | 🟡 |
 
 ---
 
