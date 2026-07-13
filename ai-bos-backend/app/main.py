@@ -38,8 +38,11 @@ from app.presentation.routes_notifications import build_notifications_router
 from app.presentation.routes_api_keys import build_api_keys_router
 from app.presentation.routes_oauth import build_oauth_router
 from app.presentation.routes_gdpr import build_gdpr_router
+from app.presentation.routes_backup import build_backup_router
+from app.presentation.routes_knowledge import build_knowledge_router
 from app.services.auth_service import AuthService
 from app.services.bootstrap import bootstrap_demo_data
+from app.services.rag_ingest import ensure_rag_index
 from app.services.session_store import InMemoryRefreshSessionStore
 
 configure_logging()
@@ -52,6 +55,7 @@ async def lifespan(_app: FastAPI):
     run_migrations()
     with SessionLocal() as session:
         bootstrap_demo_data(session)
+        ensure_rag_index(session)
     logger.info("database_ready")
     yield
 
@@ -73,6 +77,8 @@ app.include_router(build_oauth_router(auth_service))
 app.include_router(build_rbac_router(auth_service))
 app.include_router(build_platform_router())
 app.include_router(build_gdpr_router())
+app.include_router(build_backup_router())
+app.include_router(build_knowledge_router())
 app.include_router(build_dashboard_data_router())
 app.include_router(build_crm_contacts_router())
 app.include_router(build_crm_leads_router())
@@ -136,6 +142,7 @@ def health_details() -> dict[str, object]:
         db_status = "error"
     return {
         "status": "ok" if db_status == "ok" else "degraded",
+        "environment": settings.environment,
         "database": db_status,
         "metrics": snapshot(),
     }

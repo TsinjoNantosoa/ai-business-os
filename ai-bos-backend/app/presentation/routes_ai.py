@@ -17,11 +17,11 @@ from app.presentation.deps import (
     verify_chatbot_token,
 )
 from app.presentation.schemas import ChatBody
+from app.repositories.contact_repository import ContactRepository
 from app.repositories.invoice_repository import InvoiceRepository
 from app.repositories.lead_repository import LeadRepository
-from app.repositories.contact_repository import ContactRepository
 from app.services.llm_service import LLMService
-from app.services.rag_service import format_rag_context, search_knowledge
+from app.services.rag_service import format_rag_context, hits_to_sources, retrieve
 
 AGENT_PERSONAS: dict[str, str] = {
     "ceo": "Tu es le CEO Agent : synthèse stratégique, KPIs, priorités direction.",
@@ -74,23 +74,23 @@ def _build_org_context(db: Session, org_id: str) -> str:
 def _build_system_prompt(
     *,
     agent: dict,
-    user_message: str,
     org_context: str,
     ui_context: str | None,
+    rag_block: str,
 ) -> str:
     slug = agent.get("slug") or agent["id"]
     persona = AGENT_PERSONAS.get(slug, f"Tu es {agent['name']}.")
-    rag_articles = search_knowledge(user_message)
-    rag_block = format_rag_context(rag_articles)
     context_line = f"Contexte UI: {ui_context}" if ui_context else "Contexte UI: Global"
 
     return (
         f"{persona}\n"
+        "Tu es le copilote AI BOS. Appuie-toi en priorité sur les extraits RAG fournis "
+        "(documentation produit Document/*.md et FAQ). Cite les titres de documents quand c'est pertinent.\n"
         "Réponds en français, de façon concise et actionnable.\n"
         f"{context_line}\n\n"
         "Données organisation (temps réel):\n"
         f"{org_context}\n\n"
-        "Extraits base de connaissances:\n"
+        "Extraits base de connaissances (RAG):\n"
         f"{rag_block}"
     )
 
@@ -126,11 +126,14 @@ def build_ai_router() -> APIRouter:
             agent = seed.AI_AGENTS[0]
 
         org_id = claims_org_id(claims)
+        hits = retrieve(db, org_id=org_id, query=body.message, limit=5)
+        rag_block = format_rag_context(hits)
+        sources = hits_to_sources(hits)
         system_prompt = _build_system_prompt(
             agent=agent,
-            user_message=body.message,
             org_context=_build_org_context(db, org_id),
             ui_context=body.context,
+            rag_block=rag_block,
         )
         llm = LLMService()
 
@@ -138,7 +141,7 @@ def build_ai_router() -> APIRouter:
             try:
                 async for chunk in llm.stream_chat(system_prompt=system_prompt, user_message=body.message):
                     yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
-                yield f"data: {json.dumps({'type': 'done', 'provider': 'openai' if llm.is_live else 'mock'})}\n\n"
+                yield f"data: {json.dumps({'type': 'done', 'provider': 'openai' if llm.is_live else 'mock', 'sources': sources}, ensure_ascii=False)}\n\n"
             except Exception as exc:
                 yield f"data: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"
 

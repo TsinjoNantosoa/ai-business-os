@@ -2,7 +2,7 @@
 
 > **Date :** 13 juillet 2026  
 > **Projet :** AI Business Operating System (`ai-bos`)  
-> **Tests backend :** 106 pytest verts  
+> **Tests backend :** 119 pytest verts  
 > **Stack :** FastAPI + SQLAlchemy/Alembic + React/Vite  
 > **Documents liés :** `IMPLEMENTATION_TRACKER.md` · `README_ETAT_IMPLEMENTATION.md` · `README_40_ImplementationRoadmap.md`
 
@@ -14,8 +14,8 @@
 |------------|--------|
 | **Maturité actuelle** | Platform MVP multi-tenant opérationnel (Phase 1 partielle) |
 | **P0 / P1 / P2.A–E** | ✅ Terminés et testés |
-| **Phase 1 (S9–S16, S19–S20)** | ✅ Terminés (onboarding → GDPR + OAuth + API keys + CI + k6) |
-| **Phase 1 restante (S17–S18)** | ❌ Backup / staging |
+| **Phase 1 (S9–S20)** | ✅ Terminés (platform MVP multi-tenant + backup + staging) |
+| **Phase 1 restante** | — |
 | **Phase 2 agents avancés** | 🟡 Base livrée (chat SSE + workflows) — orchestration avancée à faire |
 | **Phase 3 verticales / scale** | ❌ À faire |
 | **Frontend** | Shell + modules UI complets ; modules clés branchés API réelle |
@@ -192,11 +192,11 @@ Objectif : industrialiser le CORE partagé (aujourd’hui déjà présent en pra
 | **S15** | API keys pour intégrations tierces | **Haute** | ✅ Fait |
 | **S16** | Export données (GDPR) | Moyenne | ✅ Fait (export JSON + erase-request) |
 | **S19** | CI/CD GitHub Actions complet | **Haute** | ✅ Fait |
-| S17 | Backup / restore procédures | Moyenne | Ops |
-| S18 | Staging environment | Moyenne | Pré-prod |
+| **S17** | Backup / restore procédures | Moyenne | ✅ Fait (ZIP + CLI + API `admin.audit`) |
+| **S18** | Staging environment | Moyenne | ✅ Fait (compose Postgres + Dockerfiles + CD GHCR) |
 | **S20** | Load test baseline (k6) | Moyenne | ✅ Fait (`tests/perf/`) |
 
-**Prochaine action recommandée :** **S17** backup/restore, ou **S18** staging.
+**Prochaine action recommandée :** **S6** email, ou Phase 2 **S29** tool registry.
 
 ### 5.3 Phase 2 — Agent Engine & automation (S21–S36)
 
@@ -250,13 +250,14 @@ Base déjà là (chat + run workflow). À construire ensuite :
 | Finance invoices | 🟢 Élevé | Création + envoi |
 | Tasks / Tickets / Docs | 🟢 Élevé | Mutations + UI |
 | Workflows | 🟡 Moyen | Exécution sync MVP |
-| Agents IA / Copilot | 🟡 Moyen | Chat+RAG ; pas encore tools |
+| Agents IA / Copilot | 🟢 Élevé | Chat SSE + RAG hybride sur Document/*.md + citations |
 | Billing | 🟡 Moyen | Mock Stripe OK démo |
 | Notifications | 🟡 Moyen | In-app SSE ; pas email/SMS |
 | Feature flags | 🟢 Élevé | Admin + enforcement ML |
 | Audit | 🟢 Élevé | Persistant |
-| CI/CD / Staging | 🟡 Moyen | CI Actions OK ; staging (S18) à faire |
+| CI/CD / Staging | 🟢 Élevé | CI + CD images staging GHCR |
 | OAuth / API keys / GDPR | 🟢 Élevé | API keys + OAuth mock/live + export/erase |
+| Backup / restore | 🟢 Élevé | Runbook + API/CLI |
 | Verticales Edu/Legal | 🔴 Absent | Phase 3 |
 | Scale cloud K8s | 🔴 Absent | Phase 3 |
 
@@ -273,10 +274,12 @@ Légende : 🟢 prêt démo/prod limitée · 🟡 MVP partiel · 🔴 non démar
 - [x] Copilot stream SSE
 - [x] Admin flags toggle
 - [x] Inbox / Topbar notifications
-- [x] `python -m pytest -q` → 106 passed
+- [x] `python -m pytest -q` → 110 passed
 - [x] OAuth mock login (Google/Microsoft)
 - [x] GDPR export Settings → profil
 - [x] k6 smoke load (`tests/perf/smoke.js`)
+- [x] Backup create/list API + restore roundtrip
+- [x] `docker compose -f docker-compose.staging.yml config`
 
 ---
 
@@ -290,15 +293,16 @@ Légende : 🟢 prêt démo/prod limitée · 🟡 MVP partiel · 🔴 non démar
 | 2026-07-13 | P2.E CRUD + S9–S13 (onboarding, tenant, flags, audit, notifs) |
 | 2026-07-13 | S14 OAuth + S15 API keys + S16 GDPR + S19 CI (106 pytest) |
 | 2026-07-13 | S20 load tests k6 (smoke + login_burst + smoke_httpx) |
+| 2026-07-13 | S17 backup/restore + S18 staging Docker/CD (110 pytest) |
+| 2026-07-13 | RAG hybride Document/*.md (kb_documents/chunks, search API, citations chat) — 119 pytest |
 
 ---
 
 ## 9. Recommandation de suite (ordre suggéré)
 
-1. **S17 / S18** — backup/restore + staging  
-2. **S6 / email** (invitations et alertes hors in-app)  
-3. **S29–S32** (agents avec tools + designer workflows)  
-4. **S37–S38** puis **S39+** (verticales puis scale)
+1. **S6 / email** (invitations et alertes hors in-app)  
+2. **S29–S32** (agents avec tools + designer workflows)  
+3. **S37–S38** puis **S39+** (verticales puis scale)
 
 ---
 

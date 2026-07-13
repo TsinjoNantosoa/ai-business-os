@@ -140,6 +140,7 @@
 - [x] P2.D.1 Service LLM (OpenAI si clé, sinon mock intelligent)
 - [x] P2.D.2 `POST /api/v1/ai/chat` (streaming SSE)
 - [x] P2.D.3 RAG sur knowledge base + contexte métier DB
+- [x] P2.D.3b RAG produit : index `Document/*.md`, retrieval hybride, citations chat
 - [x] P2.D.4 Copilot frontend branché au backend SSE
 
 ### P2.E — CRUD complet (au-delà du GET)
@@ -177,8 +178,8 @@ Pour chaque module métier, ajouter dans l'ordre :
 - [x] S14 Intégrations OAuth (Google, Microsoft)
 - [x] S15 API keys pour intégrations tierces
 - [x] S16 Export données (GDPR)
-- [ ] S17 Backup / restore procédures
-- [ ] S18 Staging environment
+- [x] S17 Backup / restore procédures
+- [x] S18 Staging environment
 - [x] S19 CI/CD GitHub Actions complet
 - [x] S20 Load test baseline (k6)
 
@@ -228,6 +229,6 @@ npm run dev
 
 ## Prochaine action recommandée (sans re-prompt)
 
-**S14 OAuth + S16 GDPR + S20 k6 livrés.**  
-Voir aussi : [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md).  
-Prochaine étape : **S17** backup/restore, ou **S18** staging.
+**Phase 1 (S9–S20) livrée** (backup, staging Docker/CD, OAuth, GDPR, k6).  
+Voir aussi : [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`RUNBOOK_BACKUP.md`](./RUNBOOK_BACKUP.md) · [`STAGING.md`](./STAGING.md).  
+Prochaine étape : **S6** email/notifications, ou Phase 2 **S29** tool registry agents.

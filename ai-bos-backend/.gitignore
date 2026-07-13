@@ -17,3 +17,4 @@ __pycache__/
 # Uploaded files
 storage/
 .pytest_storage/
+backups/

@@ -37,22 +37,32 @@ class LLMService:
                 stats_line = line
                 break
 
-        rag_hint = ""
-        if "base de connaissances" in system_prompt.lower():
-            for line in system_prompt.splitlines():
-                if line.startswith("- ["):
-                    rag_hint = line
+        # Prefer first numbered RAG excerpts from system prompt
+        rag_lines: list[str] = []
+        capture = False
+        for line in system_prompt.splitlines():
+            if "Extraits base de connaissances" in line:
+                capture = True
+                continue
+            if capture:
+                if not line.strip():
+                    if rag_lines:
+                        break
+                    continue
+                rag_lines.append(line.strip())
+                if len(rag_lines) >= 6:
                     break
+        rag_block = "\n".join(rag_lines) if rag_lines else "- Consultez la documentation AI BOS (Document/*.md)."
 
         return (
             f"Voici mon analyse concernant « {user_message} » :\n\n"
             f"**Contexte organisation**\n{stats_line or '- Données métier disponibles via AI BOS.'}\n\n"
-            f"**Documentation pertinente**\n{rag_hint or '- Consultez la base de connaissances pour plus de détails.'}\n\n"
+            f"**Documentation pertinente (RAG)**\n{rag_block}\n\n"
             "**Recommandations**\n"
-            "1. Prioriser les actions à fort impact sur les 7 prochains jours\n"
-            "2. Automatiser le suivi via un workflow (relance, tâche CRM)\n"
-            "3. Valider les chiffres clés avec votre équipe métier\n\n"
-            "Souhaitez-vous un plan d'action détaillé ou un export PDF ?"
+            "1. S'appuyer sur les sources citées ci-dessus (README produit)\n"
+            "2. Prioriser les actions à fort impact sur les 7 prochains jours\n"
+            "3. Automatiser le suivi via un workflow si applicable\n\n"
+            "Souhaitez-vous un plan d'action détaillé ?"
         )
 
     async def _stream_openai(self, system_prompt: str, user_message: str) -> AsyncIterator[str]:

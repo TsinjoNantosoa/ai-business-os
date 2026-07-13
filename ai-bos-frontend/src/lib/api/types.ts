@@ -431,6 +431,25 @@ export interface KnowledgeArticle {
   helpful: number;
 }
 
+export interface KnowledgeSearchHit {
+  documentId: string;
+  documentTitle: string;
+  chunkId: string;
+  relevanceScore: number;
+  excerpt: string;
+  sourceUri?: string | null;
+}
+
+export interface KnowledgeSearchResponse {
+  query: string;
+  items: KnowledgeSearchHit[];
+}
+
+export interface KnowledgeStats {
+  chunkCount: number;
+  documentCount: number;
+}
+
 // --- Analytics & BI ---
 export interface AnalyticsData {
   kpis: { label: string; value: number; change: number; unit: string }[];

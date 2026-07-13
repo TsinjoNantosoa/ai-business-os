@@ -236,6 +236,9 @@
 - [x] OAuth Google/Microsoft (authorize + callback + mock-login ; UI Login)
 - [x] GDPR export JSON + erase-request (UI Settings profil)
 - [x] Load tests k6 baseline (`tests/perf/smoke.js`, `login_burst.js`, fallback `smoke_httpx.py`)
+- [x] Backup / restore (service + CLI + API `/platform/backups`, runbook)
+- [x] Staging (docker-compose Postgres, Dockerfiles, workflow `cd-staging.yml`)
+- [x] RAG hybride : index `Document/*.md` + FAQ seed, retrieval lexical+embedding local, `/knowledge/search`, citations SSE
 
 ---
 
@@ -272,6 +275,8 @@
 | 2026-07-13 | S15 API keys + S19 CI GitHub Actions | ✅ |
 | 2026-07-13 | S14 OAuth Google/Microsoft + S16 GDPR export/erase (106 pytest) | ✅ |
 | 2026-07-13 | S20 k6 load baseline (smoke 0 % erreurs ; contacts/KPIs p95 &lt; 50 ms) | ✅ |
+| 2026-07-13 | S17 backup/restore + S18 staging compose/CD (110 pytest) | ✅ |
+| 2026-07-13 | RAG Document/*.md (chunk/embed/retrieve + tests compréhension projet) | ✅ |
 
 ---
 

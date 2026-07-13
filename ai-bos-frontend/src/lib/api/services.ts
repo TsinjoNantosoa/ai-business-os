@@ -410,6 +410,35 @@ export async function getArticles(): Promise<T.KnowledgeArticle[]> {
   return apiFetch<T.KnowledgeArticle[]>('/api/v1/knowledge/articles');
 }
 
+export async function searchKnowledge(query: string, limit = 5): Promise<T.KnowledgeSearchResponse> {
+  if (USE_MOCKS) {
+    const articles = await getArticles();
+    const q = query.toLowerCase();
+    return {
+      query,
+      items: articles
+        .filter((a) => a.title.toLowerCase().includes(q) || a.excerpt.toLowerCase().includes(q))
+        .slice(0, limit)
+        .map((a) => ({
+          documentId: a.id,
+          documentTitle: a.title,
+          chunkId: a.id,
+          relevanceScore: 1,
+          excerpt: a.excerpt,
+          sourceUri: null,
+        })),
+    };
+  }
+  return apiFetch<T.KnowledgeSearchResponse>(
+    `/api/v1/knowledge/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+  );
+}
+
+export async function getKnowledgeStats(): Promise<T.KnowledgeStats> {
+  if (USE_MOCKS) return { chunkCount: 12, documentCount: 12 };
+  return apiFetch<T.KnowledgeStats>('/api/v1/knowledge/stats');
+}
+
 // --- Workflows ---
 export async function getWorkflows(): Promise<T.Workflow[]> {
   if (USE_MOCKS) {

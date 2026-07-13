@@ -72,6 +72,7 @@ class Settings(BaseModel):
     microsoft_client_id: str | None = None
     microsoft_client_secret: str | None = None
     api_public_url: str = "http://localhost:8000"
+    backup_dir: str = "./backups"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -112,6 +113,7 @@ class Settings(BaseModel):
             microsoft_client_id=os.getenv("MICROSOFT_CLIENT_ID") or None,
             microsoft_client_secret=os.getenv("MICROSOFT_CLIENT_SECRET") or None,
             api_public_url=os.getenv("API_PUBLIC_URL", "http://localhost:8000"),
+            backup_dir=os.getenv("BACKUP_DIR", "./backups"),
         )
 
     @property

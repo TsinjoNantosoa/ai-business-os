@@ -13,10 +13,6 @@ def build_operations_router() -> APIRouter:
     def contracts(_claims: dict = Depends(require_auth)) -> list[dict]:
         return seed.CONTRACTS
 
-    @router.get("/knowledge/articles")
-    def knowledge_articles(_claims: dict = Depends(require_auth)) -> list[dict]:
-        return seed.KNOWLEDGE_ARTICLES
-
     @router.get("/inventory/items")
     def inventory_items(_claims: dict = Depends(require_auth)) -> list[dict]:
         return seed.INVENTORY_ITEMS
