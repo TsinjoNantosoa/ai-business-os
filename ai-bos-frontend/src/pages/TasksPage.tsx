@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, List, Columns3, Flag, Calendar } from 'lucide-react';
+import { Plus, List, Columns3, Calendar } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { getTasks } from '@/lib/api/services';
+import { getTasks, updateTaskStatus } from '@/lib/api/services';
 import type { Task, TaskStatus } from '@/lib/api/types';
+import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { cn, formatDate, initials } from '@/lib/utils';
 
@@ -27,24 +28,33 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export function TasksPage() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
-  const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
   const [myTasksOnly, setMyTasksOnly] = useState(false);
 
   const { data: tasks } = useQuery({ queryKey: ['tasks'], queryFn: getTasks });
-  const displayTasks = localTasks || tasks || [];
 
-  const filtered = myTasksOnly ? displayTasks.filter((t) => t.assigneeName.includes('Sophie')) : displayTasks;
+  const statusMutation = useMutation({
+    mutationFn: ({ taskId, status }: { taskId: string; status: TaskStatus }) =>
+      updateTaskStatus(taskId, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  });
 
-  const getTasksByStatus = (status: TaskStatus) => filtered.filter((t) => t.status === status);
+  const displayTasks = tasks || [];
+  const filtered = myTasksOnly && user
+    ? displayTasks.filter((task) => task.assigneeId === user.id)
+    : displayTasks;
+
+  const getTasksByStatus = (status: TaskStatus) => filtered.filter((task) => task.status === status);
 
   const handleDrop = (status: TaskStatus) => {
     if (!draggedTask) return;
-    setLocalTasks((prev) => {
-      const base = prev || tasks || [];
-      return base.map((t) => t.id === draggedTask ? { ...t, status } : t);
-    });
+    const task = displayTasks.find((item) => item.id === draggedTask);
+    if (task && task.status !== status) {
+      statusMutation.mutate({ taskId: draggedTask, status });
+    }
     setDraggedTask(null);
   };
 

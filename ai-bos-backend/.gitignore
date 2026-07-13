@@ -7,3 +7,13 @@ __pycache__/
 # Test cache
 .pytest_cache/
 
+# Local databases
+*.db
+.aibos.db
+
+# Secrets
+.env
+
+# Uploaded files
+storage/
+.pytest_storage/

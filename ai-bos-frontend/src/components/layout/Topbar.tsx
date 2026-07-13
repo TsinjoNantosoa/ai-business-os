@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
-import { getNotifications } from '@/lib/api/services';
+import { getNotifications, markAllNotificationsRead, markNotificationRead, subscribeNotifications } from '@/lib/api/services';
 import type { AppNotification } from '@/lib/api/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ import { cn, initials, formatRelativeTime } from '@/lib/utils';
 import type { Locale } from '@/lib/i18n/dictionaries';
 
 export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void }) {
-  const { user, organizations, orgId, setOrg, logout } = useAuth();
+  const { user, organizations, orgId, setOrg, logout, token } = useAuth();
   const { t, locale, setLocale } = useI18n();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -31,6 +31,16 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
   useEffect(() => {
     getNotifications().then(setNotifications).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    return subscribeNotifications((payload) => {
+      if (payload.type === 'notification' && payload.notification) {
+        const incoming = payload.notification;
+        setNotifications((prev) => [incoming, ...prev.filter((n) => n.id !== incoming.id)]);
+      }
+    });
+  }, [token]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -47,6 +57,27 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
   const currentOrg = organizations.find((o) => o.id === orgId) || organizations[0];
 
   const navItems = NAV_GROUPS.flatMap((g) => g.items);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleOpenNotification = async (n: AppNotification) => {
+    if (!n.read) {
+      try {
+        await markNotificationRead(n.id);
+        setNotifications((prev) => prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)));
+      } catch {
+        /* ignore */
+      }
+    }
+    if (n.link) navigate(n.link);
+  };
 
   const notifIcon = (type: AppNotification['type']) => {
     switch (type) {
@@ -150,14 +181,23 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
             <DropdownMenuContent align="end" className="w-80 p-0">
               <div className="flex items-center justify-between border-b border-border p-3">
                 <span className="text-sm font-semibold">Notifications</span>
-                {unreadCount > 0 && <Badge variant="default">{unreadCount} non lues</Badge>}
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && <Badge variant="default">{unreadCount} non lues</Badge>}
+                  {unreadCount > 0 && (
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => void handleMarkAllRead()}>
+                      Tout lu
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="max-h-80 overflow-y-auto scrollbar-thin">
                 {notifications.slice(0, 6).map((n) => (
-                  <div
+                  <button
                     key={n.id}
+                    type="button"
+                    onClick={() => void handleOpenNotification(n)}
                     className={cn(
-                      'flex gap-3 border-b border-border p-3 transition-colors hover:bg-muted/50',
+                      'flex w-full gap-3 border-b border-border p-3 text-left transition-colors hover:bg-muted/50',
                       !n.read && 'bg-primary-50/30'
                     )}
                   >
@@ -167,7 +207,7 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
                       <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{n.message}</p>
                       <p className="mt-1 text-2xs text-muted-foreground">{formatRelativeTime(n.createdAt, locale)}</p>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
               <DropdownMenuItem className="justify-center text-sm text-primary" onClick={() => navigate('/app/inbox')}>

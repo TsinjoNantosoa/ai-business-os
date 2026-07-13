@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Folder, FileText, FileSpreadsheet, FileImage, Upload, Search,
   Star, MoreHorizontal, Sparkles, Download, Eye,
@@ -8,11 +8,9 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { getDocuments } from '@/lib/api/services';
-import type { DocumentItem } from '@/lib/api/types';
+import { downloadDocument, getDocuments, uploadDocument } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
-import { cn, formatDate, formatRelativeTime } from '@/lib/utils';
+import { cn, formatRelativeTime } from '@/lib/utils';
 
 const FILE_ICONS: Record<string, React.ElementType> = {
   folder: Folder, pdf: FileText, docx: FileText, xlsx: FileSpreadsheet, image: FileImage,
@@ -23,24 +21,52 @@ const FILE_COLORS: Record<string, string> = {
 
 export function DocumentsPage() {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFolder, setSelectedFolder] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState('');
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { data: documents } = useQuery({ queryKey: ['documents'], queryFn: getDocuments });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadDocument(file, selectedFolder),
+    onSuccess: () => {
+      setUploadError(null);
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    },
+    onError: (error: Error) => setUploadError(error.message),
+  });
 
   const folders = (documents || []).filter((d) => d.type === 'folder');
   const files = (documents || []).filter((d) => d.type !== 'folder' && (!selectedFolder || d.parentId === selectedFolder));
   const filteredFiles = files.filter((f) => !search || f.name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleFiles = (fileList: FileList | null) => {
+    if (!fileList?.length) return;
+    uploadMutation.mutate(fileList[0]);
+  };
 
   return (
     <div>
       <PageHeader
         title={t('nav.documents')}
         description="Gérez vos documents et fichiers"
-        actions={<Button><Upload className="h-4 w-4" />Téléverser</Button>}
+        actions={
+          <Button onClick={() => inputRef.current?.click()} disabled={uploadMutation.isPending}>
+            <Upload className="h-4 w-4" />Téléverser
+          </Button>
+        }
+      />
+
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp"
+        onChange={(e) => handleFiles(e.target.files)}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        {/* Folder tree */}
         <Card className="lg:col-span-1">
           <CardContent className="p-3">
             <h3 className="mb-2 px-2 text-sm font-semibold">Dossiers</h3>
@@ -66,24 +92,31 @@ export function DocumentsPage() {
           </CardContent>
         </Card>
 
-        {/* File grid */}
         <div className="lg:col-span-3">
-          {/* Upload zone */}
-          <div className="mb-4 flex items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary/30 hover:bg-muted/30">
+          <div
+            className="mb-4 flex items-center justify-center rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary/30 hover:bg-muted/30 cursor-pointer"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleFiles(e.dataTransfer.files);
+            }}
+          >
             <div>
               <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium">Glissez vos fichiers ici ou cliquez pour téléverser</p>
+              <p className="mt-2 text-sm font-medium">
+                {uploadMutation.isPending ? 'Téléversement en cours...' : 'Glissez vos fichiers ici ou cliquez pour téléverser'}
+              </p>
               <p className="text-xs text-muted-foreground">PDF, DOCX, XLSX, images — 10MB max</p>
+              {uploadError && <p className="mt-2 text-xs text-red-500">{uploadError}</p>}
             </div>
           </div>
 
-          {/* Search */}
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Rechercher un fichier..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
 
-          {/* Files */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filteredFiles.map((file) => {
               const Icon = FILE_ICONS[file.type] || FileText;
@@ -104,7 +137,15 @@ export function DocumentsPage() {
                     <p className="text-xs text-muted-foreground">{formatRelativeTime(file.modifiedAt)} • {file.modifiedBy}</p>
                     <div className="mt-3 flex items-center gap-1 border-t border-border pt-2">
                       <Button variant="ghost" size="sm" className="text-xs"><Eye className="h-3.5 w-3.5" />Voir</Button>
-                      <Button variant="ghost" size="sm" className="text-xs"><Download className="h-3.5 w-3.5" />Télécharger</Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        disabled={!file.hasFile}
+                        onClick={() => downloadDocument(file.id, file.name)}
+                      >
+                        <Download className="h-3.5 w-3.5" />Télécharger
+                      </Button>
                       <Button variant="ghost" size="sm" className="ml-auto text-xs text-primary"><Sparkles className="h-3.5 w-3.5" />Résumer</Button>
                     </div>
                   </CardContent>

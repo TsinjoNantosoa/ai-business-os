@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Play, Zap, Mail, Webhook, Database, Bot, CheckSquare,
   GitBranch, Clock, Activity, Settings, Power,
@@ -11,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { getWorkflows } from '@/lib/api/services';
+import { getWorkflowExecutions, getWorkflows, runWorkflow } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
 import { cn, formatRelativeTime } from '@/lib/utils';
 
@@ -27,7 +26,17 @@ const ACTION_ICONS: Record<string, React.ElementType> = {
 
 export function WorkflowsPage() {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const { data: workflows } = useQuery({ queryKey: ['workflows'], queryFn: getWorkflows });
+  const { data: executions } = useQuery({ queryKey: ['workflow-executions'], queryFn: getWorkflowExecutions });
+
+  const runMutation = useMutation({
+    mutationFn: runWorkflow,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-executions'] });
+    },
+  });
 
   return (
     <div>
@@ -85,7 +94,14 @@ export function WorkflowsPage() {
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon-sm"><Settings className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon-sm"><Power className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm"><Play className="h-3.5 w-3.5" />Exécuter</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={wf.status === 'draft' || runMutation.isPending}
+                        onClick={() => runMutation.mutate(wf.id)}
+                      >
+                        <Play className="h-3.5 w-3.5" />Exécuter
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -186,15 +202,21 @@ export function WorkflowsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(workflows || []).flatMap((wf) =>
-                    Array.from({ length: 3 }, (_, i) => ({ wf, i }))
-                  ).slice(0, 12).map(({ wf, i }, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-medium">{wf.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatRelativeTime(new Date(Date.now() - idx * 3600000).toISOString())}</TableCell>
-                      <TableCell><StatusBadge status={i === 0 ? 'done' : i === 1 ? 'done' : 'error'} /></TableCell>
-                      <TableCell className="text-sm">{(i + 1) * 1.2}s</TableCell>
-                      <TableCell className="text-sm">{i === 2 ? 'Échec: API timeout' : 'Succès'}</TableCell>
+                  {(executions || []).map((execution) => (
+                    <TableRow key={execution.id}>
+                      <TableCell className="font-medium">{execution.workflowName || execution.workflowId}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatRelativeTime(execution.startedAt)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={execution.status === 'success' ? 'done' : execution.status === 'error' ? 'error' : 'in_progress'} />
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {execution.durationMs ? `${(execution.durationMs / 1000).toFixed(1)}s` : '—'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {execution.errorMessage || execution.resultMessage || '—'}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -3,7 +3,7 @@
 // Every service: try apiFetch → catch → return mock data
 // ============================================================
 
-import { apiFetch, USE_MOCKS } from './client';
+import { apiFetch, USE_MOCKS, API_URL } from './client';
 import type * as T from './types';
 
 // --- Auth ---
@@ -18,6 +18,36 @@ export async function login(email: string, password: string): Promise<T.AuthResp
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
+}
+
+export async function getOAuthProviders(): Promise<T.OAuthProvider[]> {
+  if (USE_MOCKS) {
+    return [
+      { id: 'google', enabled: true, mode: 'mock' },
+      { id: 'microsoft', enabled: true, mode: 'mock' },
+    ];
+  }
+  const res = await apiFetch<{ items: T.OAuthProvider[] }>('/api/v1/auth/oauth/providers');
+  return res.items;
+}
+
+export async function startOAuth(provider: string): Promise<T.OAuthStartResponse> {
+  return apiFetch<T.OAuthStartResponse>(`/api/v1/auth/oauth/${provider}/authorize`);
+}
+
+export async function mockOAuthLogin(provider: string, state: string, email: string): Promise<T.AuthResponse> {
+  return apiFetch<T.AuthResponse>(`/api/v1/auth/oauth/${provider}/mock-login`, {
+    method: 'POST',
+    body: JSON.stringify({ state, email }),
+  });
+}
+
+export async function exportGdprData(): Promise<T.GdprExport> {
+  return apiFetch<T.GdprExport>('/api/v1/platform/gdpr/export');
+}
+
+export async function requestGdprErase(): Promise<{ status: string; userId: string; active: boolean }> {
+  return apiFetch('/api/v1/platform/gdpr/erase-request', { method: 'POST' });
 }
 
 export async function getMe(): Promise<T.User> {
@@ -37,6 +67,122 @@ export async function getOrganizations(): Promise<T.Organization[]> {
   return apiFetch<T.Organization[]>('/api/v1/platform/organizations');
 }
 
+export async function getMyOrganization(): Promise<T.Organization> {
+  if (USE_MOCKS) {
+    const { ORGANIZATIONS } = await import('./mocks/auth');
+    return ORGANIZATIONS[0];
+  }
+  return apiFetch<T.Organization>('/api/v1/platform/organizations/me');
+}
+
+export async function updateMyOrganization(payload: {
+  name?: string;
+  currency?: string;
+  timezone?: string;
+  locale?: string;
+  address?: string;
+}): Promise<T.Organization> {
+  return apiFetch<T.Organization>('/api/v1/platform/organizations/me', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getTeamMembers(): Promise<T.TeamMember[]> {
+  if (USE_MOCKS) {
+    return [
+      { id: '1', name: 'Jean Bernard', email: 'ceo@demo.aibos.io', role: 'owner', status: 'active' },
+      { id: '2', name: 'Lucas Thomas', email: 'staff@demo.aibos.io', role: 'staff', status: 'active' },
+    ];
+  }
+  return apiFetch<T.TeamMember[]>('/api/v1/platform/team');
+}
+
+export async function getInvitations(): Promise<T.Invitation[]> {
+  if (USE_MOCKS) return [];
+  return apiFetch<T.Invitation[]>('/api/v1/platform/invitations');
+}
+
+export async function createInvitation(payload: {
+  email: string;
+  role?: string;
+  message?: string;
+}): Promise<T.Invitation> {
+  return apiFetch<T.Invitation>('/api/v1/platform/invitations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function acceptInvitation(payload: {
+  token: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+}): Promise<T.TeamMember> {
+  return apiFetch<T.TeamMember>('/api/v1/platform/invitations/accept', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getFeatureFlags(): Promise<T.FeatureFlag[]> {
+  if (USE_MOCKS) {
+    return [
+      { key: 'ai.copilot', name: 'AI Copilot', description: 'Activer le copilote IA', env: 'production', enabled: true, source: 'plan' },
+      { key: 'ml.forecasts', name: 'ML Forecasts', description: 'Prévisions machine learning', env: 'beta', enabled: true, source: 'plan' },
+    ];
+  }
+  return apiFetch<T.FeatureFlag[]>('/api/v1/platform/feature-flags');
+}
+
+export async function getAdminFeatureFlags(): Promise<T.FeatureFlag[]> {
+  if (USE_MOCKS) return getFeatureFlags();
+  return apiFetch<T.FeatureFlag[]>('/api/v1/admin/feature-flags');
+}
+
+export async function updateFeatureFlag(
+  key: string,
+  payload: { enabled: boolean; reset?: boolean },
+): Promise<T.FeatureFlag> {
+  return apiFetch<T.FeatureFlag>(`/api/v1/admin/feature-flags/${encodeURIComponent(key)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getApiKeys(): Promise<T.ApiKey[]> {
+  if (USE_MOCKS) {
+    return [
+      {
+        id: 'key-1',
+        name: 'Production API',
+        keyPrefix: 'aibos_sk_live',
+        maskedKey: 'aibos_sk_live••••••••••••••••',
+        scopes: ['crm.contact.read'],
+        active: true,
+        createdBy: 'u-1',
+        createdByName: 'Jean Bernard',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  }
+  return apiFetch<T.ApiKey[]>('/api/v1/platform/api-keys');
+}
+
+export async function createApiKey(payload: { name: string; scopes?: string[] }): Promise<T.ApiKey> {
+  return apiFetch<T.ApiKey>('/api/v1/platform/api-keys', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function revokeApiKey(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/platform/api-keys/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
 // --- Notifications ---
 export async function getNotifications(): Promise<T.AppNotification[]> {
   if (USE_MOCKS) {
@@ -44,6 +190,59 @@ export async function getNotifications(): Promise<T.AppNotification[]> {
     return MOCK_NOTIFICATIONS;
   }
   return apiFetch<T.AppNotification[]>('/api/v1/platform/notifications');
+}
+
+export async function markNotificationRead(id: string): Promise<T.AppNotification> {
+  return apiFetch<T.AppNotification>(`/api/v1/platform/notifications/${encodeURIComponent(id)}/read`, {
+    method: 'POST',
+  });
+}
+
+export async function markAllNotificationsRead(): Promise<{ updated: number }> {
+  return apiFetch<{ updated: number }>('/api/v1/platform/notifications/read-all', {
+    method: 'POST',
+  });
+}
+
+export function subscribeNotifications(
+  onEvent: (payload: { type: string; notification?: T.AppNotification; orgId?: string }) => void,
+): () => void {
+  if (USE_MOCKS || typeof window === 'undefined' || typeof EventSource === 'undefined') {
+    return () => undefined;
+  }
+
+  let closed = false;
+  let source: EventSource | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const connect = async () => {
+    if (closed) return;
+    const { useAuth } = await import('@/lib/auth/store');
+    const token = useAuth.getState().token;
+    if (!token) return;
+    const url = `${API_URL}/api/v1/platform/notifications/stream?access_token=${encodeURIComponent(token)}`;
+    source = new EventSource(url);
+    source.onmessage = (event) => {
+      try {
+        onEvent(JSON.parse(event.data));
+      } catch {
+        /* ignore malformed */
+      }
+    };
+    source.onerror = () => {
+      source?.close();
+      source = null;
+      if (!closed) timer = setTimeout(() => void connect(), 3000);
+    };
+  };
+
+  void connect();
+
+  return () => {
+    closed = true;
+    if (timer) clearTimeout(timer);
+    source?.close();
+  };
 }
 
 // --- CRM Contacts ---
@@ -116,6 +315,23 @@ export async function getTasks(): Promise<T.Task[]> {
   return apiFetch<T.Task[]>('/api/v1/tasks');
 }
 
+export async function updateTaskStatus(taskId: string, status: T.TaskStatus): Promise<T.Task> {
+  return apiFetch<T.Task>(`/api/v1/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function assignTask(
+  taskId: string,
+  payload: { assigneeId: string; assigneeName?: string; assigneeAvatarColor?: string },
+): Promise<T.Task> {
+  return apiFetch<T.Task>(`/api/v1/tasks/${taskId}/assign`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
 // --- HR ---
 export async function getEmployees(): Promise<T.Employee[]> {
   if (USE_MOCKS) {
@@ -159,6 +375,23 @@ export async function getTickets(): Promise<T.Ticket[]> {
   return apiFetch<T.Ticket[]>('/api/v1/support/tickets');
 }
 
+export async function replyToTicket(
+  ticketId: string,
+  payload: { content: string; isInternal?: boolean; author?: string },
+): Promise<T.Ticket> {
+  return apiFetch<T.Ticket>(`/api/v1/support/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTicketStatus(ticketId: string, status: T.TicketStatus): Promise<T.Ticket> {
+  return apiFetch<T.Ticket>(`/api/v1/support/tickets/${ticketId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
 // --- Contracts ---
 export async function getContracts(): Promise<T.Contract[]> {
   if (USE_MOCKS) {
@@ -184,6 +417,14 @@ export async function getWorkflows(): Promise<T.Workflow[]> {
     return MOCK_WORKFLOWS;
   }
   return apiFetch<T.Workflow[]>('/api/v1/workflows');
+}
+
+export async function runWorkflow(workflowId: string): Promise<T.WorkflowRunResult> {
+  return apiFetch<T.WorkflowRunResult>(`/api/v1/workflows/${workflowId}/run`, { method: 'POST' });
+}
+
+export async function getWorkflowExecutions(): Promise<T.WorkflowExecution[]> {
+  return apiFetch<T.WorkflowExecution[]>('/api/v1/workflows/executions');
 }
 
 // --- Agents ---
@@ -229,6 +470,50 @@ export async function getDocuments(): Promise<T.DocumentItem[]> {
     return MOCK_DOCUMENTS;
   }
   return apiFetch<T.DocumentItem[]>('/api/v1/documents');
+}
+
+export async function uploadDocument(file: File, parentId?: string): Promise<T.DocumentItem> {
+  const { useAuth } = await import('@/lib/auth/store');
+  const auth = useAuth.getState();
+  const form = new FormData();
+  form.append('file', file);
+  if (parentId) form.append('parentId', parentId);
+
+  const res = await fetch(`${API_URL}/api/v1/documents/upload`, {
+    method: 'POST',
+    headers: {
+      Authorization: auth.token ? `Bearer ${auth.token}` : '',
+      'X-Correlation-ID': crypto.randomUUID(),
+      'X-Tenant-Id': auth.orgId || '',
+    },
+    body: form,
+  });
+  if (!res.ok) {
+    throw new Error(`Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function downloadDocument(documentId: string, filename: string): Promise<void> {
+  const { useAuth } = await import('@/lib/auth/store');
+  const auth = useAuth.getState();
+  const res = await fetch(`${API_URL}/api/v1/documents/${documentId}/download`, {
+    headers: {
+      Authorization: auth.token ? `Bearer ${auth.token}` : '',
+      'X-Correlation-ID': crypto.randomUUID(),
+      'X-Tenant-Id': auth.orgId || '',
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`Download failed: ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 // --- Analytics ---
@@ -295,33 +580,112 @@ export async function getAuditLogs(): Promise<T.AuditLog[]> {
   return apiFetch<T.AuditLog[]>('/api/v1/platform/audit-logs');
 }
 
-// --- Copilot (mock streaming) ---
-export async function* streamCopilotResponse(prompt: string, agentId?: string): AsyncGenerator<string> {
-  const responses = [
-    `Basé sur l'analyse de vos données, voici ce que j'ai trouvé concernant "${prompt}":\n\n` +
-    `• Le revenu mensuel est en hausse de 12.5% par rapport au mois dernier\n` +
-    `• 3 factures sont en retard de paiement, totalisant 45 200 €\n` +
-    `• Le pipeline commercial contient 12 deals actifs pour une valeur de 340 000 €\n\n` +
-    `Je recommande de prioriser le suivi des factures impayées et de contacter les clients concernés.`,
-    
-    `Voici un résumé de la situation:\n\n` +
-    `**Performance globale:** Excellente. Tous les indicateurs clés sont au vert.\n\n` +
-    `**Points d'attention:**\n` +
-    `- 2 contrats arrivent à échéance dans les 30 prochains jours\n` +
-    `- Le stock de 3 articles est critique\n\n` +
-    `Souhaitez-vous que je prépare un plan d'action détaillé ?`,
-    
-    `Excellente question ! En analysant les données récentes, je constate que:\n\n` +
-    `1. **Tendance positive** sur les ventes (+15% ce trimestre)\n` +
-    `2. **Opportunité** d'expansion sur le segment enterprise\n` +
-    `3. **Risque** modéré sur la trésorerie à 60 jours\n\n` +
-    `Je peux générer un rapport détaillé si vous le souhaitez.`,
-  ];
+// --- Billing ---
+export async function getBillingOverview(): Promise<T.BillingOverview> {
+  return apiFetch<T.BillingOverview>('/api/v1/billing/overview');
+}
 
-  const response = responses[Math.floor(Math.random() * responses.length)];
-  const words = response.split(' ');
-  for (let i = 0; i < words.length; i++) {
-    yield words[i] + (i < words.length - 1 ? ' ' : '');
-    await new Promise((r) => setTimeout(r, 30 + Math.random() * 40));
+export async function getBillingPlans(): Promise<T.BillingPlan[]> {
+  return apiFetch<T.BillingPlan[]>('/api/v1/billing/plans');
+}
+
+export async function createBillingCheckout(planCode: string): Promise<T.CheckoutSession> {
+  return apiFetch<T.CheckoutSession>('/api/v1/billing/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ planCode }),
+  });
+}
+
+// --- CRM Contacts mutations ---
+export async function createContact(payload: {
+  firstName: string
+  lastName: string
+  email: string
+  company: string
+  phone?: string
+  position?: string
+  tags?: string[]
+}): Promise<T.Contact> {
+  return apiFetch<T.Contact>('/api/v1/crm/contacts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// --- Copilot (SSE backend) ---
+export async function* streamCopilotResponse(
+  prompt: string,
+  agentId?: string,
+  context?: string,
+): AsyncGenerator<string> {
+  if (USE_MOCKS) {
+    const responses = [
+      `Basé sur l'analyse de vos données, voici ce que j'ai trouvé concernant "${prompt}":\n\n` +
+      `• Le revenu mensuel est en hausse de 12.5% par rapport au mois dernier\n` +
+      `• 3 factures sont en retard de paiement, totalisant 45 200 €\n` +
+      `• Le pipeline commercial contient 12 deals actifs pour une valeur de 340 000 €\n\n` +
+      `Je recommande de prioriser le suivi des factures impayées et de contacter les clients concernés.`,
+      `Voici un résumé de la situation:\n\n` +
+      `**Performance globale:** Excellente. Tous les indicateurs clés sont au vert.\n\n` +
+      `**Points d'attention:**\n` +
+      `- 2 contrats arrivent à échéance dans les 30 prochains jours\n` +
+      `- Le stock de 3 articles est critique\n\n` +
+      `Souhaitez-vous que je prépare un plan d'action détaillé ?`,
+    ];
+    const response = responses[Math.floor(Math.random() * responses.length)];
+    const words = response.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      yield words[i] + (i < words.length - 1 ? ' ' : '');
+      await new Promise((r) => setTimeout(r, 30 + Math.random() * 40));
+    }
+    return;
+  }
+
+  const { useAuth } = await import('@/lib/auth/store');
+  const auth = useAuth.getState();
+  const chatbotToken = import.meta.env.VITE_CHATBOT_API_TOKEN?.trim();
+  const res = await fetch(`${API_URL}/api/v1/ai/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: auth.token ? `Bearer ${auth.token}` : '',
+      'X-Correlation-ID': crypto.randomUUID(),
+      'X-Tenant-Id': auth.orgId || '',
+      ...(chatbotToken ? { 'X-Chatbot-Token': chatbotToken } : {}),
+    },
+    body: JSON.stringify({ message: prompt, agentId, context }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Copilot API error: ${res.status}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) return;
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const payload = JSON.parse(line.slice(6)) as { type?: string; content?: string; message?: string };
+        if (payload.type === 'chunk' && payload.content) {
+          yield payload.content;
+        }
+        if (payload.type === 'error') {
+          throw new Error(payload.message || 'Copilot stream error');
+        }
+      } catch (error) {
+        if (error instanceof SyntaxError) continue;
+        throw error;
+      }
+    }
   }
 }

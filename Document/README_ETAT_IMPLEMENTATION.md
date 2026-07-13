@@ -1,6 +1,6 @@
 # État d’implémentation — AI BOS
 
-> **Dernière mise à jour :** 2026-07-08 17:10
+> **Dernière mise à jour :** 2026-07-13
 > **Projet :** AI BOS (AI Business Operating System)  
 > **But :** Suivre l’avancement global et cocher les étapes terminées.
 
@@ -190,15 +190,52 @@
 
 ### P1 — Important
 
-- 🟡 Remplacer les mocks frontend par endpoints réels module par module (début : CRM contacts, Finance invoices/transactions, Sales orders, Marketing campaigns, BI reports, Tasks, Projects, Calendar events, Meetings)
-- [ ] Ajouter tests frontend (Vitest + Playwright) pour AI BOS frontend
-- [ ] Réduire le bundle principal (code splitting)
+- [x] Remplacer les mocks frontend par endpoints réels (tous les `GET` de `services.ts` couverts — 34 tests backend)
+- [x] Qualité frontend P1.H (`.env`, Vitest, Playwright, code splitting)
+
+#### Plan P1 détaillé (pas à pas) — voir aussi `IMPLEMENTATION_TRACKER.md`
+
+##### P1 Backend — modules branchés (terminé)
+- [x] Platform : organizations, notifications, audit-logs
+- [x] CRM : contacts, leads, activities
+- [x] Sales / Marketing : orders, campaigns
+- [x] Finance : overview, invoices, transactions
+- [x] Projects / Tasks / Calendar / Meetings
+- [x] HR : employees, jobs, candidates
+- [x] Support : tickets
+- [x] Operations : contracts, knowledge, workflows, agents, inventory, documents
+- [x] Procurement : suppliers, purchase-orders
+- [x] Analytics / BI / ML : kpis, reports, forecast (7d/30d/90d)
+- [x] Données centralisées `app/data/seed.py` + tests `test_remaining_modules.py`
+
+##### P1 Frontend — qualité (terminé)
+- [x] `.env` depuis `.env.example` + smoke Playwright
+- [x] Vitest (`npm run test` — `client.test.ts`)
+- [x] Playwright smoke (`npm run test:e2e` — login + dashboard)
+- [x] Code splitting (lazy routes + manualChunks — entry gzip ~21 kB)
 
 ### P2 — Ensuite
 
-- [ ] Activer billing/subscription backend réel
-- [ ] Activer workflows persistés + exécution réelle
-- [ ] Activer agents connectés au backend AI
+- [x] P2.A Persistance : SQLAlchemy + Alembic + auth/organizations en DB
+- [x] P2.B Billing : plans, subscription, invoices, checkout, webhook Stripe, page Settings
+- [x] CRM contacts migré en DB (20 seed + CRUD API + frontend)
+- [x] CRM leads + activities migrés en DB (15 leads, 20 activities, PATCH stage)
+- [x] Finance invoices migrées en DB (15 seed + POST création + POST envoi)
+- [x] Workflows persistés + exécution réelle (`POST /run`, historique API, UI branchée)
+- [x] Agents IA connectés : `POST /api/v1/ai/chat` SSE, RAG knowledge + stats DB, copilot branché
+- [x] Tasks migrées en DB (20 seed + PATCH statut/assignation + kanban branché)
+- [x] Tickets support migrés en DB (10 seed + POST messages + PATCH statut + UI réponse)
+- [x] Documents : DB + upload local (MinIO/S3 optionnel) + download + UI téléversement
+- [x] Audit logs persistants (DB + écriture sur mutations CRM/Finance/Tasks/Tickets/Docs/Workflows)
+- [x] Onboarding org (PATCH) + invitations utilisateurs (créer / accepter / équipe)
+- [x] Isolation tenant (`X-Tenant-Id` vs JWT, filtres org, RLS Postgres, 2e org démo)
+- [x] Feature flags admin (catalogue + overrides plan/tenant + UI Admin Flags)
+- [x] Notifications in-app DB + SSE temps réel (Topbar / Inbox)
+- [x] API keys M2M (création / révocation / auth `X-Api-Key` ou Bearer)
+- [x] CI/CD GitHub Actions (pytest + typecheck/build frontend)
+- [x] OAuth Google/Microsoft (authorize + callback + mock-login ; UI Login)
+- [x] GDPR export JSON + erase-request (UI Settings profil)
+- [x] Load tests k6 baseline (`tests/perf/smoke.js`, `login_burst.js`, fallback `smoke_httpx.py`)
 
 ---
 
@@ -217,6 +254,24 @@
 | 2026-07-08 | Extraction P0.4 `core/observability` (correlation ID, metrics, health/details) | ✅ |
 | 2026-07-08 | P0.5 : `VITE_API_URL` + mocks off + smoke login HTTP | ✅ |
 | 2026-07-08 | P1 — Impl. endpoints réels minimaux CRM/Finance/Sales/Marketing/BI/Tasks/Projects/Calendar/Meetings | 🟡 |
+| 2026-07-09 | P1 — Tous endpoints `services.ts` implémentés + seed centralisé + 34 tests pytest | ✅ |
+| 2026-07-09 | Création `IMPLEMENTATION_TRACKER.md` (roadmap pas à pas sans re-prompt) | ✅ |
+| 2026-07-09 | P1.H terminé : `.env`, Vitest, Playwright e2e, code splitting lazy routes | ✅ |
+| 2026-07-09 | P2.A : SQLAlchemy + Alembic + bootstrap DB + auth/platform depuis DB (39 tests) | ✅ |
+| 2026-07-09 | P2.B billing complet + CRM contacts DB + 46 tests pytest | ✅ |
+| 2026-07-09 | CRM leads + activities en DB (50 tests pytest) | ✅ |
+| 2026-07-09 | Finance invoices DB + workflows exécutables P2.C (53 tests pytest) | ✅ |
+| 2026-07-09 | P2.D agents IA : chat SSE, RAG, copilot branché (57 tests pytest) | ✅ |
+| 2026-07-09 | P2.E.3 tasks DB + kanban drag → API (61 tests pytest) | ✅ |
+| 2026-07-13 | P2.E.4 tickets support DB + réponses messages | ✅ |
+| 2026-07-13 | P2.E.5 documents upload/download (local + S3/MinIO optionnel) | ✅ |
+| 2026-07-13 | S12 audit logs DB + record sur mutations | ✅ |
+| 2026-07-13 | S9 onboarding org + invitations | ✅ |
+| 2026-07-13 | S10 isolation tenant + S11 feature flags | ✅ |
+| 2026-07-13 | S13 notifications DB + SSE realtime | ✅ |
+| 2026-07-13 | S15 API keys + S19 CI GitHub Actions | ✅ |
+| 2026-07-13 | S14 OAuth Google/Microsoft + S16 GDPR export/erase (106 pytest) | ✅ |
+| 2026-07-13 | S20 k6 load baseline (smoke 0 % erreurs ; contacts/KPIs p95 &lt; 50 ms) | ✅ |
 
 ---
 

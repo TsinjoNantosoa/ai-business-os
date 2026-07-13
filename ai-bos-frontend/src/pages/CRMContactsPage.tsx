@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Search, Filter, Download, MoreHorizontal, Mail, Phone, Tag,
   ChevronLeft, ChevronRight, X,
@@ -18,10 +18,11 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TableSkeleton } from '@/components/shared/Skeletons';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { getContacts, getActivities } from '@/lib/api/services';
+import { getContacts, getActivities, createContact } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
 import { cn, initials, formatDate, formatRelativeTime } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/store';
+import { toast } from 'sonner';
 
 const PAGE_SIZE = 10;
 
@@ -34,9 +35,29 @@ export function CRMContactsPage() {
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    company: '',
+    position: '',
+  });
 
+  const queryClient = useQueryClient();
   const { data: contacts, isLoading } = useQuery({ queryKey: ['contacts'], queryFn: getContacts });
   const { data: activities } = useQuery({ queryKey: ['activities'], queryFn: getActivities });
+
+  const createMutation = useMutation({
+    mutationFn: createContact,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      setCreateOpen(false);
+      setForm({ firstName: '', lastName: '', email: '', phone: '', company: '', position: '' });
+      toast.success('Contact créé');
+    },
+    onError: () => toast.error('Impossible de créer le contact'),
+  });
 
   const owners = useMemo(() => {
     const set = new Set((contacts || []).map((c) => c.ownerName).filter(Boolean) as string[]);
@@ -291,32 +312,37 @@ export function CRMContactsPage() {
           <div className="grid grid-cols-2 gap-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="firstName">Prénom</Label>
-              <Input id="firstName" placeholder="Jean" />
+              <Input id="firstName" placeholder="Jean" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Nom</Label>
-              <Input id="lastName" placeholder="Dupont" />
+              <Input id="lastName" placeholder="Dupont" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
             </div>
             <div className="space-y-2 col-span-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="jean.dupont@entreprise.com" />
+              <Input id="email" type="email" placeholder="jean.dupont@entreprise.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Téléphone</Label>
-              <Input id="phone" placeholder="+33 6 12 34 56 78" />
+              <Input id="phone" placeholder="+33 6 12 34 56 78" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="company">Entreprise</Label>
-              <Input id="company" placeholder="Acme Corp" />
+              <Input id="company" placeholder="Acme Corp" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
             </div>
             <div className="space-y-2 col-span-2">
               <Label htmlFor="position">Poste</Label>
-              <Input id="position" placeholder="Directeur Commercial" />
+              <Input id="position" placeholder="Directeur Commercial" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={() => setCreateOpen(false)}>{t('common.save')}</Button>
+            <Button
+              disabled={createMutation.isPending || !form.firstName || !form.lastName || !form.email || !form.company}
+              onClick={() => createMutation.mutate(form)}
+            >
+              {t('common.save')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

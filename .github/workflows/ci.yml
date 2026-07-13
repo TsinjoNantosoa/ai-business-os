@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-bos-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ai-bos-backend/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite:///./.ci_aibos.db
+        run: python -m pytest -q --tb=line
+
+  frontend:
+    name: Frontend typecheck & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-bos-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ai-bos-frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test
+      - name: Build
+        env:
+          VITE_API_URL: http://localhost:8000
+          VITE_USE_MOCKS: "false"
+        run: npm run build

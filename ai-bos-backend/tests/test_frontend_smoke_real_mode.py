@@ -27,7 +27,7 @@ def test_platform_orgs_ok() -> None:
     assert res.status_code == 200
     body = res.json()
     assert isinstance(body, list)
-    assert body[0]["id"] == "org-demo-1"
+    assert body[0]["id"] == "org-1"
 
 
 def test_dashboard_data_ok_for_staff() -> None:

@@ -34,6 +34,36 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+export interface OAuthProvider {
+  id: string;
+  enabled: boolean;
+  mode: 'mock' | 'live' | string;
+}
+
+export interface OAuthStartResponse {
+  provider: string;
+  mode: string;
+  state: string;
+  authorizationUrl: string;
+}
+
+export interface GdprExport {
+  exportVersion: string;
+  subject: { userId: string; orgId: string };
+  organization: Organization | null;
+  user: TeamMember | null;
+  contacts: Contact[];
+  leads: Lead[];
+  activitiesCount: number;
+  invoicesCount: number;
+  tasks: Task[];
+  ticketsCount: number;
+  documentsCount: number;
+  notifications: AppNotification[];
+  auditLogsCount: number;
+  note?: string;
+}
+
 export interface Organization {
   id: string;
   name: string;
@@ -42,6 +72,58 @@ export interface Organization {
   currency: string;
   timezone: string;
   locale: string;
+  address?: string | null;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface Invitation {
+  id: string;
+  orgId: string;
+  email: string;
+  role: string;
+  status: 'pending' | 'accepted' | 'revoked' | string;
+  invitedBy: string;
+  invitedByName: string;
+  message?: string | null;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  token?: string;
+  organizationName?: string;
+}
+
+export interface FeatureFlag {
+  key: string;
+  name: string;
+  description: string;
+  env: string;
+  enabled: boolean;
+  source?: 'override' | 'plan' | 'default' | string;
+  plan?: string;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  maskedKey: string;
+  scopes: string[];
+  active: boolean;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
+  secret?: string;
 }
 
 // --- CRM ---
@@ -239,6 +321,7 @@ export interface DocumentItem {
   modifiedAt: string;
   modifiedBy: string;
   starred?: boolean;
+  hasFile?: boolean;
 }
 
 // --- HR ---
@@ -396,6 +479,25 @@ export interface Workflow {
   successRate: number;
 }
 
+export type WorkflowExecutionStatus = 'running' | 'success' | 'error';
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  workflowName?: string;
+  status: WorkflowExecutionStatus;
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  resultMessage?: string;
+  errorMessage?: string;
+}
+
+export interface WorkflowRunResult {
+  execution: WorkflowExecution;
+  workflow: Workflow;
+}
+
 // --- AI Agents ---
 export type AgentStatus = 'active' | 'idle' | 'error';
 
@@ -497,4 +599,58 @@ export interface PurchaseOrder {
   expectedAt: string
   ownerName: string
   itemCount: number
+}
+
+// --- Billing ---
+export interface BillingPlan {
+  id: string
+  code: 'starter' | 'pro' | 'enterprise' | string
+  name: string
+  priceMonthly: number
+  currency: string
+  seatsLimit: number
+  aiTokensLimit: number
+  storageGbLimit: number
+}
+
+export interface BillingUsageMeter {
+  used: number
+  limit: number
+}
+
+export interface BillingSubscription {
+  id: string
+  orgId: string
+  status: string
+  plan: BillingPlan
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  renewalDate: string
+  usage: {
+    seats: BillingUsageMeter
+    aiTokens: BillingUsageMeter
+    storageGb: BillingUsageMeter
+  }
+}
+
+export interface BillingInvoice {
+  id: string
+  invoiceNumber: string
+  amount: number
+  currency: string
+  status: string
+  periodStart: string
+  periodEnd: string
+  createdAt: string
+  pdfUrl?: string
+}
+
+export interface BillingOverview {
+  subscription: BillingSubscription
+  invoices: BillingInvoice[]
+}
+
+export interface CheckoutSession {
+  sessionId: string
+  checkoutUrl: string
 }

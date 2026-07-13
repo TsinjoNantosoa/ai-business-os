@@ -77,7 +77,7 @@ export function CopilotWidget() {
     setIsStreaming(true);
 
     try {
-      for await (const chunk of streamCopilotResponse(text, selectedAgent.id)) {
+      for await (const chunk of streamCopilotResponse(text, selectedAgent.id, context)) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId ? { ...m, content: m.content + chunk } : m

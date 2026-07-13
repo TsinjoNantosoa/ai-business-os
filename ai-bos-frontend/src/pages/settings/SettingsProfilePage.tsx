@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,33 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { initials } from '@/lib/utils';
+import { exportGdprData } from '@/lib/api/services';
+import { Download, Loader2 } from 'lucide-react';
 
 export function SettingsProfilePage() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const data = await exportGdprData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aibos-gdpr-export-${user?.id || 'me'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export impossible');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div>
@@ -58,6 +82,20 @@ export function SettingsProfilePage() {
               <Switch defaultChecked={user?.twoFactorEnabled} />
             </div>
             <Button>{t('common.save')}</Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Confidentialité (GDPR)</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Exportez une copie JSON de vos données (droit à la portabilité).
+            </p>
+            {exportError && <p className="text-sm text-destructive">{exportError}</p>}
+            <Button variant="outline" onClick={() => void handleExport()} disabled={exporting}>
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Exporter mes données
+            </Button>
           </CardContent>
         </Card>
       </div>

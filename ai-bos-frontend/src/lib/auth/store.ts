@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, Organization } from '@/lib/api/types';
+import type { User, Organization, AuthResponse } from '@/lib/api/types';
 import { login as apiLogin, getOrganizations } from '@/lib/api/services';
 
 interface AuthState {
@@ -12,6 +12,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  applyAuthResponse: (res: AuthResponse) => Promise<void>;
   logout: () => void;
   logoutAll: () => void;
   setTokens: (token: string, refreshToken: string) => void;
@@ -32,18 +33,23 @@ export const useAuth = create<AuthState>()(
       isLoading: false,
       error: null,
 
+      applyAuthResponse: async (res: AuthResponse) => {
+        set({
+          user: res.user,
+          token: res.token,
+          refreshToken: res.refreshToken,
+          orgId: res.user.orgId,
+          isLoading: false,
+          error: null,
+        });
+        await get().loadOrganizations();
+      },
+
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
           const res = await apiLogin(email, password);
-          set({
-            user: res.user,
-            token: res.token,
-            refreshToken: res.refreshToken,
-            orgId: res.user.orgId,
-            isLoading: false,
-          });
-          await get().loadOrganizations();
+          await get().applyAuthResponse(res);
         } catch (err) {
           set({ isLoading: false, error: (err as Error).message });
           throw err;

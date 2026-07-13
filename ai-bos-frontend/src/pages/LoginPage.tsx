@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
+import { mockOAuthLogin, startOAuth } from '@/lib/api/services';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,14 +20,36 @@ const DEMO_ACCOUNTS = [
 ];
 
 export function LoginPage() {
-  const { login, isLoading, error } = useAuth();
+  const { login, applyAuthResponse, isLoading, error } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/app/dashboard';
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const refreshToken = searchParams.get('refreshToken');
+    if (token && refreshToken) {
+      // Live OAuth callback redirected with tokens
+      void (async () => {
+        try {
+          const { getMe } = await import('@/lib/api/services');
+          // Temporarily set token to fetch me
+          useAuth.getState().setTokens(token, refreshToken);
+          const user = await getMe();
+          await applyAuthResponse({ user, token, refreshToken });
+          navigate(from, { replace: true });
+        } catch {
+          /* ignore */
+        }
+      })();
+    }
+  }, [searchParams, applyAuthResponse, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +69,24 @@ export function LoginPage() {
       navigate(from, { replace: true });
     } catch {
       // error is in store
+    }
+  };
+
+  const handleOAuth = async (provider: 'google' | 'microsoft') => {
+    setOauthLoading(provider);
+    try {
+      const start = await startOAuth(provider);
+      if (start.mode === 'mock') {
+        const res = await mockOAuthLogin(provider, start.state, 'ceo@demo.aibos.io');
+        await applyAuthResponse(res);
+        navigate(from, { replace: true });
+      } else {
+        window.location.href = start.authorizationUrl;
+      }
+    } catch (err) {
+      useAuth.setState({ error: err instanceof Error ? err.message : 'OAuth error' });
+    } finally {
+      setOauthLoading(null);
     }
   };
 
@@ -156,6 +197,27 @@ export function LoginPage() {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.signIn')}
                 </Button>
+                <div className="grid w-full grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!!oauthLoading}
+                    onClick={() => void handleOAuth('google')}
+                  >
+                    {oauthLoading === 'google' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Google'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!!oauthLoading}
+                    onClick={() => void handleOAuth('microsoft')}
+                  >
+                    {oauthLoading === 'microsoft' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Microsoft'}
+                  </Button>
+                </div>
+                <p className="text-center text-2xs text-muted-foreground">
+                  OAuth en mode mock (sans credentials) → connexion CEO démo
+                </p>
               </CardFooter>
             </form>
           </Card>

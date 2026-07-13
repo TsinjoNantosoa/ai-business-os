@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, Search, Clock, Send, Sparkles, LifeBuoy, AlertCircle,
+  Plus, Search, Clock, Send, Sparkles,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,10 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { getTickets } from '@/lib/api/services';
-import type { TicketPriority } from '@/lib/api/types';
+import { getTickets, replyToTicket } from '@/lib/api/services';
+import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { cn, initials, formatRelativeTime } from '@/lib/utils';
 
@@ -22,19 +21,42 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export function SupportTicketsPage() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
+  const [isInternal, setIsInternal] = useState(false);
   const { data: tickets } = useQuery({ queryKey: ['tickets'], queryFn: getTickets });
 
-  const filtered = (tickets || []).filter((t) =>
-    !search || t.subject.toLowerCase().includes(search.toLowerCase()) ||
-    t.ticketNumber.toLowerCase().includes(search.toLowerCase()) ||
-    t.customerName.toLowerCase().includes(search.toLowerCase())
+  const replyMutation = useMutation({
+    mutationFn: ({ ticketId, content, internal }: { ticketId: string; content: string; internal: boolean }) =>
+      replyToTicket(ticketId, {
+        content,
+        isInternal: internal,
+        author: user ? `${user.firstName} ${user.lastName}` : 'Support Agent',
+      }),
+    onSuccess: (ticket) => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      setSelectedId(ticket.id);
+      setReply('');
+      setIsInternal(false);
+    },
+  });
+
+  const filtered = (tickets || []).filter((ticket) =>
+    !search || ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
+    ticket.ticketNumber.toLowerCase().includes(search.toLowerCase()) ||
+    ticket.customerName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const selected = (tickets || []).find((t) => t.id === selectedId) || filtered[0];
+  const selected = (tickets || []).find((ticket) => ticket.id === selectedId) || filtered[0];
   const aiSuggestedReply = 'Bonjour,\n\nMerci pour votre message. J\'ai bien pris connaissance de votre problème et je travaille sur une résolution. Je vous tiendrai informé(e) des avancements.\n\nCordialement,\nL\'équipe support AI BOS';
+
+  const handleSend = () => {
+    if (!selected || !reply.trim() || replyMutation.isPending) return;
+    replyMutation.mutate({ ticketId: selected.id, content: reply.trim(), internal: isInternal });
+  };
 
   return (
     <div>
@@ -45,7 +67,6 @@ export function SupportTicketsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        {/* Ticket list */}
         <div className="lg:col-span-2">
           <div className="mb-3 relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -80,12 +101,10 @@ export function SupportTicketsPage() {
           </div>
         </div>
 
-        {/* Ticket detail */}
         <div className="lg:col-span-3">
           {selected && (
             <Card className="flex flex-col h-[calc(100vh-14rem)]">
               <CardContent className="p-5 flex flex-col h-full">
-                {/* Header */}
                 <div className="border-b border-border pb-3">
                   <div className="flex items-start justify-between">
                     <div>
@@ -96,7 +115,6 @@ export function SupportTicketsPage() {
                   </div>
                 </div>
 
-                {/* Conversation */}
                 <div className="flex-1 overflow-y-auto scrollbar-thin py-4 space-y-3">
                   {selected.messages.map((msg) => (
                     <div key={msg.id} className={cn('flex gap-3', msg.author === 'Customer' && 'flex-row-reverse')}>
@@ -107,10 +125,15 @@ export function SupportTicketsPage() {
                       </Avatar>
                       <div className={cn(
                         'max-w-[70%] rounded-2xl px-4 py-2 text-sm',
-                        msg.author === 'Customer' ? 'bg-muted' : 'bg-primary text-primary-foreground'
+                        msg.isInternal
+                          ? 'bg-amber-50 border border-amber-200 text-amber-900'
+                          : msg.author === 'Customer'
+                            ? 'bg-muted'
+                            : 'bg-primary text-primary-foreground'
                       )}>
+                        {msg.isInternal && <p className="mb-1 text-2xs font-semibold uppercase">Note interne</p>}
                         {msg.content}
-                        <p className={cn('mt-1 text-2xs', msg.author === 'Customer' ? 'text-muted-foreground' : 'text-primary-foreground/70')}>
+                        <p className={cn('mt-1 text-2xs', msg.author === 'Customer' || msg.isInternal ? 'text-muted-foreground' : 'text-primary-foreground/70')}>
                           {formatRelativeTime(msg.createdAt)}
                         </p>
                       </div>
@@ -118,7 +141,6 @@ export function SupportTicketsPage() {
                   ))}
                 </div>
 
-                {/* AI suggested reply */}
                 <div className="mb-3 rounded-xl border border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30 p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="flex h-6 w-6 items-center justify-center rounded-lg gradient-ai">
@@ -132,7 +154,6 @@ export function SupportTicketsPage() {
                   </Button>
                 </div>
 
-                {/* Reply box */}
                 <div className="border-t border-border pt-3">
                   <Textarea
                     placeholder="Écrivez votre réponse..."
@@ -142,8 +163,15 @@ export function SupportTicketsPage() {
                     className="mb-2"
                   />
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline">Note interne</Button>
-                    <Button disabled={!reply.trim()}><Send className="h-4 w-4" />Répondre</Button>
+                    <Button
+                      variant={isInternal ? 'default' : 'outline'}
+                      onClick={() => setIsInternal((value) => !value)}
+                    >
+                      Note interne
+                    </Button>
+                    <Button disabled={!reply.trim() || replyMutation.isPending} onClick={handleSend}>
+                      <Send className="h-4 w-4" />Répondre
+                    </Button>
                   </div>
                 </div>
               </CardContent>
