@@ -1,4 +1,4 @@
-"""Support tickets seed data."""
+"""Support tickets seed data (rich demo volumes)."""
 
 from __future__ import annotations
 
@@ -16,11 +16,31 @@ SUBJECTS = [
     "Demande de formation",
     "Problème de synchronisation",
     "Accès refusé API",
+    "SLA non respecté",
+    "Demande d'ajout d'utilisateur",
+    "Webhook Stripe en échec",
+    "Export GDPR trop lent",
+    "Copilot ne cite pas de sources",
+    "Pipeline drag & drop cassé",
+    "Notification non reçue",
+    "SSO Microsoft échoue",
+    "Stock incohérent",
+    "Paie : écart de montant",
+    "Contrat PDF illisible",
+    "Campagne email bloquée",
+    "Prévision ML absente",
+    "Ticket dupliqué",
+    "Demande de suppression compte",
+    "Latence API contacts",
+    "Erreur upload document",
+    "Workflow run échoué",
+    "Clé API révoquée par erreur",
+    "Question licence Enterprise",
 ]
 
 PRIORITIES = ["low", "medium", "high", "urgent"]
 STATUSES = ["open", "pending", "resolved", "closed"]
-CATEGORIES = ["Technique", "Facturation", "Compte", "Produit", "Formation"]
+CATEGORIES = ["Technique", "Facturation", "Compte", "Produit", "Formation", "Sécurité", "Intégrations"]
 AGENTS = [
     {"id": "u-owner-1", "name": "Jean Bernard"},
     {"id": "u-staff-1", "name": "Lucas Thomas"},
@@ -45,27 +65,36 @@ for i, subject in enumerate(SUBJECTS):
             "agent_id": agent["id"] if agent else None,
             "agent_name": agent["name"] if agent else None,
             "category": CATEGORIES[i % len(CATEGORIES)],
-            "created_at": days_ago(i * 2 + 1),
-            "updated_at": days_ago(i),
-            "sla_deadline": hours_from_now(i * 4 - 12),
+            "created_at": days_ago(i + 1),
+            "updated_at": days_ago(max(0, i // 2)),
+            "sla_deadline": hours_from_now(i * 3 - 8),
             "messages": [
                 {
                     "id": f"tm-{i + 1}-1",
                     "org_id": "org-1",
                     "ticket_id": ticket_id,
                     "author": "Customer",
-                    "content": "Bonjour, j'ai un problème avec mon compte.",
+                    "content": f"Bonjour, concernant « {subject} », pouvez-vous nous aider rapidement ?",
                     "is_internal": False,
-                    "created_at": days_ago(i * 2 + 1),
+                    "created_at": days_ago(i + 1),
                 },
                 {
                     "id": f"tm-{i + 1}-2",
                     "org_id": "org-1",
                     "ticket_id": ticket_id,
                     "author": "Support Agent",
-                    "content": "Bonjour, je vais regarder cela pour vous immédiatement.",
+                    "content": "Bonjour, nous avons bien reçu votre demande et investiguons.",
                     "is_internal": False,
-                    "created_at": days_ago(i * 2),
+                    "created_at": days_ago(max(0, i)),
+                },
+                {
+                    "id": f"tm-{i + 1}-3",
+                    "org_id": "org-1",
+                    "ticket_id": ticket_id,
+                    "author": "Support Agent",
+                    "content": "Note interne : vérifier logs corr-id et permissions tenant.",
+                    "is_internal": True,
+                    "created_at": days_ago(max(0, i // 2)),
                 },
             ],
         }

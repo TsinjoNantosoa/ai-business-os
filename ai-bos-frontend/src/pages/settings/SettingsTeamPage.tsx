@@ -11,10 +11,11 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useI18n } from '@/lib/i18n/store';
 import { useEffect, useState } from 'react';
-import { Search, UserPlus, Loader2 } from 'lucide-react';
+import { Search, UserPlus, Loader2, X } from 'lucide-react';
 import { initials } from '@/lib/utils';
-import { createInvitation, getInvitations, getTeamMembers } from '@/lib/api/services';
+import { createInvitation, getInvitations, getTeamMembers, revokeInvitation } from '@/lib/api/services';
 import type { Invitation, TeamMember } from '@/lib/api/types';
+import { toast } from 'sonner';
 
 export function SettingsTeamPage() {
   const { t } = useI18n();
@@ -64,9 +65,25 @@ export function SettingsTeamPage() {
       setInviteEmail('');
       setInviteRole('staff');
       await load();
+      toast.success('Invitation envoyée');
       if (!invitation.token) setInviteOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'invitation");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRevoke = async (invitationId: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await revokeInvitation(invitationId);
+      await load();
+      toast.success('Invitation révoquée');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de révoquer');
+      toast.error(err instanceof Error ? err.message : 'Impossible de révoquer');
     } finally {
       setSaving(false);
     }
@@ -156,11 +173,22 @@ export function SettingsTeamPage() {
             <h2 className="mb-3 text-sm font-semibold">Invitations en attente</h2>
             <ul className="space-y-2">
               {invitations.map((inv) => (
-                <li key={inv.id} className="flex items-center justify-between text-sm">
+                <li key={inv.id} className="flex items-center justify-between gap-3 text-sm">
                   <span>
                     {inv.email} · <span className="capitalize text-muted-foreground">{inv.role.replace(/_/g, ' ')}</span>
                   </span>
-                  <Badge variant="muted">{inv.status}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="muted">{inv.status}</Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={saving}
+                      onClick={() => void handleRevoke(inv.id)}
+                    >
+                      <X className="h-4 w-4" />
+                      Révoquer
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

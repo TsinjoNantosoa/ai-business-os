@@ -66,6 +66,19 @@ class ChatBody(BaseModel):
     conversationId: str | None = None
 
 
+class TaskCreateBody(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    priority: str = Field(default="medium", min_length=1, max_length=16)
+    status: str = Field(default="todo", min_length=1, max_length=32)
+    dueDate: str
+    assigneeId: str | None = None
+    assigneeName: str | None = None
+    projectId: str | None = None
+    projectName: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
 class TaskStatusUpdateBody(BaseModel):
     status: str = Field(min_length=1, max_length=32)
 
@@ -76,6 +89,15 @@ class TaskAssignBody(BaseModel):
     assigneeAvatarColor: str | None = None
 
 
+class TicketCreateBody(BaseModel):
+    subject: str = Field(min_length=1, max_length=255)
+    customerName: str = Field(min_length=1, max_length=255)
+    customerEmail: EmailStr
+    priority: str = Field(default="medium", min_length=1, max_length=16)
+    category: str = Field(default="Support", min_length=1, max_length=64)
+    message: str | None = Field(default=None, max_length=8000)
+
+
 class TicketMessageCreateBody(BaseModel):
     content: str = Field(min_length=1, max_length=8000)
     isInternal: bool = False
@@ -84,6 +106,16 @@ class TicketMessageCreateBody(BaseModel):
 
 class TicketStatusUpdateBody(BaseModel):
     status: str = Field(min_length=1, max_length=32)
+
+
+class ProfileUpdateBody(BaseModel):
+    firstName: str | None = Field(default=None, min_length=1, max_length=128)
+    lastName: str | None = Field(default=None, min_length=1, max_length=128)
+
+
+class PasswordChangeBody(BaseModel):
+    currentPassword: str = Field(min_length=4, max_length=128)
+    newPassword: str = Field(min_length=6, max_length=128)
 
 
 class OrganizationUpdateBody(BaseModel):

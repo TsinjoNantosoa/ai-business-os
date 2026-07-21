@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.orm import Session
 
+from app.core.database import get_db
+from app.core.security import hash_password, verify_password
+from app.presentation.deps import claims_user_id, require_auth
+from app.presentation.schemas import PasswordChangeBody, ProfileUpdateBody
+from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
-from app.presentation.deps import require_auth
 
 
 class LoginRequest(BaseModel):
@@ -40,5 +45,34 @@ def build_auth_router(auth_service: AuthService) -> APIRouter:
     @router.get("/me")
     def me(claims: dict = Depends(require_auth)):
         return auth_service.me_from_claims(claims)
+
+    @router.patch("/me")
+    def update_me(
+        body: ProfileUpdateBody,
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_auth),
+    ) -> dict:
+        user = UserRepository(db).get_by_id(claims_user_id(claims))
+        if not user or not user.active:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur introuvable")
+        UserRepository(db).update_profile(user, first_name=body.firstName, last_name=body.lastName)
+        db.commit()
+        db.refresh(user)
+        return auth_service._user_to_me(user)
+
+    @router.post("/change-password")
+    def change_password(
+        body: PasswordChangeBody,
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_auth),
+    ) -> dict:
+        user = UserRepository(db).get_by_id(claims_user_id(claims))
+        if not user or not user.active:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur introuvable")
+        if not verify_password(body.currentPassword, user.password_hash):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mot de passe actuel incorrect")
+        UserRepository(db).update_password(user, hash_password(body.newPassword))
+        db.commit()
+        return {"status": "ok"}
 
     return router

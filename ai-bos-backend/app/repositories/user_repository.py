@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,6 +29,21 @@ class UserRepository:
 
     def count(self) -> int:
         return len(self.list_all())
+
+    def update_profile(self, user: User, *, first_name: str | None = None, last_name: str | None = None) -> User:
+        if first_name is not None:
+            user.first_name = first_name.strip()
+        if last_name is not None:
+            user.last_name = last_name.strip()
+        user.updated_at = datetime.now(timezone.utc)
+        self._session.flush()
+        return user
+
+    def update_password(self, user: User, password_hash: str) -> User:
+        user.password_hash = password_hash
+        user.updated_at = datetime.now(timezone.utc)
+        self._session.flush()
+        return user
 
     def create(
         self,

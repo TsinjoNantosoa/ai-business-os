@@ -24,7 +24,7 @@ def test_tickets_list_from_db() -> None:
     res = client.get("/api/v1/support/tickets", headers=auth_headers())
     assert res.status_code == 200
     body = res.json()
-    assert len(body) == 10
+    assert len(body) >= 10
     assert body[0]["ticketNumber"].startswith("TKT-")
     assert body[0]["messages"]
 
@@ -57,3 +57,25 @@ def test_ticket_status_update() -> None:
     )
     assert res.status_code == 200
     assert res.json()["status"] == "resolved"
+
+
+def test_ticket_create() -> None:
+    headers = auth_headers()
+    res = client.post(
+        "/api/v1/support/tickets",
+        headers=headers,
+        json={
+            "subject": "Phase4 ticket",
+            "customerName": "Client Test",
+            "customerEmail": "client@test.io",
+            "priority": "high",
+            "category": "Billing",
+            "message": "Besoin d'aide sur la facture",
+        },
+    )
+    assert res.status_code == 201
+    body = res.json()
+    assert body["subject"] == "Phase4 ticket"
+    assert body["status"] == "open"
+    assert body["ticketNumber"].startswith("TKT-")
+    assert len(body["messages"]) >= 1

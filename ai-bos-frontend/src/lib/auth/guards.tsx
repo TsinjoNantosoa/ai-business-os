@@ -13,6 +13,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Route-level RBAC. Owner/admin always pass (see permissions.ts).
+ * Staff/viewer only see routes matching their permission grants.
+ */
 export function RequirePermission({
   permission,
   permissions,
@@ -24,13 +28,17 @@ export function RequirePermission({
   fallback?: ReactNode;
   children: ReactNode;
 }) {
-  const { hasPermission, hasAnyPermission } = useAuth();
+  const { user, hasPermission, hasAnyPermission } = useAuth();
+
+  if (!user) {
+    return <>{fallback}</>;
+  }
 
   const allowed = permission
     ? hasPermission(permission)
     : permissions
-    ? hasAnyPermission(permissions)
-    : true;
+      ? hasAnyPermission(permissions)
+      : true;
 
   if (!allowed) return <>{fallback}</>;
   return <>{children}</>;

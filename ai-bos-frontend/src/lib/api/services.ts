@@ -58,6 +58,26 @@ export async function getMe(): Promise<T.User> {
   return apiFetch<T.User>('/api/v1/auth/me');
 }
 
+export async function updateProfile(payload: {
+  firstName?: string
+  lastName?: string
+}): Promise<T.User> {
+  return apiFetch<T.User>('/api/v1/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function changePassword(payload: {
+  currentPassword: string
+  newPassword: string
+}): Promise<{ status: string }> {
+  return apiFetch<{ status: string }>('/api/v1/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 // --- Organizations ---
 export async function getOrganizations(): Promise<T.Organization[]> {
   if (USE_MOCKS) {
@@ -111,6 +131,12 @@ export async function createInvitation(payload: {
   return apiFetch<T.Invitation>('/api/v1/platform/invitations', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function revokeInvitation(invitationId: string): Promise<T.Invitation> {
+  return apiFetch<T.Invitation>(`/api/v1/platform/invitations/${encodeURIComponent(invitationId)}/revoke`, {
+    method: 'POST',
   });
 }
 
@@ -322,6 +348,24 @@ export async function updateTaskStatus(taskId: string, status: T.TaskStatus): Pr
   });
 }
 
+export async function createTask(payload: {
+  title: string
+  description?: string
+  priority?: string
+  status?: string
+  dueDate: string
+  assigneeId?: string
+  assigneeName?: string
+  projectId?: string
+  projectName?: string
+  tags?: string[]
+}): Promise<T.Task> {
+  return apiFetch<T.Task>('/api/v1/tasks', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function assignTask(
   taskId: string,
   payload: { assigneeId: string; assigneeName?: string; assigneeAvatarColor?: string },
@@ -373,6 +417,20 @@ export async function getTickets(): Promise<T.Ticket[]> {
     return MOCK_TICKETS;
   }
   return apiFetch<T.Ticket[]>('/api/v1/support/tickets');
+}
+
+export async function createTicket(payload: {
+  subject: string
+  customerName: string
+  customerEmail: string
+  priority?: string
+  category?: string
+  message?: string
+}): Promise<T.Ticket> {
+  return apiFetch<T.Ticket>('/api/v1/support/tickets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function replyToTicket(
@@ -634,6 +692,7 @@ export async function createContact(payload: {
   phone?: string
   position?: string
   tags?: string[]
+  status?: string
 }): Promise<T.Contact> {
   return apiFetch<T.Contact>('/api/v1/crm/contacts', {
     method: 'POST',
@@ -641,12 +700,97 @@ export async function createContact(payload: {
   });
 }
 
+export async function updateContact(
+  contactId: string,
+  payload: Partial<{
+    firstName: string
+    lastName: string
+    email: string
+    company: string
+    phone: string
+    position: string
+    status: string
+    tags: string[]
+  }>,
+): Promise<T.Contact> {
+  return apiFetch<T.Contact>(`/api/v1/crm/contacts/${encodeURIComponent(contactId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteContact(contactId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm/contacts/${encodeURIComponent(contactId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function createLead(payload: {
+  title: string
+  company: string
+  contactName: string
+  value: number
+  currency?: string
+  stage?: string
+  expectedCloseDate: string
+}): Promise<T.Lead> {
+  return apiFetch<T.Lead>('/api/v1/crm/leads', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateLeadStage(leadId: string, stage: string): Promise<T.Lead> {
+  return apiFetch<T.Lead>(`/api/v1/crm/leads/${encodeURIComponent(leadId)}/stage`, {
+    method: 'PATCH',
+    body: JSON.stringify({ stage }),
+  });
+}
+
+export async function createInvoice(payload: {
+  clientId: string
+  clientName: string
+  currency?: string
+  issueDate?: string
+  dueDate?: string
+  lineItems: Array<{
+    description: string
+    quantity: number
+    unitPrice: number
+    taxRate?: number
+  }>
+}): Promise<T.Invoice> {
+  return apiFetch<T.Invoice>('/api/v1/finance/invoices', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function sendInvoice(invoiceId: string): Promise<T.Invoice> {
+  return apiFetch<T.Invoice>(`/api/v1/finance/invoices/${encodeURIComponent(invoiceId)}/send`, {
+    method: 'POST',
+  });
+}
+
 // --- Copilot (SSE backend) ---
+export type CopilotSource = {
+  documentId: string
+  documentTitle: string
+  chunkId?: string
+  relevanceScore: number
+  excerpt: string
+  sourceUri?: string
+}
+
+export type CopilotStreamEvent =
+  | { type: 'chunk'; content: string }
+  | { type: 'done'; sources: CopilotSource[]; provider?: string }
+
 export async function* streamCopilotResponse(
   prompt: string,
   agentId?: string,
   context?: string,
-): AsyncGenerator<string> {
+): AsyncGenerator<CopilotStreamEvent> {
   if (USE_MOCKS) {
     const responses = [
       `Basé sur l'analyse de vos données, voici ce que j'ai trouvé concernant "${prompt}":\n\n` +
@@ -664,9 +808,22 @@ export async function* streamCopilotResponse(
     const response = responses[Math.floor(Math.random() * responses.length)];
     const words = response.split(' ');
     for (let i = 0; i < words.length; i++) {
-      yield words[i] + (i < words.length - 1 ? ' ' : '');
+      yield { type: 'chunk', content: words[i] + (i < words.length - 1 ? ' ' : '') };
       await new Promise((r) => setTimeout(r, 30 + Math.random() * 40));
     }
+    yield {
+      type: 'done',
+      provider: 'mock',
+      sources: [
+        {
+          documentId: 'doc-mock-1',
+          documentTitle: 'README_00_Vision.md',
+          relevanceScore: 0.92,
+          excerpt: 'AI BOS — vision produit et positionnement SaaS B2B.',
+          sourceUri: 'Document/README_00_Vision.md',
+        },
+      ],
+    };
     return;
   }
 
@@ -704,9 +861,18 @@ export async function* streamCopilotResponse(
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
       try {
-        const payload = JSON.parse(line.slice(6)) as { type?: string; content?: string; message?: string };
+        const payload = JSON.parse(line.slice(6)) as {
+          type?: string
+          content?: string
+          message?: string
+          sources?: CopilotSource[]
+          provider?: string
+        };
         if (payload.type === 'chunk' && payload.content) {
-          yield payload.content;
+          yield { type: 'chunk', content: payload.content };
+        }
+        if (payload.type === 'done') {
+          yield { type: 'done', sources: payload.sources || [], provider: payload.provider };
         }
         if (payload.type === 'error') {
           throw new Error(payload.message || 'Copilot stream error');

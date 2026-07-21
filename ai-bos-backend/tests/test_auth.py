@@ -48,3 +48,49 @@ def test_me_success() -> None:
     body = response.json()
     assert body["email"] == "staff@demo.aibos.io"
     assert body["role"] == "staff"
+
+
+def test_update_profile_and_password() -> None:
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "staff@demo.aibos.io", "password": "demo1234"},
+    )
+    assert login.status_code == 200
+    token = login.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    patched = client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={"firstName": "Lucas", "lastName": "Thomas"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["firstName"] == "Lucas"
+
+    bad = client.post(
+        "/api/v1/auth/change-password",
+        headers=headers,
+        json={"currentPassword": "wrong", "newPassword": "newpass99"},
+    )
+    assert bad.status_code == 400
+
+    changed = client.post(
+        "/api/v1/auth/change-password",
+        headers=headers,
+        json={"currentPassword": "demo1234", "newPassword": "newpass99"},
+    )
+    assert changed.status_code == 200
+
+    relogin = client.post(
+        "/api/v1/auth/login",
+        json={"email": "staff@demo.aibos.io", "password": "newpass99"},
+    )
+    assert relogin.status_code == 200
+    new_headers = {"Authorization": f"Bearer {relogin.json()['token']}"}
+
+    restore = client.post(
+        "/api/v1/auth/change-password",
+        headers=new_headers,
+        json={"currentPassword": "newpass99", "newPassword": "demo1234"},
+    )
+    assert restore.status_code == 200

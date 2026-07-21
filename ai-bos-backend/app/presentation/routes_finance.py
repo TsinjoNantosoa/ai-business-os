@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.data.seed_ops import DEMO_TRANSACTIONS
 from app.presentation.deps import claims_org_id, require_auth, require_permission
 from app.presentation.schemas import InvoiceCreateBody
 from app.presentation.serializers import finance_invoice_to_dict, parse_iso_datetime
@@ -85,34 +86,6 @@ def build_finance_router() -> APIRouter:
 
     @router.get("/transactions")
     def transactions(_claims: dict = Depends(require_auth)) -> list[dict]:
-        return [
-            {
-                "id": "tx-10",
-                "description": "Paiement facture INV-1021",
-                "amount": 12000,
-                "type": "income",
-                "category": "Invoices",
-                "date": "2026-07-02",
-                "account": "Main AR",
-            },
-            {
-                "id": "tx-11",
-                "description": "Dépense marketing — Ads",
-                "amount": 3400,
-                "type": "expense",
-                "category": "Marketing ads",
-                "date": "2026-06-28",
-                "account": "Operating",
-            },
-            {
-                "id": "tx-12",
-                "description": "Achat licences cloud",
-                "amount": 2900,
-                "type": "expense",
-                "category": "Cloud",
-                "date": "2026-06-26",
-                "account": "Operating",
-            },
-        ]
+        return DEMO_TRANSACTIONS
 
     return router

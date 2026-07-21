@@ -8,9 +8,11 @@ export const ORGANIZATIONS: Organization[] = [
 ];
 
 const ALL_PERMISSIONS = [
+  'dashboard.read',
   'crm.contact.read', 'crm.contact.write', 'crm.lead.read', 'crm.lead.write',
-  'finance.invoice.read', 'finance.invoice.write', 'finance.payment.read',
-  'hr.employee.read', 'hr.employee.write', 'hr.recruitment.read',
+  'sales.order.read', 'sales.order.write',
+  'finance.invoice.read', 'finance.invoice.write', 'finance.payment.read', 'finance.payment.write',
+  'hr.employee.read', 'hr.employee.write', 'hr.recruitment.read', 'hr.leave.read', 'hr.leave.write',
   'project.read', 'project.write', 'task.read', 'task.write',
   'ai.agent.use', 'ai.copilot.use',
   'analytics.read', 'bi.read', 'ml.forecast.read',
@@ -22,8 +24,8 @@ const ALL_PERMISSIONS = [
   'inventory.read', 'inventory.write',
   'document.read', 'document.write',
   'contract.read', 'contract.write',
-  'knowledge.read',
-  'calendar.read', 'calendar.write', 'meeting.read',
+  'knowledge.read', 'knowledge.write',
+  'calendar.read', 'calendar.write', 'meeting.read', 'meeting.write',
 ];
 
 export const DEMO_USERS: Record<string, User> = {

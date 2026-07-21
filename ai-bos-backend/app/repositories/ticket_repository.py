@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -32,6 +32,56 @@ class TicketRepository:
 
     def count_all(self) -> int:
         return len(list(self._session.scalars(select(Ticket)).all()))
+
+    def next_ticket_number(self, org_id: str) -> str:
+        existing = self.list_by_org(org_id)
+        return f"TKT-{len(existing) + 1:04d}-{secrets.token_hex(2)}"
+
+    def create(
+        self,
+        *,
+        org_id: str,
+        subject: str,
+        customer_name: str,
+        customer_email: str,
+        priority: str = "medium",
+        category: str = "Support",
+        agent_id: str | None = None,
+        agent_name: str | None = None,
+        sla_deadline: datetime | None = None,
+        initial_message: str | None = None,
+    ) -> Ticket:
+        now = datetime.now(timezone.utc)
+        deadline = sla_deadline or (now + timedelta(hours=24))
+        ticket = Ticket(
+            id=f"ticket-{secrets.token_hex(6)}",
+            org_id=org_id,
+            ticket_number=self.next_ticket_number(org_id),
+            subject=subject,
+            customer_name=customer_name,
+            customer_email=customer_email.lower().strip(),
+            priority=priority,
+            status="open",
+            agent_id=agent_id,
+            agent_name=agent_name,
+            category=category,
+            sla_deadline=deadline,
+            created_at=now,
+            updated_at=now,
+        )
+        self._session.add(ticket)
+        self._session.flush()
+        if initial_message and initial_message.strip():
+            self.add_message(
+                ticket,
+                org_id=org_id,
+                author=customer_name or "Customer",
+                content=initial_message.strip(),
+                is_internal=False,
+            )
+            ticket.status = "open"
+            ticket.updated_at = datetime.now(timezone.utc)
+        return ticket
 
     def add_message(
         self,

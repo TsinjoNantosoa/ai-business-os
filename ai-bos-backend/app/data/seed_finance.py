@@ -1,17 +1,18 @@
-"""Finance invoices and workflows seed data."""
+"""Finance invoices and workflows seed data (rich demo volumes)."""
 
 from __future__ import annotations
 
 from app.data.datetime_utils import days_ago, days_from_now
-from app.data.seed_crm import COMPANIES
+from app.data.seed_crm import COMPANIES, CONTACT_COUNT
 
-INVOICE_STATUSES = ["draft", "sent", "paid", "paid", "paid", "overdue", "cancelled"]
+INVOICE_STATUSES = ["draft", "sent", "paid", "paid", "paid", "overdue", "cancelled", "sent", "overdue"]
+INVOICE_COUNT = 45
 
 FINANCE_INVOICES = []
-for i in range(15):
+for i in range(INVOICE_COUNT):
     company = COMPANIES[i % len(COMPANIES)]
     status = INVOICE_STATUSES[i % len(INVOICE_STATUSES)]
-    amount = (i + 1) * 1200 + (i % 5) * 800
+    amount = (i + 1) * 900 + (i % 5) * 650
     tax_amount = round(amount * 0.2)
     line_count = (i % 3) + 1
     line_items = []
@@ -32,16 +33,16 @@ for i in range(15):
         {
             "id": f"inv-{i + 1}",
             "org_id": "org-1",
-            "invoice_number": f"INV-2024-{i + 1:03d}",
-            "client_id": f"contact-{(i % 20) + 1}",
+            "invoice_number": f"INV-2026-{i + 1:03d}",
+            "client_id": f"contact-{(i % CONTACT_COUNT) + 1}",
             "client_name": company,
             "amount": amount,
             "tax_amount": tax_amount,
             "total_amount": amount + tax_amount,
             "currency": "EUR",
             "status": status,
-            "issue_date": days_ago(i * 5 + 3),
-            "due_date": days_from_now(30 - i * 5),
+            "issue_date": days_ago(i * 3 + 2),
+            "due_date": days_from_now(30 - (i % 40)),
             "paid_date": days_ago(i * 2) if status == "paid" else None,
             "line_items": line_items,
         }
@@ -78,34 +79,70 @@ WORKFLOWS = [
         "name": "Onboarding employé",
         "description": "Checklist RH pour les nouveaux arrivants.",
         "status": "inactive",
-        "trigger": "Employé ajouté",
-        "actions": ["Créer tâche", "Mettre à jour CRM"],
-        "last_run": days_ago(5),
-        "run_count": 34,
+        "trigger": "Employé créé",
+        "actions": ["Créer tâches", "Assigner mentor"],
+        "last_run": days_ago(12),
+        "run_count": 18,
         "success_rate": 88.0,
     },
     {
         "id": "wf-4",
         "org_id": "org-1",
-        "name": "Rapport hebdo auto",
-        "description": "Génération et envoi du rapport hebdomadaire.",
+        "name": "Escalade ticket urgent",
+        "description": "Escalade support si SLA critique.",
         "status": "active",
-        "trigger": "Planification hebdo",
-        "actions": ["Run AI agent", "Envoyer email"],
-        "last_run": days_ago(0),
-        "run_count": 52,
-        "success_rate": 97.0,
+        "trigger": "Ticket urgent",
+        "actions": ["Notifier manager", "Créer tâche"],
+        "last_run": days_ago(1),
+        "run_count": 54,
+        "success_rate": 96.0,
     },
     {
         "id": "wf-5",
         "org_id": "org-1",
-        "name": "Alerte stock faible",
-        "description": "Alerte quand un article passe sous le seuil.",
-        "status": "draft",
+        "name": "Deal gagné → facture",
+        "description": "Crée un brouillon de facture quand un lead est gagné.",
+        "status": "active",
+        "trigger": "Lead won",
+        "actions": ["Créer facture", "Notifier finance"],
+        "last_run": days_ago(4),
+        "run_count": 33,
+        "success_rate": 92.5,
+    },
+    {
+        "id": "wf-6",
+        "org_id": "org-1",
+        "name": "Rappel réunion client",
+        "description": "Rappel J-1 avant meeting commercial.",
+        "status": "active",
+        "trigger": "Meeting demain",
+        "actions": ["Envoyer email", "Notifier calendrier"],
+        "last_run": days_ago(0),
+        "run_count": 210,
+        "success_rate": 98.0,
+    },
+    {
+        "id": "wf-7",
+        "org_id": "org-1",
+        "name": "Stock bas → achat",
+        "description": "Crée un PO brouillon si stock sous seuil.",
+        "status": "paused",
         "trigger": "Stock bas",
-        "actions": ["Notifier Slack"],
-        "last_run": None,
-        "run_count": 0,
-        "success_rate": 100.0,
+        "actions": ["Créer PO", "Notifier procurement"],
+        "last_run": days_ago(8),
+        "run_count": 12,
+        "success_rate": 85.0,
+    },
+    {
+        "id": "wf-8",
+        "org_id": "org-1",
+        "name": "NPS follow-up",
+        "description": "Enquête satisfaction après ticket résolu.",
+        "status": "active",
+        "trigger": "Ticket resolved",
+        "actions": ["Envoyer email"],
+        "last_run": days_ago(3),
+        "run_count": 67,
+        "success_rate": 90.0,
     },
 ]

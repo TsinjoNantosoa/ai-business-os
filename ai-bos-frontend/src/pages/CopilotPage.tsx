@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Sparkles, Send, Mic, Volume2, Plus, MessageSquare,
-  TrendingUp, Wallet, Calendar, Zap, Bot, Trash2,
+  TrendingUp, Wallet, Calendar, Zap, Bot, BookOpen,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
-import { streamCopilotResponse } from '@/lib/api/services';
+import { streamCopilotResponse, type CopilotSource } from '@/lib/api/services';
 import { cn, initials } from '@/lib/utils';
 
 interface Message {
@@ -19,6 +19,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   streaming?: boolean;
+  sources?: CopilotSource[];
 }
 
 interface Conversation {
@@ -74,11 +75,19 @@ export function CopilotPage() {
     setIsStreaming(true);
 
     try {
-      for await (const chunk of streamCopilotResponse(text, selectedAgent.id)) {
-        setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: m.content + chunk } : m));
+      for await (const event of streamCopilotResponse(text, selectedAgent.id, 'Copilot')) {
+        if (event.type === 'chunk') {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + event.content } : m)),
+          );
+        } else if (event.type === 'done') {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, sources: event.sources } : m)),
+          );
+        }
       }
     } finally {
-      setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, streaming: false } : m));
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)));
       setIsStreaming(false);
     }
   };
@@ -194,6 +203,21 @@ export function CopilotPage() {
                     {msg.content}
                     {msg.streaming && <span className="ml-0.5 inline-block h-3 w-1 animate-pulse bg-current" />}
                   </p>
+                  {msg.role === 'assistant' && !msg.streaming && msg.sources && msg.sources.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.sources.map((s) => (
+                        <Badge
+                          key={`${s.documentId}-${s.chunkId || s.documentTitle}`}
+                          variant="outline"
+                          className="max-w-full gap-1 text-2xs font-normal"
+                          title={s.excerpt}
+                        >
+                          <BookOpen className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{s.documentTitle}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                   {msg.role === 'assistant' && !msg.streaming && msg.content && (
                     <button className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                       <Volume2 className="h-3 w-3" /> Écouter

@@ -2,7 +2,7 @@
 
 > **Objectif :** Implémenter le projet étape par étape **sans re-prompt**.  
 > Cocher `[x]` uniquement après **test validé** (backend : `pytest`, frontend : `typecheck` / `build` / tests).  
-> **Dernière mise à jour :** 2026-07-09
+> **Dernière mise à jour :** 2026-07-17
 
 ---
 
@@ -150,8 +150,45 @@ Pour chaque module métier, ajouter dans l'ordre :
 - [x] P2.E.1 Contacts : `POST`, `PATCH`, `DELETE`
 - [x] P2.E.2 Invoices : création + envoi (`POST /invoices`, `POST /{id}/send`)
 - [x] P2.E.3 Tasks : assignation + changement statut (`PATCH /status`, `PATCH /assign`)
+- [x] P2.E.3b Tasks : création (`POST /tasks`) + UI Create
 - [x] P2.E.4 Tickets : réponses messages (`POST /messages`, `PATCH /status`)
+- [x] P2.E.4b Tickets : création (`POST /tickets`) + UI Create
 - [x] P2.E.5 Documents : upload local + MinIO/S3 optionnel (`POST /upload`, `GET /download`)
+- [x] P2.E.6 Auth profil : `PATCH /auth/me` + `POST /auth/change-password` + Settings Profil
+- [x] P2.E.7 Leads : création + stage (`POST /leads`, `PATCH /{id}/stage`) + Pipeline DnD
+- [x] P2.E.8 Settings Org Save (`GET/PATCH /organizations/me`)
+- [x] P2.E.9 Team revoke invitation + Copilot sources RAG + Analytics CSV + BI NL IA + Projects `/:id`
+
+---
+
+## Phases roadmap produit UX (audit SaaS 2026-07)
+
+### Phase UX 1 — Permissions CEO / nav
+
+- [x] Catalogue `APP_PERMISSIONS` + rôles owner/admin full access (FE + BE owner sync)
+- [x] Toutes les routes app gated `RequirePermission`
+- [x] Nav Leaves `/app/hr/leaves`
+
+### Phase UX 2 — Mutations Create/Save CRM & Finance
+
+- [x] Contacts Create/Update/Delete + export CSV
+- [x] Pipeline Create lead + DnD → PATCH stage (optimistic)
+- [x] Factures Create + Send + Voir + export
+
+### Phase UX 3 — Settings / Copilot / Analytics / BI / Projects
+
+- [x] Settings Org load/save
+- [x] Copilot SSE `done.sources` (widget + page)
+- [x] Team revoke invitation + GDPR erase UI
+- [x] Analytics période 3/6/12m + CSV
+- [x] BI NL → stream IA + Play rapport
+- [x] Route `projects/:id` depuis liste
+
+### Phase UX 4 — Tasks / Tickets / Profil (2026-07-17)
+
+- [x] `POST /api/v1/tasks` + dialog Create Tasks
+- [x] `POST /api/v1/support/tickets` + dialog Create Tickets
+- [x] `PATCH /api/v1/auth/me` + `POST /api/v1/auth/change-password` + Settings Profil
 
 ---
 
@@ -185,7 +222,7 @@ Pour chaque module métier, ajouter dans l'ordre :
 
 ### Phase 2 — Agent Engine + Workflows (S21–S36)
 
-- [ ] S21–S28 Voir P2.C et P2.D ci-dessus
+- [x] S21–S28 Base P2.C / P2.D (workflows run + chat SSE + RAG Document)
 - [ ] S29 Tool registry (CRM, Finance, HR tools pour agents)
 - [ ] S30 Agent orchestration multi-step
 - [ ] S31 Human-in-the-loop approvals
@@ -229,6 +266,10 @@ npm run dev
 
 ## Prochaine action recommandée (sans re-prompt)
 
-**Phase 1 (S9–S20) livrée** (backup, staging Docker/CD, OAuth, GDPR, k6).  
-Voir aussi : [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`RUNBOOK_BACKUP.md`](./RUNBOOK_BACKUP.md) · [`STAGING.md`](./STAGING.md).  
-Prochaine étape : **S6** email/notifications, ou Phase 2 **S29** tool registry agents.
+**Phases UX 1–4 livrées** (permissions, CRM/Finance mutations, Settings/Copilot/BI, Tasks/Tickets create, profil/password).  
+Voir aussi : [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`README_ETAT_IMPLEMENTATION.md`](./README_ETAT_IMPLEMENTATION.md).  
+
+**Suite suggérée :**
+1. Forgot password (nouveaux endpoints + email)
+2. Marketing/Sales/Projects `POST` create
+3. **S29** tool registry agents / **S6** email notifications

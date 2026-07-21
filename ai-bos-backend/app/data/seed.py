@@ -38,65 +38,59 @@ ORGANIZATIONS = [
 
 NOTIFICATIONS = [
     {
-        "id": "notif-1",
-        "type": "warning",
-        "title": "Facture en retard",
-        "message": "TechSolutions SAS n'a pas payé la facture #INV-2024-018 (45 jours de retard)",
-        "read": False,
-        "createdAt": hours_ago(2),
-        "link": "/app/finance/invoices",
-    },
-    {
-        "id": "notif-2",
-        "type": "info",
-        "title": "Nouveau lead",
-        "message": 'Un nouveau lead "GreenEnergy Corp" a été ajouté au pipeline',
-        "read": False,
-        "createdAt": hours_ago(5),
-        "link": "/app/crm/pipeline",
-    },
-    {
-        "id": "notif-3",
-        "type": "success",
-        "title": "Deal gagné",
-        "message": 'Le deal "Studio Pixel" a été gagné — 12 500 €',
-        "read": False,
-        "createdAt": hours_ago(8),
-        "link": "/app/crm/pipeline",
-    },
-    {
-        "id": "notif-4",
-        "type": "warning",
-        "title": "Stock faible",
-        "message": 'L\'article "Ordinateur portable Pro" est en dessous du seuil de réapprovisionnement',
-        "read": True,
-        "createdAt": days_ago(1),
-        "link": "/app/inventory",
-    },
-    {
-        "id": "notif-5",
-        "type": "error",
-        "title": "Contrat expirant",
-        "message": 'Le contrat avec "Logitrans SARL" expire dans 15 jours',
-        "read": True,
-        "createdAt": days_ago(2),
-        "link": "/app/contracts",
-    },
+        "id": f"notif-{i + 1}",
+        "type": ["warning", "info", "success", "error", "info"][i % 5],
+        "title": [
+            "Facture en retard",
+            "Nouveau lead",
+            "Deal gagné",
+            "Stock faible",
+            "Contrat expirant",
+            "Ticket urgent",
+            "Workflow exécuté",
+            "Invitation acceptée",
+            "Backup terminé",
+            "Prévision ML prête",
+            "Campagne démarrée",
+            "Export GDPR prêt",
+            "Clé API créée",
+            "Relance envoyée",
+            "Réunion dans 1h",
+            "Churn détecté",
+            "PO à valider",
+            "Paie à signer",
+            "Bug critique",
+            "NPS reçu",
+        ][i % 20],
+        "message": f"Notification démo #{i + 1} — données enrichies pour tester l'inbox.",
+        "read": i % 3 == 0,
+        "createdAt": hours_ago(i * 2 + 1),
+        "link": [
+            "/app/finance/invoices",
+            "/app/crm/pipeline",
+            "/app/support/tickets",
+            "/app/inventory",
+            "/app/contracts",
+            "/app/workflows",
+            "/app/tasks",
+        ][i % 7],
+    }
+    for i in range(20)
 ]
 
 AUDIT_LOGS = [
     {
         "id": f"audit-{i + 1}",
-        "timestamp": hours_ago(i * 3 + 1),
+        "timestamp": hours_ago(i * 2 + 1),
         "userId": f"user-{(i % 5) + 1}",
         "userName": f"{FIRST_NAMES[i % len(FIRST_NAMES)]} {LAST_NAMES[(i * 3) % len(LAST_NAMES)]}",
         "action": ["LOGIN", "LOGOUT", "CREATE", "UPDATE", "DELETE", "EXPORT", "VIEW"][i % 7],
-        "resource": ["Contact", "Invoice", "Project", "Task", "Employee", "Contract", "Setting"][i % 7],
+        "resource": ["Contact", "Invoice", "Project", "Task", "Employee", "Contract", "Setting", "Ticket", "Lead"][i % 9],
         "resourceId": f"res-{i}",
         "ip": f"192.168.{i % 255}.{(i * 7) % 255}",
         "details": "Action effectuée depuis le navigateur",
     }
-    for i in range(30)
+    for i in range(80)
 ]
 
 JOB_OPENINGS = [
@@ -107,7 +101,7 @@ JOB_OPENINGS = [
         "status": (["open", "open", "open", "paused", "closed"])[i % 5],
         "applicants": (i % 15) + 3,
         "postedDate": days_ago(i * 5 + 2),
-        "location": ["Paris", "Lyon", "Remote", "Bordeaux"][i % 4],
+        "location": ["Paris", "Lyon", "Remote", "Bordeaux", "Nantes", "Toulouse"][i % 6],
         "type": (["full_time", "full_time", "contract", "part_time", "internship"])[i % 5],
     }
     for i, title in enumerate(
@@ -122,6 +116,20 @@ JOB_OPENINGS = [
             "DevOps Engineer",
             "Business Analyst",
             "Customer Success Manager",
+            "Backend Engineer",
+            "Frontend Engineer",
+            "QA Automation",
+            "Security Engineer",
+            "Finance Controller",
+            "Talent Acquisition",
+            "Support Lead",
+            "Solutions Architect",
+            "ML Engineer",
+            "Office Manager",
+            "Legal Counsel",
+            "Growth Hacker",
+            "Technical Writer",
+            "SRE",
         ]
     )
 ]
@@ -131,14 +139,14 @@ CANDIDATES = [
         "id": f"cand-{i + 1}",
         "name": f"{FIRST_NAMES[i % len(FIRST_NAMES)]} {LAST_NAMES[(i * 5) % len(LAST_NAMES)]}",
         "email": f"candidate{i + 1}@email.com",
-        "jobId": f"job-{(i % 10) + 1}",
-        "jobTitle": JOB_OPENINGS[i % 4]["title"],
+        "jobId": f"job-{(i % len(JOB_OPENINGS)) + 1}",
+        "jobTitle": JOB_OPENINGS[i % len(JOB_OPENINGS)]["title"],
         "stage": (["applied", "screening", "interview", "offer", "hired", "rejected"])[i % 6],
         "score": 60 + (i % 40),
         "avatarColor": f"bg-{(i + 3) % 8}-100",
         "appliedAt": days_ago(i * 2 + 1),
     }
-    for i in range(20)
+    for i in range(48)
 ]
 
 CONTRACTS = [
@@ -151,17 +159,19 @@ CONTRACTS = [
             "Contrat fournisseur Cloud",
             "Bail commercial",
             "Contrat de maintenance",
-        ][i % 6],
-        "type": (["service", "nda", "employment", "vendor", "lease", "service"])[i % 6],
+            "MSA Enterprise",
+            "Avenant support premium",
+        ][i % 8],
+        "type": (["service", "nda", "employment", "vendor", "lease", "service", "msa", "amendment"])[i % 8],
         "counterparty": COMPANIES[i % len(COMPANIES)],
         "value": (i + 1) * 15000,
         "currency": "EUR",
-        "startDate": days_ago(i * 30 + 60),
-        "endDate": days_from_now(i * 10 - 15),
+        "startDate": days_ago(i * 20 + 40),
+        "endDate": days_from_now(i * 8 - 10),
         "status": (["active", "active", "active", "expiring", "expired", "draft"])[i % 6],
-        "owner": ["Jean Bernard", "Sophie Martin", "Pierre Dubois"][i % 3],
+        "owner": ["Jean Bernard", "Sophie Martin", "Pierre Dubois", "Lucas Thomas"][i % 4],
     }
-    for i in range(12)
+    for i in range(28)
 ]
 
 KNOWLEDGE_ARTICLES = [
@@ -300,8 +310,8 @@ INVENTORY_ITEMS = [
         "category": category,
         "quantity": qty,
         "reorderLevel": reorder,
-        "warehouse": ["Paris Nord", "Lyon Sud", "Bordeaux"][i % 3],
-        "unitPrice": 50 + i * 120,
+        "warehouse": ["Paris Nord", "Lyon Sud", "Bordeaux", "Lille Est"][i % 4],
+        "unitPrice": 50 + i * 85,
         "status": "out_of_stock" if qty == 0 else ("low_stock" if qty < reorder else "in_stock"),
     }
     for i, (name, category, qty, reorder) in enumerate(
@@ -316,6 +326,26 @@ INVENTORY_ITEMS = [
             ("Routeur WiFi 6", "Réseau", 18, 20),
             ("Imprimante laser", "Impression", 6, 20),
             ("Projecteur", "Présentation", 4, 20),
+            ("Dock USB-C", "Accessoires", 22, 15),
+            ("Chaise ergonomique", "Bureau", 9, 10),
+            ("Bureau assis-debout", "Bureau", 3, 5),
+            ("Switch 24 ports", "Réseau", 7, 8),
+            ("NAS 8To", "Stockage", 2, 4),
+            ("Licence Office", "Logiciel", 120, 50),
+            ("Licence Adobe", "Logiciel", 35, 20),
+            ("Câble HDMI", "Accessoires", 200, 40),
+            ("Tablette graphique", "Design", 11, 8),
+            ("Micro podcast", "Audio", 8, 6),
+            ("Batterie externe", "Accessoires", 40, 25),
+            ("Lampe LED bureau", "Bureau", 16, 12),
+            ("Serveur rack 1U", "IT", 1, 2),
+            ("Onduleur UPS", "IT", 5, 4),
+            ("Badge RFID", "Sécurité", 90, 30),
+            ("Caméra IP", "Sécurité", 14, 10),
+            ("Kit visioconférence", "Vidéo", 6, 5),
+            ("Papier A4 (ramette)", "Consommable", 300, 80),
+            ("Toner noir", "Consommable", 25, 15),
+            ("Clé USB 64Go", "Stockage", 55, 20),
         ]
     )
 ]

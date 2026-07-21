@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts';
 import { Download, FileText, TrendingUp, TrendingDown } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -12,27 +12,66 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getAnalytics } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
-import { formatCurrency, formatNumber, formatPercent, cn } from '@/lib/utils';
+import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const PERIODS = [
-  { id: '3m', label: '3 mois' },
-  { id: '6m', label: '6 mois' },
-  { id: '12m', label: '12 mois' },
-  { id: 'custom', label: 'Personnalisé' },
-];
+  { id: '3m', label: '3 mois', months: 3 },
+  { id: '6m', label: '6 mois', months: 6 },
+  { id: '12m', label: '12 mois', months: 12 },
+] as const;
 
 const PIE_COLORS = ['#4f46e5', '#0d9488', '#f59e0b', '#ec4899', '#3b82f6'];
 
+function sliceTail<T>(rows: T[], n: number): T[] {
+  if (!rows.length) return rows;
+  return rows.slice(Math.max(0, rows.length - n));
+}
+
 export function AnalyticsPage() {
   const { t } = useI18n();
-  const [period, setPeriod] = useState('12m');
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]['id']>('12m');
   const { data: analytics } = useQuery({ queryKey: ['analytics'], queryFn: getAnalytics });
 
+  const months = PERIODS.find((p) => p.id === period)?.months ?? 12;
+
   const kpis = analytics?.kpis || [];
-  const revenue = analytics?.revenue || [];
-  const users = analytics?.users || [];
+  const revenue = useMemo(() => sliceTail(analytics?.revenue || [], months), [analytics?.revenue, months]);
+  const users = useMemo(() => sliceTail(analytics?.users || [], months), [analytics?.users, months]);
   const conversion = analytics?.conversion || [];
-  const churn = analytics?.churn || [];
+  const churn = useMemo(() => sliceTail(analytics?.churn || [], months), [analytics?.churn, months]);
+
+  const exportCsv = () => {
+    if (!revenue.length && !users.length) {
+      toast.error('Aucune donnée à exporter');
+      return;
+    }
+    const lines = [
+      'section,month,metric,value',
+      ...revenue.flatMap((r) => [
+        `revenue,${r.month},revenue,${r.revenue}`,
+        `revenue,${r.month},target,${r.target}`,
+      ]),
+      ...users.flatMap((u) => [
+        `users,${u.month},active,${u.active}`,
+        `users,${u.month},new,${u.new}`,
+      ]),
+      ...churn.map((c) => `churn,${c.month},rate,${c.rate}`),
+      ...conversion.map((c) => `conversion,${c.stage},value,${c.value}`),
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Export CSV téléchargé');
+  };
+
+  const exportPdfStub = () => {
+    toast.message('Export PDF bientôt disponible — utilisez CSV pour l’instant');
+  };
 
   return (
     <div>
@@ -48,19 +87,30 @@ export function AnalyticsPage() {
                 </Button>
               ))}
             </div>
-            <Button variant="outline"><Download className="h-4 w-4" />CSV</Button>
-            <Button variant="outline"><FileText className="h-4 w-4" />PDF</Button>
+            <Button variant="outline" onClick={exportCsv}>
+              <Download className="h-4 w-4" />
+              CSV
+            </Button>
+            <Button variant="outline" onClick={exportPdfStub}>
+              <FileText className="h-4 w-4" />
+              PDF
+            </Button>
           </>
         }
       />
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {kpis.map((kpi, i) => (
           <KpiCard
             key={i}
             label={kpi.label}
-            value={kpi.unit === '€' ? formatCurrency(kpi.value) : kpi.unit === '%' ? formatPercent(kpi.value) : formatNumber(kpi.value)}
+            value={
+              kpi.unit === '€'
+                ? formatCurrency(kpi.value)
+                : kpi.unit === '%'
+                  ? formatPercent(kpi.value)
+                  : formatNumber(kpi.value)
+            }
             change={kpi.change}
             icon={kpi.change >= 0 ? TrendingUp : TrendingDown}
             trend={kpi.change >= 0 ? 'up' : 'down'}
@@ -68,11 +118,13 @@ export function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Revenue chart */}
       <Card className="mt-6">
         <CardHeader className="flex-row items-center justify-between">
-          <CardTitle className="text-base">Revenu vs Objectif</CardTitle>
-          <Badge variant="success" className="gap-1"><TrendingUp className="h-3 w-3" />+12.5%</Badge>
+          <CardTitle className="text-base">Revenu vs Objectif ({PERIODS.find((p) => p.id === period)?.label})</CardTitle>
+          <Badge variant="success" className="gap-1">
+            <TrendingUp className="h-3 w-3" />
+            +12.5%
+          </Badge>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -85,8 +137,16 @@ export function AnalyticsPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-              <Tooltip contentStyle={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0' }} formatter={(v) => formatCurrency(Number(v))} />
+              <YAxis
+                tick={{ fontSize: 12, fill: '#64748b' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${v / 1000}k`}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}
+                formatter={(v) => formatCurrency(Number(v))}
+              />
               <Legend />
               <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={2.5} fill="url(#rev)" name="Revenu" />
               <Line type="monotone" dataKey="target" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" name="Objectif" />
@@ -95,10 +155,11 @@ export function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Users + Conversion */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Utilisateurs</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Utilisateurs</CardTitle>
+          </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={users}>
@@ -115,16 +176,27 @@ export function AnalyticsPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Tunnel de conversion</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Tunnel de conversion</CardTitle>
+          </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={conversion} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="stage" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} width={70} />
+                <YAxis
+                  type="category"
+                  dataKey="stage"
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={70}
+                />
                 <Tooltip contentStyle={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0' }} />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {conversion.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                  {conversion.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -132,15 +204,21 @@ export function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Churn */}
       <Card className="mt-6">
-        <CardHeader><CardTitle className="text-base">Taux de churn</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Taux de churn</CardTitle>
+        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={churn}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+              <YAxis
+                tick={{ fontSize: 12, fill: '#64748b' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${v}%`}
+              />
               <Tooltip contentStyle={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0' }} formatter={(v) => `${v}%`} />
               <Line type="monotone" dataKey="rate" stroke="#ef4444" strokeWidth={2.5} dot={{ fill: '#ef4444', r: 3 }} />
             </LineChart>

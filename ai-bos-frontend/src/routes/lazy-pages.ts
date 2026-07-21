@@ -16,6 +16,7 @@ export const FinancePaymentsPage = lazyNamed(() => import('@/pages/FinancePaymen
 export const FinanceAccountingPage = lazyNamed(() => import('@/pages/FinanceAccountingPage'), 'FinanceAccountingPage');
 export const FinanceReportsPage = lazyNamed(() => import('@/pages/FinanceReportsPage'), 'FinanceReportsPage');
 export const ProjectsPage = lazyNamed(() => import('@/pages/ProjectsPage'), 'ProjectsPage');
+export const ProjectDetailPage = lazyNamed(() => import('@/pages/ProjectDetailPage'), 'ProjectDetailPage');
 export const TasksPage = lazyNamed(() => import('@/pages/TasksPage'), 'TasksPage');
 export const CalendarPage = lazyNamed(() => import('@/pages/CalendarPage'), 'CalendarPage');
 export const MeetingsPage = lazyNamed(() => import('@/pages/MeetingsPage'), 'MeetingsPage');
@@ -24,6 +25,7 @@ export const HREmployeesPage = lazyNamed(() => import('@/pages/HREmployeesPage')
 export const RecruitmentPage = lazyNamed(() => import('@/pages/RecruitmentPage'), 'RecruitmentPage');
 export const HROrgChartPage = lazyNamed(() => import('@/pages/HROrgChartPage'), 'HROrgChartPage');
 export const HRPayrollPage = lazyNamed(() => import('@/pages/HRPayrollPage'), 'HRPayrollPage');
+export const HRLeavesPage = lazyNamed(() => import('@/pages/HRLeavesPage'), 'HRLeavesPage');
 export const CopilotPage = lazyNamed(() => import('@/pages/CopilotPage'), 'CopilotPage');
 export const AgentsPage = lazyNamed(() => import('@/pages/AgentsPage'), 'AgentsPage');
 export const AnalyticsPage = lazyNamed(() => import('@/pages/AnalyticsPage'), 'AnalyticsPage');

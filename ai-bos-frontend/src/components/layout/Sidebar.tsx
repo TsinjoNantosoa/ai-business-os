@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronDown, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, PanelLeft, Sparkles } from 'lucide-react';
 import { NAV_GROUPS } from '@/lib/navigation';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
@@ -167,5 +167,3 @@ export function Sidebar({
     </>
   );
 }
-
-import { Sparkles } from 'lucide-react';

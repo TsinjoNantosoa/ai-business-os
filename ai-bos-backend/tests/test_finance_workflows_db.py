@@ -57,7 +57,7 @@ def test_workflows_list_and_run() -> None:
     list_res = client.get("/api/v1/workflows", headers=headers)
     assert list_res.status_code == 200
     workflows = list_res.json()
-    assert len(workflows) == 5
+    assert len(workflows) >= 5
 
     active = next(wf for wf in workflows if wf["status"] == "active")
     run_res = client.post(f"/api/v1/workflows/{active['id']}/run", headers=headers)

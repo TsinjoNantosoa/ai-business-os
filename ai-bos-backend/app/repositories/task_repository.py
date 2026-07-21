@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -22,6 +23,44 @@ class TaskRepository:
 
     def count_all(self) -> int:
         return len(list(self._session.scalars(select(Task)).all()))
+
+    def create(
+        self,
+        *,
+        org_id: str,
+        title: str,
+        description: str | None,
+        priority: str,
+        status: str,
+        assignee_id: str,
+        assignee_name: str,
+        assignee_avatar_color: str,
+        due_date: datetime,
+        project_id: str | None = None,
+        project_name: str | None = None,
+        tags: list[str] | None = None,
+    ) -> Task:
+        now = datetime.now(timezone.utc)
+        task = Task(
+            id=f"task-{secrets.token_hex(6)}",
+            org_id=org_id,
+            title=title,
+            description=description,
+            status=status,
+            priority=priority,
+            assignee_id=assignee_id,
+            assignee_name=assignee_name,
+            assignee_avatar_color=assignee_avatar_color,
+            project_id=project_id,
+            project_name=project_name,
+            due_date=due_date,
+            tags=tags or [],
+            created_at=now,
+            updated_at=now,
+        )
+        self._session.add(task)
+        self._session.flush()
+        return task
 
     def update_status(self, task: Task, status: str) -> Task:
         task.status = status

@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.presentation.deps import claims_org_id, require_permission
-from app.presentation.schemas import TicketMessageCreateBody, TicketStatusUpdateBody
+from app.presentation.deps import claims_org_id, claims_user_id, require_permission
+from app.presentation.schemas import TicketCreateBody, TicketMessageCreateBody, TicketStatusUpdateBody
 from app.presentation.serializers import ticket_to_dict
 from app.repositories.ticket_repository import TicketRepository
 from app.services.audit_service import record_audit
 
 VALID_STATUSES = {"open", "pending", "resolved", "closed"}
+VALID_PRIORITIES = {"urgent", "high", "medium", "low"}
 
 
 def build_support_router() -> APIRouter:
@@ -33,6 +34,42 @@ def build_support_router() -> APIRouter:
         ticket = TicketRepository(db).get_by_id(claims_org_id(claims), ticket_id)
         if not ticket:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket introuvable")
+        return ticket_to_dict(ticket)
+
+    @router.post("/tickets", status_code=status.HTTP_201_CREATED)
+    def create_ticket(
+        body: TicketCreateBody,
+        request: Request,
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_permission("support.ticket.write")),
+    ) -> dict:
+        if body.priority not in VALID_PRIORITIES:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Priorité invalide")
+
+        org_id = claims_org_id(claims)
+        agent_name = f"{claims.get('first_name', '')} {claims.get('last_name', '')}".strip() or None
+        ticket = TicketRepository(db).create(
+            org_id=org_id,
+            subject=body.subject.strip(),
+            customer_name=body.customerName.strip(),
+            customer_email=str(body.customerEmail),
+            priority=body.priority,
+            category=body.category.strip() or "Support",
+            agent_id=claims_user_id(claims),
+            agent_name=agent_name,
+            initial_message=body.message,
+        )
+        record_audit(
+            db,
+            claims,
+            action="CREATE",
+            resource="Ticket",
+            resource_id=ticket.id,
+            details=ticket.ticket_number,
+            request=request,
+        )
+        db.commit()
+        db.refresh(ticket)
         return ticket_to_dict(ticket)
 
     @router.post("/tickets/{ticket_id}/messages", status_code=status.HTTP_201_CREATED)

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, CheckCircle2, Circle, DollarSign } from 'lucide-react';
+import { Plus, Calendar, CheckCircle2, DollarSign } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,16 @@ export function ProjectsPage() {
       <PageHeader
         title={t('nav.projects')}
         description="Gérez vos projets et suivez leur avancement"
-        actions={<Button><Plus className="h-4 w-4" />{t('common.create')}</Button>}
+        actions={
+          <Button
+            variant="outline"
+            disabled
+            title="Création de projet — API non disponible"
+          >
+            <Plus className="h-4 w-4" />
+            {t('common.create')}
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

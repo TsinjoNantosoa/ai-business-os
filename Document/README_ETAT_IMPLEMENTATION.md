@@ -1,8 +1,9 @@
 # État d’implémentation — AI BOS
 
-> **Dernière mise à jour :** 2026-07-13
+> **Dernière mise à jour :** 2026-07-18 00:15 (UTC+3)
 > **Projet :** AI BOS (AI Business Operating System)  
-> **But :** Suivre l’avancement global et cocher les étapes terminées.
+> **But :** Suivre l’avancement global et cocher les étapes terminées.  
+> **Étape suivante :** voir [`README_ETAPE_SUIVANTE.md`](./README_ETAPE_SUIVANTE.md)
 
 ---
 
@@ -138,8 +139,9 @@
 - [x] **Phase 0 / S1** — Scaffold doc & architecture (partie documentation)
 - [x] **Phase 0 / S1** — Frontend shell de référence généré (mock-first)
 - [ ] Phase 0 / S2-S8 — Extraction CORE réel depuis SIH IA (code backend)
-- [ ] Phase 1 / S9-S20 — Platform MVP multi-tenant opérationnel
-- [ ] Phase 2 / S21-S36 — Agent Engine + Workflows productifs
+- [x] Phase 1 / S9-S20 — Platform MVP multi-tenant opérationnel
+- [x] Phase 2 / S21–S28 — Base Agent Engine + Workflows (chat SSE, RAG, run)
+- [ ] Phase 2 / S29-S36 — Tool registry, orchestration, designer, quotas
 - [ ] Phase 3 / S37-S52 — Verticales Edu/Legal + scale cloud
 
 ---
@@ -239,6 +241,10 @@
 - [x] Backup / restore (service + CLI + API `/platform/backups`, runbook)
 - [x] Staging (docker-compose Postgres, Dockerfiles, workflow `cd-staging.yml`)
 - [x] RAG hybride : index `Document/*.md` + FAQ seed, retrieval lexical+embedding local, `/knowledge/search`, citations SSE
+- [x] **UX Phase 1** : permissions CEO / owner bypass / nav Leaves / routes gated
+- [x] **UX Phase 2** : Contacts CRUD, Pipeline create+DnD stage, Factures create/send
+- [x] **UX Phase 3** : Settings Org save, Copilot sources, Team revoke, Analytics CSV, BI NL IA, Projects detail
+- [x] **UX Phase 4** : `POST /tasks`, `POST /support/tickets`, `PATCH /auth/me`, `POST /auth/change-password` + UI
 
 ---
 
@@ -277,6 +283,9 @@
 | 2026-07-13 | S20 k6 load baseline (smoke 0 % erreurs ; contacts/KPIs p95 &lt; 50 ms) | ✅ |
 | 2026-07-13 | S17 backup/restore + S18 staging compose/CD (110 pytest) | ✅ |
 | 2026-07-13 | RAG Document/*.md (chunk/embed/retrieve + tests compréhension projet) | ✅ |
+| 2026-07-14 | UX P1–P3 : CEO perms, CRM/Finance mutations, Settings/Copilot/BI/Projects | ✅ |
+| 2026-07-17 | UX P4 : Create Tasks/Tickets + profil/password API + UI ; docs à jour | ✅ |
+| 2026-07-18 00:15 | Création `README_ETAPE_SUIVANTE.md` (déjà fait vs reste + Lots A/B/C) | ✅ |
 
 ---
 

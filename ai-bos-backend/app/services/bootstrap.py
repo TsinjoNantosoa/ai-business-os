@@ -45,6 +45,7 @@ from app.repositories.ticket_repository import TicketRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.workflow_repository import WorkflowRepository
 from app.services.feature_flag_service import FEATURE_CATALOG
+from app.services.role_permissions import OWNER_PERMISSIONS, permissions_for_role
 
 
 def bootstrap_demo_data(session: Session) -> None:
@@ -91,32 +92,7 @@ def _bootstrap_organizations_and_users(session: Session) -> None:
             "first_name": "Jean",
             "last_name": "Bernard",
             "role": "owner",
-            "permissions": [
-                "dashboard.read",
-                "ai.copilot.use",
-                "ai.agent.use",
-                "crm.contact.read",
-                "crm.contact.write",
-                "crm.lead.read",
-                "crm.lead.write",
-                "finance.invoice.read",
-                "finance.invoice.write",
-                "task.read",
-                "task.write",
-                "support.ticket.read",
-                "support.ticket.write",
-                "document.read",
-                "document.write",
-                "workflow.read",
-                "workflow.write",
-                "settings.org",
-                "settings.team",
-                "settings.billing",
-                "admin.audit",
-                "admin.flags",
-                "analytics.read",
-                "bi.read",
-            ],
+            "permissions": list(OWNER_PERMISSIONS),
             "org_id": "org-1",
         },
         {
@@ -125,7 +101,34 @@ def _bootstrap_organizations_and_users(session: Session) -> None:
             "first_name": "Lucas",
             "last_name": "Thomas",
             "role": "staff",
-            "permissions": ["dashboard.read", "task.read", "task.write", "document.read", "crm.contact.read", "crm.lead.read", "finance.invoice.read", "support.ticket.read"],
+            "permissions": permissions_for_role("staff"),
+            "org_id": "org-1",
+        },
+        {
+            "id": "u-sales-1",
+            "email": "sales@demo.aibos.io",
+            "first_name": "Marie",
+            "last_name": "Dupont",
+            "role": "admin",
+            "permissions": permissions_for_role("admin"),
+            "org_id": "org-1",
+        },
+        {
+            "id": "u-finance-1",
+            "email": "finance@demo.aibos.io",
+            "first_name": "Paul",
+            "last_name": "Martin",
+            "role": "admin",
+            "permissions": permissions_for_role("admin"),
+            "org_id": "org-1",
+        },
+        {
+            "id": "u-hr-1",
+            "email": "hr@demo.aibos.io",
+            "first_name": "Sophie",
+            "last_name": "Leroy",
+            "role": "admin",
+            "permissions": permissions_for_role("admin"),
             "org_id": "org-1",
         },
         {
@@ -134,22 +137,7 @@ def _bootstrap_organizations_and_users(session: Session) -> None:
             "first_name": "Anna",
             "last_name": "Schmidt",
             "role": "owner",
-            "permissions": [
-                "dashboard.read",
-                "ai.copilot.use",
-                "crm.contact.read",
-                "crm.contact.write",
-                "crm.lead.read",
-                "crm.lead.write",
-                "task.read",
-                "task.write",
-                "document.read",
-                "settings.org",
-                "settings.team",
-                "admin.audit",
-                "admin.flags",
-                "analytics.read",
-            ],
+            "permissions": list(OWNER_PERMISSIONS),
             "org_id": "org-2",
         },
         ]
@@ -171,6 +159,7 @@ def _bootstrap_organizations_and_users(session: Session) -> None:
         session.flush()
 
     _ensure_org2_user(session)
+    _ensure_login_demo_users(session)
     _sync_demo_user_permissions(session)
 
 
@@ -185,22 +174,7 @@ def _ensure_org2_user(session: Session) -> None:
             first_name="Anna",
             last_name="Schmidt",
             role="owner",
-            permissions=[
-                "dashboard.read",
-                "ai.copilot.use",
-                "crm.contact.read",
-                "crm.contact.write",
-                "crm.lead.read",
-                "crm.lead.write",
-                "task.read",
-                "task.write",
-                "document.read",
-                "settings.org",
-                "settings.team",
-                "admin.audit",
-                "admin.flags",
-                "analytics.read",
-            ],
+            permissions=list(OWNER_PERMISSIONS),
             org_id="org-2",
             password_hash=hash_password("demo1234"),
             active=True,
@@ -209,62 +183,64 @@ def _ensure_org2_user(session: Session) -> None:
     session.flush()
 
 
+def _ensure_login_demo_users(session: Session) -> None:
+    """Ensure LoginPage demo accounts exist even on an already-seeded DB."""
+    user_repo = UserRepository(session)
+    extras = [
+        {
+            "id": "u-sales-1",
+            "email": "sales@demo.aibos.io",
+            "first_name": "Marie",
+            "last_name": "Dupont",
+            "role": "admin",
+            "permissions": permissions_for_role("admin"),
+        },
+        {
+            "id": "u-finance-1",
+            "email": "finance@demo.aibos.io",
+            "first_name": "Paul",
+            "last_name": "Martin",
+            "role": "admin",
+            "permissions": permissions_for_role("admin"),
+        },
+        {
+            "id": "u-hr-1",
+            "email": "hr@demo.aibos.io",
+            "first_name": "Sophie",
+            "last_name": "Leroy",
+            "role": "admin",
+            "permissions": permissions_for_role("admin"),
+        },
+    ]
+    for user_data in extras:
+        if user_repo.get_by_email(user_data["email"]):
+            continue
+        session.add(
+            User(
+                id=user_data["id"],
+                email=user_data["email"],
+                first_name=user_data["first_name"],
+                last_name=user_data["last_name"],
+                role=user_data["role"],
+                permissions=user_data["permissions"],
+                org_id="org-1",
+                password_hash=hash_password("demo1234"),
+                active=True,
+            )
+        )
+    session.flush()
+
+
 def _sync_demo_user_permissions(session: Session) -> None:
     """Met à jour les permissions démo si la base existait déjà."""
     user_repo = UserRepository(session)
     expected: dict[str, list[str]] = {
-        "ceo@demo.aibos.io": [
-            "dashboard.read",
-            "ai.copilot.use",
-            "ai.agent.use",
-            "crm.contact.read",
-            "crm.contact.write",
-            "crm.lead.read",
-            "crm.lead.write",
-            "finance.invoice.read",
-            "finance.invoice.write",
-            "task.read",
-            "task.write",
-            "support.ticket.read",
-            "support.ticket.write",
-            "document.read",
-            "document.write",
-            "workflow.read",
-            "workflow.write",
-            "settings.org",
-            "settings.team",
-            "settings.billing",
-            "admin.audit",
-            "admin.flags",
-            "analytics.read",
-            "bi.read",
-        ],
-        "staff@demo.aibos.io": [
-            "dashboard.read",
-            "task.read",
-            "task.write",
-            "document.read",
-            "crm.contact.read",
-            "crm.lead.read",
-            "finance.invoice.read",
-            "support.ticket.read",
-        ],
-        "ceo@eu.aibos.io": [
-            "dashboard.read",
-            "ai.copilot.use",
-            "crm.contact.read",
-            "crm.contact.write",
-            "crm.lead.read",
-            "crm.lead.write",
-            "task.read",
-            "task.write",
-            "document.read",
-            "settings.org",
-            "settings.team",
-            "admin.audit",
-            "admin.flags",
-            "analytics.read",
-        ],
+        "ceo@demo.aibos.io": list(OWNER_PERMISSIONS),
+        "staff@demo.aibos.io": permissions_for_role("staff"),
+        "sales@demo.aibos.io": permissions_for_role("admin"),
+        "finance@demo.aibos.io": permissions_for_role("admin"),
+        "hr@demo.aibos.io": permissions_for_role("admin"),
+        "ceo@eu.aibos.io": list(OWNER_PERMISSIONS),
     }
     for email, permissions in expected.items():
         user = user_repo.get_by_email(email)

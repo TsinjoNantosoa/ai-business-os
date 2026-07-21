@@ -52,10 +52,22 @@ logger = logging.getLogger("aibos")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    import threading
+
     run_migrations()
     with SessionLocal() as session:
         bootstrap_demo_data(session)
-        ensure_rag_index(session)
+
+    def _index_rag() -> None:
+        try:
+            with SessionLocal() as session:
+                ensure_rag_index(session)
+            logger.info("rag_index_ready")
+        except Exception:
+            logger.exception("rag_index_failed")
+
+    # Defer RAG so API is available immediately (large Document/*.md can block for minutes).
+    threading.Thread(target=_index_rag, daemon=True, name="rag-index").start()
     logger.info("database_ready")
     yield
 

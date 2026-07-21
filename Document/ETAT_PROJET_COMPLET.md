@@ -1,8 +1,8 @@
 # AI BOS — État complet du projet
 
-> **Date :** 13 juillet 2026  
+> **Date :** 17 juillet 2026  
 > **Projet :** AI Business Operating System (`ai-bos`)  
-> **Tests backend :** 119 pytest verts  
+> **Tests backend :** 119+ pytest (subset auth/tasks/tickets validé 13/13 après UX P4)  
 > **Stack :** FastAPI + SQLAlchemy/Alembic + React/Vite  
 > **Documents liés :** `IMPLEMENTATION_TRACKER.md` · `README_ETAT_IMPLEMENTATION.md` · `README_40_ImplementationRoadmap.md`
 
@@ -16,9 +16,10 @@
 | **P0 / P1 / P2.A–E** | ✅ Terminés et testés |
 | **Phase 1 (S9–S20)** | ✅ Terminés (platform MVP multi-tenant + backup + staging) |
 | **Phase 1 restante** | — |
-| **Phase 2 agents avancés** | 🟡 Base livrée (chat SSE + workflows) — orchestration avancée à faire |
+| **Phase 2 agents avancés** | 🟡 Base livrée (chat SSE + workflows + RAG) — S29+ à faire |
+| **UX produit (Phases 1–4)** | ✅ Permissions, CRM/Finance mutations, Settings/Copilot/BI, Tasks/Tickets create, profil |
 | **Phase 3 verticales / scale** | ❌ À faire |
-| **Frontend** | Shell + modules UI complets ; modules clés branchés API réelle |
+| **Frontend** | Shell + modules UI complets ; Create/Save branchés sur APIs clés |
 | **Backend** | Auth, RBAC, CRM/Finance/Tasks/Tickets/Docs/Workflows/Billing/IA en DB |
 
 **Verdict :** le produit est utilisable en démo locale (login → dashboard → CRM / factures / tâches / copilote / admin).  
@@ -119,7 +120,7 @@ Qualité frontend P1.H : Vitest, Playwright smoke, code splitting, `.env`.
 | **P2.B Billing** | Plans, abo, factures, checkout, webhook | ✅ |
 | **P2.C Workflows** | Exécution synchrone + historique + UI | ✅ |
 | **P2.D Agents IA** | Chat SSE + RAG + Copilot | ✅ |
-| **P2.E CRUD** | Contacts, factures, tâches, tickets, documents | ✅ |
+| **P2.E CRUD** | Contacts, leads, factures, tâches (+create), tickets (+create), documents, profil | ✅ |
 
 ### 4.4 Platform MVP Phase 1 (S9–S13) — ✅ faits
 
@@ -188,15 +189,24 @@ Objectif : industrialiser le CORE partagé (aujourd’hui déjà présent en pra
 
 | ID | Tâche | Priorité | Valeur produit |
 |----|-------|----------|----------------|
-| **S14** | OAuth Google / Microsoft | **Haute** | ✅ Fait (mock sans secrets ; live si `GOOGLE_*` / `MICROSOFT_*`) |
+| **S14** | OAuth Google / Microsoft | **Haute** | ✅ Fait |
 | **S15** | API keys pour intégrations tierces | **Haute** | ✅ Fait |
-| **S16** | Export données (GDPR) | Moyenne | ✅ Fait (export JSON + erase-request) |
+| **S16** | Export données (GDPR) | Moyenne | ✅ Fait |
 | **S19** | CI/CD GitHub Actions complet | **Haute** | ✅ Fait |
-| **S17** | Backup / restore procédures | Moyenne | ✅ Fait (ZIP + CLI + API `admin.audit`) |
-| **S18** | Staging environment | Moyenne | ✅ Fait (compose Postgres + Dockerfiles + CD GHCR) |
-| **S20** | Load test baseline (k6) | Moyenne | ✅ Fait (`tests/perf/`) |
+| **S17** | Backup / restore procédures | Moyenne | ✅ Fait |
+| **S18** | Staging environment | Moyenne | ✅ Fait |
+| **S20** | Load test baseline (k6) | Moyenne | ✅ Fait |
 
-**Prochaine action recommandée :** **S6** email, ou Phase 2 **S29** tool registry.
+### 5.2b UX produit (audit SaaS) — ✅ Phases 1–4
+
+| Phase | Contenu | Statut |
+|-------|---------|--------|
+| UX-1 | Permissions CEO / nav / Leaves | ✅ |
+| UX-2 | Contacts CRUD, Pipeline DnD, Factures create/send | ✅ |
+| UX-3 | Settings Org, Copilot sources, Team revoke, Analytics/BI, Projects detail | ✅ |
+| UX-4 | Tasks/Tickets create, profil + change password | ✅ |
+
+**Prochaine action recommandée :** Forgot password, Marketing/Sales/Projects POST, ou **S29** tool registry / **S6** email.
 
 ### 5.3 Phase 2 — Agent Engine & automation (S21–S36)
 
@@ -248,7 +258,8 @@ Base déjà là (chat + run workflow). À construire ensuite :
 | Multi-tenant | 🟢 Élevé | Isolation app + RLS PG |
 | CRM contacts/leads | 🟢 Élevé | DB + CRUD / stage |
 | Finance invoices | 🟢 Élevé | Création + envoi |
-| Tasks / Tickets / Docs | 🟢 Élevé | Mutations + UI |
+| Tasks / Tickets / Docs | 🟢 Élevé | Mutations + Create + UI |
+| Auth profil / password | 🟢 Élevé | PATCH me + change-password |
 | Workflows | 🟡 Moyen | Exécution sync MVP |
 | Agents IA / Copilot | 🟢 Élevé | Chat SSE + RAG hybride sur Document/*.md + citations |
 | Billing | 🟡 Moyen | Mock Stripe OK démo |
@@ -295,14 +306,17 @@ Légende : 🟢 prêt démo/prod limitée · 🟡 MVP partiel · 🔴 non démar
 | 2026-07-13 | S20 load tests k6 (smoke + login_burst + smoke_httpx) |
 | 2026-07-13 | S17 backup/restore + S18 staging Docker/CD (110 pytest) |
 | 2026-07-13 | RAG hybride Document/*.md (kb_documents/chunks, search API, citations chat) — 119 pytest |
+| 2026-07-14 | UX P1–P3 : CEO perms, CRM/Finance, Settings/Copilot/BI/Projects |
+| 2026-07-17 | UX P4 : POST tasks/tickets + profil/password ; docs tracker à jour |
 
 ---
 
 ## 9. Recommandation de suite (ordre suggéré)
 
-1. **S6 / email** (invitations et alertes hors in-app)  
-2. **S29–S32** (agents avec tools + designer workflows)  
-3. **S37–S38** puis **S39+** (verticales puis scale)
+1. **Forgot password** + email (**S6**)  
+2. **Marketing / Sales / Projects Create** (POST + UI)  
+3. **S29–S32** (agents tools + designer workflows)  
+4. **S37–S38** puis **S39+** (verticales puis scale)
 
 ---
 

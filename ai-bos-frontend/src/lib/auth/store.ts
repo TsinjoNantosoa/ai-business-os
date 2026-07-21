@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Organization, AuthResponse } from '@/lib/api/types';
 import { login as apiLogin, getOrganizations } from '@/lib/api/services';
+import { checkAnyPermission, checkPermission } from '@/lib/auth/permissions';
 
 interface AuthState {
   user: User | null;
@@ -16,6 +17,7 @@ interface AuthState {
   logout: () => void;
   logoutAll: () => void;
   setTokens: (token: string, refreshToken: string) => void;
+  setUser: (user: User) => void;
   setOrg: (orgId: string) => void;
   loadOrganizations: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -66,6 +68,8 @@ export const useAuth = create<AuthState>()(
 
       setTokens: (token, refreshToken) => set({ token, refreshToken }),
 
+      setUser: (user) => set({ user }),
+
       setOrg: (orgId) => set({ orgId }),
 
       loadOrganizations: async () => {
@@ -80,15 +84,13 @@ export const useAuth = create<AuthState>()(
       hasPermission: (permission: string) => {
         const { user } = get();
         if (!user) return false;
-        if (user.role === 'owner' || user.role === 'admin') return true;
-        return user.permissions.includes(permission);
+        return checkPermission(user.role, user.permissions, permission);
       },
 
       hasAnyPermission: (permissions: string[]) => {
         const { user } = get();
         if (!user) return false;
-        if (user.role === 'owner' || user.role === 'admin') return true;
-        return permissions.some((p) => user.permissions.includes(p));
+        return checkAnyPermission(user.role, user.permissions, permissions);
       },
     }),
     {
