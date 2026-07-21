@@ -1,6 +1,6 @@
 # État d’implémentation — AI BOS
 
-> **Dernière mise à jour :** 2026-07-18 00:15 (UTC+3)
+> **Dernière mise à jour :** 2026-07-21 15:11 (UTC+3)
 > **Projet :** AI BOS (AI Business Operating System)  
 > **But :** Suivre l’avancement global et cocher les étapes terminées.  
 > **Étape suivante :** voir [`README_ETAPE_SUIVANTE.md`](./README_ETAPE_SUIVANTE.md)
@@ -286,6 +286,7 @@
 | 2026-07-14 | UX P1–P3 : CEO perms, CRM/Finance mutations, Settings/Copilot/BI/Projects | ✅ |
 | 2026-07-17 | UX P4 : Create Tasks/Tickets + profil/password API + UI ; docs à jour | ✅ |
 | 2026-07-18 00:15 | Création `README_ETAPE_SUIVANTE.md` (déjà fait vs reste + Lots A/B/C) | ✅ |
+| 2026-07-21 15:11 | Lot A terminé : forgot/reset password, email log/SMTP, pages FR/EN/AR, migration 015 (125 pytest + 9 Vitest) | ✅ |
 
 ---
 

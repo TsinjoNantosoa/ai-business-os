@@ -23,9 +23,9 @@ class JsonFormatter(logging.Formatter):
 _CONFIGURED = False
 
 
-def configure_logging() -> None:
+def configure_logging(*, force: bool = False) -> None:
     global _CONFIGURED
-    if _CONFIGURED:
+    if _CONFIGURED and not force:
         return
 
     handler = logging.StreamHandler(sys.stdout)
@@ -34,9 +34,14 @@ def configure_logging() -> None:
     root = logging.getLogger()
     root.setLevel(logging.INFO)
 
-    # Avoid duplicate handlers if configure_logging() is called twice
+    if force:
+        root.handlers.clear()
     if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
         root.addHandler(handler)
+
+    # Alembic's fileConfig disables loggers created before migrations run.
+    for name in ("aibos", "aibos.auth", "aibos.email", "aibos.platform", "uvicorn", "uvicorn.error", "uvicorn.access"):
+        logging.getLogger(name).disabled = False
 
     _CONFIGURED = True
 

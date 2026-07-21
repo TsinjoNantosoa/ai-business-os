@@ -6,6 +6,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PageLoader } from '@/components/shared/PageLoader';
 import { ProtectedRoute, RequirePermission } from '@/lib/auth/guards';
 import { LoginPage } from '@/pages/LoginPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { OnboardingPage } from '@/pages/OnboardingPage';
@@ -42,6 +44,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/403" element={<ForbiddenPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

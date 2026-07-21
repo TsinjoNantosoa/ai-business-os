@@ -118,6 +118,21 @@ class PasswordChangeBody(BaseModel):
     newPassword: str = Field(min_length=6, max_length=128)
 
 
+class ForgotPasswordBody(BaseModel):
+    email: EmailStr
+
+
+class VerifyResetCodeBody(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=16)
+
+
+class ResetPasswordBody(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=16)
+    newPassword: str = Field(min_length=6, max_length=128)
+
+
 class OrganizationUpdateBody(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     currency: str | None = Field(default=None, min_length=1, max_length=8)

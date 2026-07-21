@@ -11,7 +11,9 @@ def _load_dotenv() -> None:
         from dotenv import load_dotenv
 
         backend_dir = Path(__file__).resolve().parents[2]
-        load_dotenv(backend_dir / ".env", override=True)
+        # override=False: real env vars win over .env, so pytest's DATABASE_URL
+        # (test DB) isn't silently replaced by the dev aibos.db.
+        load_dotenv(backend_dir / ".env", override=False)
     except ImportError:
         pass
 
@@ -71,8 +73,17 @@ class Settings(BaseModel):
     google_client_secret: str | None = None
     microsoft_client_id: str | None = None
     microsoft_client_secret: str | None = None
+    microsoft_tenant_id: str = "common"
     api_public_url: str = "http://localhost:8000"
     backup_dir: str = "./backups"
+    password_reset_exp_minutes: int = 60
+    email_mode: str = "log"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_use_tls: bool = True
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str = "AI BOS <noreply@aibos.local>"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -112,8 +123,17 @@ class Settings(BaseModel):
             google_client_secret=os.getenv("GOOGLE_CLIENT_SECRET") or None,
             microsoft_client_id=os.getenv("MICROSOFT_CLIENT_ID") or None,
             microsoft_client_secret=os.getenv("MICROSOFT_CLIENT_SECRET") or None,
+            microsoft_tenant_id=os.getenv("MICROSOFT_TENANT_ID", "common"),
             api_public_url=os.getenv("API_PUBLIC_URL", "http://localhost:8000"),
             backup_dir=os.getenv("BACKUP_DIR", "./backups"),
+            password_reset_exp_minutes=int(os.getenv("PASSWORD_RESET_EXP_MINUTES", "60")),
+            email_mode=os.getenv("EMAIL_MODE", "log"),
+            smtp_host=os.getenv("SMTP_HOST") or None,
+            smtp_port=int(os.getenv("SMTP_PORT", "587")),
+            smtp_use_tls=_env_bool("SMTP_USE_TLS", True),
+            smtp_user=os.getenv("SMTP_USER") or None,
+            smtp_password=os.getenv("SMTP_PASSWORD") or None,
+            smtp_from=os.getenv("SMTP_FROM", "AI BOS <noreply@aibos.local>"),
         )
 
     @property

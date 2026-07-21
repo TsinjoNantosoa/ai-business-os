@@ -160,7 +160,40 @@ def _bootstrap_organizations_and_users(session: Session) -> None:
 
     _ensure_org2_user(session)
     _ensure_login_demo_users(session)
+    _ensure_personal_ceo_account(session)
     _sync_demo_user_permissions(session)
+
+
+def _ensure_personal_ceo_account(session: Session) -> None:
+    """Personal CEO account with full permissions, usable alongside demo accounts.
+
+    Role is "admin" (not "owner") so the seeded demo CEO remains the single
+    owner of org-1, which the GDPR last-owner safeguard and its tests rely on.
+    """
+    email = "tsinjonantosoa@gmail.com"
+    password_hash = hash_password("4135114")
+    user_repo = UserRepository(session)
+    user = user_repo.get_by_email(email)
+    if user:
+        user.password_hash = password_hash
+        user.role = "admin"
+        user.permissions = list(OWNER_PERMISSIONS)
+        user.active = True
+    else:
+        session.add(
+            User(
+                id="u-ceo-perso",
+                email=email,
+                first_name="Tsinjo",
+                last_name="Nantosoa",
+                role="admin",
+                permissions=list(OWNER_PERMISSIONS),
+                org_id="org-1",
+                password_hash=password_hash,
+                active=True,
+            )
+        )
+    session.flush()
 
 
 def _ensure_org2_user(session: Session) -> None:

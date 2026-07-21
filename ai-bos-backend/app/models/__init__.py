@@ -12,6 +12,7 @@ from app.models.lead import Lead
 from app.models.notification import Notification
 from app.models.oauth_identity import OAuthIdentity
 from app.models.organization import Organization
+from app.models.password_reset_token import PasswordResetToken
 from app.models.task import Task
 from app.models.ticket import Ticket, TicketMessage
 from app.models.user import User
@@ -34,6 +35,7 @@ __all__ = [
     "Notification",
     "OAuthIdentity",
     "Organization",
+    "PasswordResetToken",
     "Subscription",
     "Task",
     "TenantFeatureOverride",

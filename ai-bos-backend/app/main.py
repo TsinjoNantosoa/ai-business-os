@@ -42,6 +42,7 @@ from app.presentation.routes_backup import build_backup_router
 from app.presentation.routes_knowledge import build_knowledge_router
 from app.services.auth_service import AuthService
 from app.services.bootstrap import bootstrap_demo_data
+from app.services.email_service import EmailService
 from app.services.rag_ingest import ensure_rag_index
 from app.services.session_store import InMemoryRefreshSessionStore
 
@@ -55,8 +56,11 @@ async def lifespan(_app: FastAPI):
     import threading
 
     run_migrations()
+    configure_logging(force=True)
+    logger.info("migrations_ready")
     with SessionLocal() as session:
         bootstrap_demo_data(session)
+    logger.info("demo_data_ready")
 
     def _index_rag() -> None:
         try:
@@ -83,11 +87,20 @@ app.add_middleware(
 )
 
 session_store = InMemoryRefreshSessionStore()
-auth_service = AuthService(session_store=session_store)
+email_service = EmailService(
+    mode=settings.email_mode,
+    smtp_host=settings.smtp_host,
+    smtp_port=settings.smtp_port,
+    smtp_use_tls=settings.smtp_use_tls,
+    smtp_user=settings.smtp_user,
+    smtp_password=settings.smtp_password,
+    sender=settings.smtp_from,
+)
+auth_service = AuthService(session_store=session_store, email_service=email_service)
 app.include_router(build_auth_router(auth_service))
 app.include_router(build_oauth_router(auth_service))
 app.include_router(build_rbac_router(auth_service))
-app.include_router(build_platform_router())
+app.include_router(build_platform_router(email_service))
 app.include_router(build_gdpr_router())
 app.include_router(build_backup_router())
 app.include_router(build_knowledge_router())

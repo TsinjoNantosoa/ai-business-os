@@ -2,7 +2,7 @@
 
 > **Objectif :** Implémenter le projet étape par étape **sans re-prompt**.  
 > Cocher `[x]` uniquement après **test validé** (backend : `pytest`, frontend : `typecheck` / `build` / tests).  
-> **Dernière mise à jour :** 2026-07-17
+> **Dernière mise à jour :** 2026-07-21 15:11 (UTC+3)
 
 ---
 
@@ -192,6 +192,18 @@ Pour chaque module métier, ajouter dans l'ordre :
 
 ---
 
+## Lot A — Auth & email (2026-07-21)
+
+- [x] Table + migrations `password_reset_tokens` (015) puis code à 6 chiffres + compteur `attempts` (016)
+- [x] `POST /api/v1/auth/forgot-password` avec réponse anti-énumération (envoie un code 6 chiffres par email)
+- [x] `POST /api/v1/auth/verify-reset-code` (validation du code, blocage après 5 échecs)
+- [x] `POST /api/v1/auth/reset-password` (email + code + nouveau mot de passe) + révocation des refresh sessions
+- [x] Service email `log|smtp` + templates code de réinitialisation et invitation
+- [x] Pages `/forgot-password` et `/reset-password` en 2 étapes (code → nouveau mot de passe) + i18n FR/EN/AR
+- [x] Tests validés (2026-07-21 15:55) : 127 pytest, 8 Vitest, typecheck, smoke HTTP
+
+---
+
 ## Phases roadmap (README_40)
 
 ### Phase 0 — CORE extraction SIH IA (S2–S8)
@@ -212,7 +224,7 @@ Pour chaque module métier, ajouter dans l'ordre :
 - [x] S11 Feature flags admin
 - [x] S12 Audit log persistant (écriture sur chaque mutation)
 - [x] S13 Notifications temps réel (WebSocket/SSE)
-- [x] S14 Intégrations OAuth (Google, Microsoft)
+- [x] S14 Intégrations OAuth Google/Microsoft : Authorization Code + PKCE, callback backend, code SPA à usage unique, mock local uniquement (renforcé le 2026-07-21 à 16:27 UTC+3 ; credentials fournisseurs à renseigner)
 - [x] S15 API keys pour intégrations tierces
 - [x] S16 Export données (GDPR)
 - [x] S17 Backup / restore procédures
@@ -270,6 +282,6 @@ npm run dev
 Voir aussi : [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`README_ETAT_IMPLEMENTATION.md`](./README_ETAT_IMPLEMENTATION.md).  
 
 **Suite suggérée :**
-1. Forgot password (nouveaux endpoints + email)
-2. Marketing/Sales/Projects `POST` create
-3. **S29** tool registry agents / **S6** email notifications
+1. Lot B : Marketing/Sales/Projects `POST` create
+2. Calendar/Meetings create/update
+3. **S29** tool registry agents / finaliser **S6** email staging

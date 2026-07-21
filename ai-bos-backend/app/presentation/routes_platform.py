@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.data import seed
@@ -21,11 +23,15 @@ from app.repositories.invitation_repository import InvitationRepository
 from app.repositories.organization_repository import OrganizationRepository
 from app.repositories.user_repository import UserRepository
 from app.services.audit_service import record_audit
+from app.services.email_service import EmailService
 from app.services.notification_service import create_and_publish_notification
 from app.services.role_permissions import INVITABLE_ROLES, permissions_for_role
 
 
-def build_platform_router() -> APIRouter:
+logger = logging.getLogger("aibos.platform")
+
+
+def build_platform_router(email_service: EmailService | None = None) -> APIRouter:
     router = APIRouter(prefix="/api/v1/platform", tags=["platform"])
 
     @router.get("/organizations")
@@ -145,7 +151,23 @@ def build_platform_router() -> APIRouter:
             message=f"Invitation {invitation.role} pour {invitation.email}",
             link="/app/settings/team",
         )
-        # Token returned once so UI/tests can share the invite link (email mock).
+        if email_service:
+            invitation_url = (
+                f"{settings.app_public_url.rstrip('/')}/onboarding?token={invitation.token}"
+            )
+            try:
+                email_service.send_invitation(
+                    recipient=invitation.email,
+                    invitation_url=invitation_url,
+                    invited_by_name=invited_by_name,
+                    message=body.message,
+                )
+            except Exception:
+                logger.exception(
+                    "invitation_email_failed",
+                    extra={"recipient": invitation.email},
+                )
+        # Token remains returned once for local demos and existing integrations.
         return invitation_to_dict(invitation, include_token=True)
 
     @router.get("/invitations/by-token/{token}")

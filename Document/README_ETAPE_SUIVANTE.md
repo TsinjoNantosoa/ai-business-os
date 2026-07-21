@@ -1,6 +1,6 @@
 # AI BOS — Étape suivante (déjà fait vs reste)
 
-> **Dernière mise à jour :** 2026-07-18 00:15 (UTC+3)  
+> **Dernière mise à jour :** 2026-07-21 15:11 (UTC+3)
 > **Projet :** AI Business Operating System (`ai-bos`)  
 > **But :** Vue claire de ce qui est **déjà implémenté** et de ce qu’il reste à faire pour la **prochaine étape**.  
 > **Documents liés :** [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`IMPLEMENTATION_TRACKER.md`](./IMPLEMENTATION_TRACKER.md) · [`README_40_ImplementationRoadmap.md`](./README_40_ImplementationRoadmap.md) · [`README_ETAT_IMPLEMENTATION.md`](./README_ETAT_IMPLEMENTATION.md)
@@ -16,7 +16,8 @@
 | Backend MVP (auth, RBAC, multi-tenant, modules métier) | ✅ Fait |
 | Platform Phase 1 (S9–S20) | ✅ Fait |
 | Base IA (chat SSE, RAG, workflows run) | ✅ Fait |
-| **Prochaine étape produit** | 🟡 CRUD manquants + email + forgot password |
+| **Lot A — Auth & email** | ✅ Terminé (SMTP configurable ; credentials staging à fournir) |
+| **Prochaine étape produit** | 🟡 Lot B — CRUD Sales / Marketing / Projects / Calendar |
 | **Prochaine étape technique (roadmap)** | 🟡 Phase 2 avancée — **S29 Tool registry** |
 | Verticales Edu / Legal + scale cloud (Phase 3) | ❌ Pas démarré |
 
@@ -30,7 +31,7 @@
 ### 2.1 Fondation & plateforme
 
 - [x] Monorepo (`ai-bos-backend`, `ai-bos-frontend`, scaffold `apps/`, `platform/`, …)
-- [x] Auth JWT : login / refresh / me / change-password / PATCH profil
+- [x] Auth JWT : login / refresh / me / forgot-password / reset-password / change-password / PATCH profil
 - [x] RBAC (permissions, rôles, guards FE + BE)
 - [x] Multi-tenant (`org_id`, `X-Tenant-Id`, RLS Postgres)
 - [x] Observabilité : logs JSON, metrics, `/health`, correlation ID
@@ -39,6 +40,7 @@
 - [x] Feature flags admin + enforcement
 - [x] Audit logs persistants
 - [x] Notifications in-app SSE
+- [x] Email transactionnel `log|smtp` + templates reset / invitation
 - [x] API keys M2M
 - [x] OAuth Google / Microsoft (mock + live ready)
 - [x] GDPR export / erase
@@ -63,7 +65,7 @@
 ### 2.3 Frontend
 
 - [x] Shell (`AppLayout`, Sidebar, Topbar), i18n FR/EN/AR + RTL
-- [x] Auth pages (login, 403, onboarding)
+- [x] Auth pages (login, forgot-password, reset-password, 403, onboarding)
 - [x] Toutes les routes modules déclarées
 - [x] Copilot widget + page
 - [x] Qualité : Vitest, Playwright smoke, code splitting
@@ -87,8 +89,8 @@ Objectif : passer d’une démo « lecture + quelques CRUD » à un SaaS où les
 
 | # | Tâche | Pourquoi | Critère de done |
 |---|-------|----------|-----------------|
-| **N1** | Forgot password (reset email) | Auth complète SaaS | Endpoints reset + page FE + email (ou log mock) |
-| **N2** | Email réel (SMTP / provider) — **S6** | Invitations + reset + notifs | Invitation reçue en boîte mail en staging |
+| **N1** | Forgot password (reset email) | ✅ Terminé | Endpoints + pages FE + token one-shot en DB |
+| **N2** | Email SMTP configurable — **S6 partiel** | ✅ Code terminé / 🟡 staging | Mode log local + SMTP ; credentials et réception staging à valider |
 | **N3** | Sales orders `POST` + UI Create | Module sales utilisable | Créer une commande depuis le front |
 | **N4** | Marketing campaigns `POST` + UI Create | Idem marketing | Créer une campagne |
 | **N5** | Projects `POST` / `PATCH` + UI | Projets éditables | Créer / éditer un projet |
@@ -153,12 +155,12 @@ Fonctionne déjà **dans** `ai-bos-backend`, mais pas encore en packages `platfo
 
 Cocher au fur et à mesure. Mettre à jour la date/heure en tête de fichier à chaque lot terminé.
 
-### Lot A — Auth & email (1ère priorité)
+### Lot A — Auth & email — ✅ terminé le 2026-07-21 à 15:11 (UTC+3)
 
-- [ ] A1. `POST /auth/forgot-password` + `POST /auth/reset-password`
-- [ ] A2. Page frontend `/forgot-password` + `/reset-password`
-- [ ] A3. Service email (SMTP ou provider) + template invitation / reset
-- [ ] A4. Tests pytest + smoke manuel
+- [x] A1. `POST /auth/forgot-password` + `POST /auth/reset-password`
+- [x] A2. Page frontend `/forgot-password` + `/reset-password`
+- [x] A3. Service email (`log` / SMTP) + templates invitation / reset
+- [x] A4. Tests : 125 pytest, 9 Vitest, typecheck/build et smoke HTTP validés
 
 ### Lot B — Mutations modules seed-only
 

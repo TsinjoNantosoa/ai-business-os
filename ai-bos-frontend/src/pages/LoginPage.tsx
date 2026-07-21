@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
-import { mockOAuthLogin, startOAuth } from '@/lib/api/services';
+import {
+  exchangeOAuthCode,
+  getOAuthProviders,
+  mockOAuthLogin,
+  startOAuth,
+} from '@/lib/api/services';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,24 +33,32 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [oauthModes, setOauthModes] = useState<Record<string, string>>({});
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/app/dashboard';
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const refreshToken = searchParams.get('refreshToken');
-    if (token && refreshToken) {
-      // Live OAuth callback redirected with tokens
+    void getOAuthProviders()
+      .then((providers) => {
+        setOauthModes(Object.fromEntries(providers.map((provider) => [provider.id, provider.mode])));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const oauthCode = searchParams.get('oauth_code');
+    if (oauthCode) {
       void (async () => {
         try {
-          const { getMe } = await import('@/lib/api/services');
-          // Temporarily set token to fetch me
-          useAuth.getState().setTokens(token, refreshToken);
-          const user = await getMe();
-          await applyAuthResponse({ user, token, refreshToken });
+          setOauthLoading(searchParams.get('oauth') || 'oauth');
+          const response = await exchangeOAuthCode(oauthCode);
+          await applyAuthResponse(response);
           navigate(from, { replace: true });
-        } catch {
-          /* ignore */
+        } catch (err) {
+          useAuth.setState({ error: err instanceof Error ? err.message : 'OAuth error' });
+          navigate('/login', { replace: true });
+        } finally {
+          setOauthLoading(null);
         }
       })();
     }
@@ -172,9 +185,9 @@ export function LoginPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">{t('auth.password')}</Label>
-                    <button type="button" className="text-xs text-primary hover:underline">
+                    <Link to="/forgot-password" className="text-xs text-primary hover:underline">
                       {t('auth.forgotPassword')}
-                    </button>
+                    </Link>
                   </div>
                   <Input
                     id="password"
@@ -201,7 +214,7 @@ export function LoginPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={!!oauthLoading}
+                    disabled={!!oauthLoading || oauthModes.google === 'disabled'}
                     onClick={() => void handleOAuth('google')}
                   >
                     {oauthLoading === 'google' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Google'}
@@ -209,14 +222,16 @@ export function LoginPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={!!oauthLoading}
+                    disabled={!!oauthLoading || oauthModes.microsoft === 'disabled'}
                     onClick={() => void handleOAuth('microsoft')}
                   >
                     {oauthLoading === 'microsoft' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Microsoft'}
                   </Button>
                 </div>
                 <p className="text-center text-2xs text-muted-foreground">
-                  OAuth en mode mock (sans credentials) → connexion CEO démo
+                  {Object.values(oauthModes).some((mode) => mode === 'live')
+                    ? 'Connexion sécurisée avec votre compte Google ou Microsoft'
+                    : 'OAuth en mode mock (sans credentials) → connexion CEO démo'}
                 </p>
               </CardFooter>
             </form>

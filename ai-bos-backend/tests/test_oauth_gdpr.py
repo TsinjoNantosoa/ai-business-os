@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlparse
+
 from fastapi.testclient import TestClient
 
+from app.core.config import settings
 from app.main import app
+from app.services.oauth_service import create_oauth_login_code
 
 client = TestClient(app)
 
@@ -65,6 +69,41 @@ def test_oauth_invalid_state() -> None:
         json={"state": "invalid-state-value-xx", "email": "ceo@demo.aibos.io"},
     )
     assert res.status_code == 400
+
+
+def test_oauth_live_authorize_uses_pkce(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "google_client_id", "google-client")
+    monkeypatch.setattr(settings, "google_client_secret", "google-secret")
+
+    res = client.get("/api/v1/auth/oauth/google/authorize")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["mode"] == "live"
+    query = parse_qs(urlparse(body["authorizationUrl"]).query)
+    assert query["code_challenge_method"] == ["S256"]
+    assert query["code_challenge"][0]
+    assert query["redirect_uri"] == [
+        "http://localhost:8000/api/v1/auth/oauth/google/callback"
+    ]
+
+
+def test_oauth_exchange_code_is_one_use() -> None:
+    login_res = client.post(
+        "/api/v1/auth/login",
+        json={"email": "ceo@demo.aibos.io", "password": "demo1234"},
+    )
+    tokens = login_res.json()
+    code = create_oauth_login_code(
+        token=tokens["token"],
+        refresh_token=tokens["refreshToken"],
+    )
+
+    first = client.post("/api/v1/auth/oauth/exchange", json={"code": code})
+    assert first.status_code == 200
+    assert first.json()["user"]["email"] == "ceo@demo.aibos.io"
+
+    reused = client.post("/api/v1/auth/oauth/exchange", json={"code": code})
+    assert reused.status_code == 400
 
 
 def test_gdpr_export() -> None:

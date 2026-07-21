@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -12,16 +13,27 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.models.user import User as UserModel
+from app.repositories.password_reset_repository import PasswordResetRepository, hash_reset_token
 from app.repositories.user_repository import UserRepository
+from app.services.email_service import EmailService
 from app.services.session_store import InMemoryRefreshSessionStore, RefreshSession
 
 
+logger = logging.getLogger("aibos.auth")
+
+
 class AuthService:
-    def __init__(self, session_store: InMemoryRefreshSessionStore) -> None:
+    def __init__(
+        self,
+        session_store: InMemoryRefreshSessionStore,
+        email_service: EmailService,
+    ) -> None:
         self._sessions = session_store
+        self.email_service = email_service
 
     def _claims_for_user(self, user: UserModel) -> dict[str, Any]:
         return {
@@ -48,6 +60,71 @@ class AuthService:
         if not user.active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Compte désactivé")
         return self._issue_tokens(user)
+
+    def request_password_reset(self, email: str) -> None:
+        """Create and email a one-use verification code without revealing account existence."""
+        with SessionLocal() as session:
+            user = UserRepository(session).get_by_email(email)
+            if not user or not user.active:
+                return
+            _, raw_code = PasswordResetRepository(session).create(
+                user.id,
+                expires_minutes=settings.password_reset_exp_minutes,
+            )
+            session.commit()
+            recipient = user.email
+
+        try:
+            self.email_service.send_password_reset(
+                recipient=recipient,
+                code=raw_code,
+                expires_minutes=settings.password_reset_exp_minutes,
+            )
+        except Exception:
+            # Preserve the same public response for known and unknown emails.
+            logger.exception("password_reset_email_failed", extra={"recipient": recipient})
+
+    def _get_valid_reset(self, session, email: str, code: str):
+        """Return the active reset row for (email, code) or raise 400."""
+        invalid = HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Code invalide ou expiré",
+        )
+        user = UserRepository(session).get_by_email(email)
+        if not user or not user.active:
+            raise invalid
+
+        reset_repo = PasswordResetRepository(session)
+        reset = reset_repo.get_active_for_user(user.id)
+        if not reset:
+            raise invalid
+
+        expires_at = reset.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= datetime.now(timezone.utc):
+            raise invalid
+
+        if reset.token_hash != hash_reset_token(code.strip()):
+            reset_repo.register_failed_attempt(reset)
+            session.commit()
+            raise invalid
+
+        return user, reset
+
+    def verify_reset_code(self, email: str, code: str) -> None:
+        with SessionLocal() as session:
+            self._get_valid_reset(session, email, code)
+
+    def reset_password(self, email: str, code: str, new_password: str) -> None:
+        with SessionLocal() as session:
+            user, reset = self._get_valid_reset(session, email, code)
+            UserRepository(session).update_password(user, hash_password(new_password))
+            PasswordResetRepository(session).mark_used(reset)
+            session.commit()
+            user_id = user.id
+
+        self._sessions.revoke_all_for_user(user_id)
 
     def login_oauth_profile(
         self,
