@@ -1,20 +1,61 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calendar, CheckCircle2, DollarSign } from 'lucide-react';
+import { Plus, Calendar, CheckCircle2, DollarSign, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { getProjects } from '@/lib/api/services';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { createProject, getProjects } from '@/lib/api/services';
+import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
-import { cn, formatCurrency, formatDate, initials } from '@/lib/utils';
+import { formatCurrency, formatDate, initials } from '@/lib/utils';
+import { toast } from 'sonner';
+
+const PROJECT_COLORS = ['#4f46e5', '#0d9488', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444', '#64748b'];
 
 export function ProjectsPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('project.write');
+  const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [budget, setBudget] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [color, setColor] = useState(PROJECT_COLORS[0]);
   const { data: projects, isLoading } = useQuery({ queryKey: ['projects'], queryFn: getProjects });
+
+  const createMutation = useMutation({
+    mutationFn: createProject,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setCreateOpen(false);
+      setName('');
+      setDescription('');
+      setBudget('');
+      setEndDate('');
+      toast.success('Projet créé');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Impossible de créer le projet'),
+  });
+
+  const handleCreate = () => {
+    createMutation.mutate({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      budget: budget ? Number(budget) : 0,
+      endDate: endDate || undefined,
+      color,
+    });
+  };
 
   return (
     <div>
@@ -22,14 +63,12 @@ export function ProjectsPage() {
         title={t('nav.projects')}
         description="Gérez vos projets et suivez leur avancement"
         actions={
-          <Button
-            variant="outline"
-            disabled
-            title="Création de projet — API non disponible"
-          >
-            <Plus className="h-4 w-4" />
-            {t('common.create')}
-          </Button>
+          canWrite ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {t('common.create')}
+            </Button>
+          ) : undefined
         }
       />
 
@@ -95,6 +134,55 @@ export function ProjectsPage() {
           <div key={i} className="h-56 animate-pulse rounded-xl bg-muted" />
         ))}
       </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Créer un projet</DialogTitle>
+            <DialogDescription>Le projet démarre en statut « planning ».</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-name">Nom</Label>
+              <Input id="project-name" placeholder="Ex : Refonte site web" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-description">Description</Label>
+              <Textarea id="project-description" rows={3} placeholder="Objectif du projet…" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="project-budget">Budget (€)</Label>
+                <Input id="project-budget" type="number" min="0" placeholder="50000" value={budget} onChange={(e) => setBudget(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="project-end">Échéance</Label>
+                <Input id="project-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Couleur</Label>
+              <div className="flex gap-2">
+                {PROJECT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`h-7 w-7 rounded-full border-2 transition-transform ${color === c ? 'scale-110 border-foreground' : 'border-transparent'}`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setColor(c)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button onClick={handleCreate} disabled={!name.trim() || createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer le projet'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

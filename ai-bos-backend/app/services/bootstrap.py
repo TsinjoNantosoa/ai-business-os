@@ -56,6 +56,7 @@ def bootstrap_demo_data(session: Session) -> None:
     _bootstrap_finance_invoices(session)
     _bootstrap_workflows(session)
     _bootstrap_tasks(session)
+    _bootstrap_ops(session)
     _bootstrap_tickets(session)
     _bootstrap_documents(session)
     _bootstrap_audit_logs(session)
@@ -488,6 +489,127 @@ def _bootstrap_tasks(session: Session) -> None:
                 due_date=parse_iso_datetime(task_data["due_date"]),
                 tags=task_data["tags"],
                 created_at=parse_iso_datetime(task_data["created_at"]),
+            )
+        )
+
+
+def _bootstrap_ops(session: Session) -> None:
+    """Seed Lot B demo data (orders, campaigns, projects, events, meetings) into org-1."""
+    from datetime import datetime, timezone as _tz
+
+    from app.data.seed_ops import (
+        DEMO_CALENDAR_EVENTS,
+        DEMO_CAMPAIGNS,
+        DEMO_MEETINGS,
+        DEMO_PROJECTS,
+        DEMO_SALES_ORDERS,
+    )
+    from app.models.ops import CalendarEvent, Campaign, Meeting, Project, SalesOrder
+    from app.repositories.ops_repository import SalesOrderRepository
+
+    if SalesOrderRepository(session).count_all() > 0:
+        return
+
+    now = datetime.now(_tz.utc)
+    org_id = "org-1"
+
+    for order in DEMO_SALES_ORDERS:
+        session.add(
+            SalesOrder(
+                id=order["id"],
+                org_id=org_id,
+                order_number=order["orderNumber"],
+                customer_id=order["customerId"],
+                customer_name=order["customerName"],
+                status=order["status"],
+                amount=order["amount"],
+                currency=order["currency"],
+                date=order["date"],
+                sales_rep_id=order["salesRepId"],
+                sales_rep_name=order["salesRepName"],
+                line_items=order["lineItems"],
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    for campaign in DEMO_CAMPAIGNS:
+        session.add(
+            Campaign(
+                id=campaign["id"],
+                org_id=org_id,
+                name=campaign["name"],
+                type=campaign["type"],
+                status=campaign["status"],
+                reach=campaign["reach"],
+                open_rate=campaign["openRate"],
+                click_rate=campaign["clickRate"],
+                conversions=campaign["conversions"],
+                budget=campaign["budget"],
+                spent=campaign["spent"],
+                start_date=str(campaign["startDate"])[:10],
+                end_date=str(campaign["endDate"])[:10] if campaign.get("endDate") else None,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    for project in DEMO_PROJECTS:
+        session.add(
+            Project(
+                id=project["id"],
+                org_id=org_id,
+                name=project["name"],
+                description=project["description"],
+                status=project["status"],
+                progress=project["progress"],
+                start_date=str(project["startDate"])[:10],
+                end_date=str(project["endDate"])[:10] if project.get("endDate") else None,
+                budget=project["budget"],
+                spent=project["spent"],
+                team_members=project["teamMembers"],
+                task_count=project["taskCount"],
+                completed_tasks=project["completedTasks"],
+                color=project["color"],
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    for event in DEMO_CALENDAR_EVENTS:
+        session.add(
+            CalendarEvent(
+                id=event["id"],
+                org_id=org_id,
+                title=event["title"],
+                type=event["type"],
+                start_date=event["startDate"],
+                end_date=event.get("endDate"),
+                color=event["color"],
+                location=event.get("location"),
+                attendees=event.get("attendees") or [],
+                description=event.get("description"),
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    for meeting in DEMO_MEETINGS:
+        session.add(
+            Meeting(
+                id=meeting["id"],
+                org_id=org_id,
+                title=meeting["title"],
+                date=str(meeting["date"])[:10],
+                duration=meeting["duration"],
+                status=meeting["status"],
+                location=meeting.get("location"),
+                attendees=meeting.get("attendees") or [],
+                agenda=meeting.get("agenda") or [],
+                summary=meeting.get("summary"),
+                action_items=meeting.get("actionItems") or [],
+                created_at=now,
+                updated_at=now,
             )
         )
 

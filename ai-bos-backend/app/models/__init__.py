@@ -11,6 +11,7 @@ from app.models.kb import KbChunk, KbDocument
 from app.models.lead import Lead
 from app.models.notification import Notification
 from app.models.oauth_identity import OAuthIdentity
+from app.models.ops import CalendarEvent, Campaign, Meeting, Project, SalesOrder
 from app.models.organization import Organization
 from app.models.password_reset_token import PasswordResetToken
 from app.models.task import Task
@@ -24,6 +25,8 @@ __all__ = [
     "AuditLog",
     "BillingInvoice",
     "BillingPlan",
+    "CalendarEvent",
+    "Campaign",
     "Contact",
     "Document",
     "FeatureFlag",
@@ -32,10 +35,13 @@ __all__ = [
     "KbChunk",
     "KbDocument",
     "Lead",
+    "Meeting",
     "Notification",
     "OAuthIdentity",
     "Organization",
     "PasswordResetToken",
+    "Project",
+    "SalesOrder",
     "Subscription",
     "Task",
     "TenantFeatureOverride",

@@ -1,21 +1,69 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, Plus, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getEvents } from '@/lib/api/services';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { createEvent, getEvents } from '@/lib/api/services';
+import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
+const EVENT_TYPES = [
+  { value: 'meeting', label: 'Réunion', color: '#4f46e5' },
+  { value: 'call', label: 'Appel', color: '#0d9488' },
+  { value: 'deadline', label: 'Deadline', color: '#ef4444' },
+  { value: 'reminder', label: 'Rappel', color: '#f59e0b' },
+  { value: 'task', label: 'Tâche', color: '#8b5cf6' },
+];
+
 export function CalendarPage() {
   const { t } = useI18n();
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('calendar.write');
+  const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('month');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState('meeting');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
+  const [location, setLocation] = useState('');
   const { data: events } = useQuery({ queryKey: ['events'], queryFn: getEvents });
+
+  const createMutation = useMutation({
+    mutationFn: createEvent,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+      setCreateOpen(false);
+      setTitle('');
+      setLocation('');
+      toast.success('Événement créé');
+    },
+    onError: (err: Error) => toast.error(err.message || "Impossible de créer l'événement"),
+  });
+
+  const handleCreate = () => {
+    const color = EVENT_TYPES.find((option) => option.value === type)?.color || '#4f46e5';
+    createMutation.mutate({
+      title: title.trim(),
+      type,
+      startDate: `${date}T${startTime}:00Z`,
+      endDate: `${date}T${endTime}:00Z`,
+      color,
+      location: location.trim() || undefined,
+    });
+  };
 
   const days = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -57,7 +105,7 @@ export function CalendarPage() {
                 </Button>
               ))}
             </div>
-            <Button><Plus className="h-4 w-4" />Nouvel événement</Button>
+            {canWrite && <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />Nouvel événement</Button>}
           </>
         }
       />
@@ -113,6 +161,58 @@ export function CalendarPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nouvel événement</DialogTitle>
+            <DialogDescription>Ajoutez un événement au calendrier.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="event-title">Titre</Label>
+              <Input id="event-title" placeholder="Ex : Réunion équipe produit" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {EVENT_TYPES.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="event-date">Date</Label>
+                <Input id="event-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="event-start">Début</Label>
+                <Input id="event-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="event-end">Fin</Label>
+                <Input id="event-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="event-location">Lieu (optionnel)</Label>
+              <Input id="event-location" placeholder="Zoom, salle A…" value={location} onChange={(e) => setLocation(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button onClick={handleCreate} disabled={!title.trim() || createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer l'événement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

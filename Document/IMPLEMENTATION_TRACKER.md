@@ -282,6 +282,6 @@ npm run dev
 Voir aussi : [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`README_ETAT_IMPLEMENTATION.md`](./README_ETAT_IMPLEMENTATION.md).  
 
 **Suite suggérée :**
-1. Lot B : Marketing/Sales/Projects `POST` create
-2. Calendar/Meetings create/update
+1. ~~Lot B : Marketing/Sales/Projects `POST` create~~ ✅ terminé le 2026-07-21 (migration 017, POST/PATCH + UI sur les 5 modules)
+2. ~~Calendar/Meetings create/update~~ ✅ terminé le 2026-07-21
 3. **S29** tool registry agents / finaliser **S6** email staging

@@ -1,6 +1,6 @@
 # AI BOS — Étape suivante (déjà fait vs reste)
 
-> **Dernière mise à jour :** 2026-07-21 15:11 (UTC+3)
+> **Dernière mise à jour :** 2026-07-21 17:50 (UTC+3)
 > **Projet :** AI Business Operating System (`ai-bos`)  
 > **But :** Vue claire de ce qui est **déjà implémenté** et de ce qu’il reste à faire pour la **prochaine étape**.  
 > **Documents liés :** [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`IMPLEMENTATION_TRACKER.md`](./IMPLEMENTATION_TRACKER.md) · [`README_40_ImplementationRoadmap.md`](./README_40_ImplementationRoadmap.md) · [`README_ETAT_IMPLEMENTATION.md`](./README_ETAT_IMPLEMENTATION.md)
@@ -17,7 +17,8 @@
 | Platform Phase 1 (S9–S20) | ✅ Fait |
 | Base IA (chat SSE, RAG, workflows run) | ✅ Fait |
 | **Lot A — Auth & email** | ✅ Terminé (SMTP configurable ; credentials staging à fournir) |
-| **Prochaine étape produit** | 🟡 Lot B — CRUD Sales / Marketing / Projects / Calendar |
+| **Lot B — CRUD Sales / Marketing / Projects / Calendar** | ✅ Terminé (DB multi-tenant + POST/PATCH + UI Create) |
+| **Prochaine étape produit** | 🟡 Lot C — Outils IA pour le Copilot (S29 Tool registry) |
 | **Prochaine étape technique (roadmap)** | 🟡 Phase 2 avancée — **S29 Tool registry** |
 | Verticales Edu / Legal + scale cloud (Phase 3) | ❌ Pas démarré |
 
@@ -42,7 +43,7 @@
 - [x] Notifications in-app SSE
 - [x] Email transactionnel `log|smtp` + templates reset / invitation
 - [x] API keys M2M
-- [x] OAuth Google / Microsoft (mock + live ready)
+- [x] OAuth Google / Microsoft : Google **live testé** (PKCE + code SPA à usage unique) ; Microsoft prêt (credentials à fournir)
 - [x] GDPR export / erase
 - [x] Backup / restore + staging Docker + CI/CD GitHub Actions
 - [x] Load tests k6 baseline
@@ -155,20 +156,23 @@ Fonctionne déjà **dans** `ai-bos-backend`, mais pas encore en packages `platfo
 
 Cocher au fur et à mesure. Mettre à jour la date/heure en tête de fichier à chaque lot terminé.
 
-### Lot A — Auth & email — ✅ terminé le 2026-07-21 à 15:11 (UTC+3)
+### Lot A — Auth & email — ✅ terminé le 2026-07-21 à 17:10 (UTC+3)
 
-- [x] A1. `POST /auth/forgot-password` + `POST /auth/reset-password`
-- [x] A2. Page frontend `/forgot-password` + `/reset-password`
-- [x] A3. Service email (`log` / SMTP) + templates invitation / reset
-- [x] A4. Tests : 125 pytest, 9 Vitest, typecheck/build et smoke HTTP validés
+- [x] A1. `POST /auth/forgot-password` + `POST /auth/verify-reset-code` + `POST /auth/reset-password` (code 6 chiffres, anti brute-force)
+- [x] A2. Pages frontend `/forgot-password` + `/reset-password` en 2 étapes (code → nouveau mot de passe)
+- [x] A3. Service email (`log` / SMTP) + templates invitation / reset ; **SMTP Gmail réel validé**
+- [x] A4. OAuth Google **live** (PKCE + code SPA à usage unique) testé bout en bout ; Microsoft prêt (credentials à fournir)
+- [x] A5. Tests : 127 pytest, 8 Vitest, typecheck et smoke HTTP validés
 
-### Lot B — Mutations modules seed-only
+### Lot B — Mutations modules seed-only — ✅ terminé le 2026-07-21 à 17:50 (UTC+3)
 
-- [ ] B1. Sales : modèle/repo si besoin + `POST/PATCH` + UI Create
-- [ ] B2. Marketing : idem campagnes
-- [ ] B3. Projects : `POST/PATCH` + UI
-- [ ] B4. Calendar events + Meetings : create/update
-- [ ] B5. Tests + journal dans `README_ETAT_IMPLEMENTATION.md`
+- [x] B1. Sales : table `sales_orders` (migration 017) + `POST/PATCH /sales/orders` + wizard Create branché (lignes dynamiques, total calculé)
+- [x] B2. Marketing : table `campaigns` + `POST/PATCH /marketing/campaigns` + formulaire Create (type, budget, dates)
+- [x] B3. Projects : table `projects` + `POST/PATCH /projects` + dialog Create (couleur, budget, échéance)
+- [x] B4. Calendar events + Meetings : tables `calendar_events` / `meetings` + create/update + dialogs Create
+- [x] B5. Tests : 7 nouveaux pytest (create, patch, 403 permission, isolation tenant org-1/org-2), 136 pytest au total + 11 Vitest + typecheck ; journal mis à jour
+
+> Les 5 modules sont passés du seed en mémoire à de vraies tables multi-tenant (org_id), avec permissions `*.write`, audit log et données démo migrées en DB au bootstrap.
 
 ### Lot C — Agents S29 (dès Lot A/B stables ou en parallèle IA)
 

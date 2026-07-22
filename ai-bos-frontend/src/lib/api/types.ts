@@ -289,7 +289,7 @@ export interface Task {
 export interface CalendarEvent {
   id: string;
   title: string;
-  type: 'meeting' | 'deadline' | 'reminder' | 'task';
+  type: 'meeting' | 'deadline' | 'reminder' | 'call' | 'task';
   startDate: string;
   endDate: string;
   color: string;
@@ -371,7 +371,7 @@ export type CampaignStatus = 'draft' | 'scheduled' | 'active' | 'completed' | 'p
 export interface Campaign {
   id: string;
   name: string;
-  type: 'email' | 'social' | 'sms' | 'webinar';
+  type: 'email' | 'social' | 'sms' | 'webinar' | 'ads' | 'content';
   status: CampaignStatus;
   reach: number;
   openRate: number;

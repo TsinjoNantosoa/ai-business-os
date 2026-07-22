@@ -346,6 +346,34 @@ export async function getOrders(): Promise<T.Order[]> {
   return apiFetch<T.Order[]>('/api/v1/sales/orders');
 }
 
+export async function createOrder(input: {
+  customerName: string;
+  customerId?: string;
+  status?: string;
+  currency?: string;
+  date?: string;
+  lineItems: { description: string; quantity: number; unitPrice: number }[];
+}): Promise<T.Order> {
+  return apiFetch<T.Order>('/api/v1/sales/orders', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateOrder(
+  orderId: string,
+  input: {
+    customerName?: string;
+    status?: string;
+    lineItems?: { description: string; quantity: number; unitPrice: number }[];
+  },
+): Promise<T.Order> {
+  return apiFetch<T.Order>(`/api/v1/sales/orders/${orderId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 // --- Finance ---
 export async function getFinanceOverview(): Promise<T.FinanceOverview> {
   if (USE_MOCKS) {
@@ -370,6 +398,41 @@ export async function getProjects(): Promise<T.Project[]> {
     return MOCK_PROJECTS;
   }
   return apiFetch<T.Project[]>('/api/v1/projects');
+}
+
+export async function createProject(input: {
+  name: string;
+  description?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  color?: string;
+}): Promise<T.Project> {
+  return apiFetch<T.Project>('/api/v1/projects', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateProject(
+  projectId: string,
+  input: {
+    name?: string;
+    description?: string;
+    status?: string;
+    progress?: number;
+    startDate?: string;
+    endDate?: string;
+    budget?: number;
+    spent?: number;
+    color?: string;
+  },
+): Promise<T.Project> {
+  return apiFetch<T.Project>(`/api/v1/projects/${projectId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 // --- Tasks ---
@@ -448,6 +511,38 @@ export async function getCampaigns(): Promise<T.Campaign[]> {
     return MOCK_CAMPAIGNS;
   }
   return apiFetch<T.Campaign[]>('/api/v1/marketing/campaigns');
+}
+
+export async function createCampaign(input: {
+  name: string;
+  type?: string;
+  status?: string;
+  budget?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<T.Campaign> {
+  return apiFetch<T.Campaign>('/api/v1/marketing/campaigns', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateCampaign(
+  campaignId: string,
+  input: {
+    name?: string;
+    type?: string;
+    status?: string;
+    budget?: number;
+    spent?: number;
+    startDate?: string;
+    endDate?: string;
+  },
+): Promise<T.Campaign> {
+  return apiFetch<T.Campaign>(`/api/v1/marketing/campaigns/${campaignId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 // --- Support ---
@@ -581,6 +676,41 @@ export async function getEvents(): Promise<T.CalendarEvent[]> {
   return apiFetch<T.CalendarEvent[]>('/api/v1/calendar/events');
 }
 
+export async function createEvent(input: {
+  title: string;
+  type?: string;
+  startDate: string;
+  endDate?: string;
+  color?: string;
+  location?: string;
+  attendees?: string[];
+  description?: string;
+}): Promise<T.CalendarEvent> {
+  return apiFetch<T.CalendarEvent>('/api/v1/calendar/events', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateEvent(
+  eventId: string,
+  input: {
+    title?: string;
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+    color?: string;
+    location?: string;
+    attendees?: string[];
+    description?: string;
+  },
+): Promise<T.CalendarEvent> {
+  return apiFetch<T.CalendarEvent>(`/api/v1/calendar/events/${eventId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 // --- Meetings ---
 export async function getMeetings(): Promise<T.Meeting[]> {
   if (USE_MOCKS) {
@@ -588,6 +718,37 @@ export async function getMeetings(): Promise<T.Meeting[]> {
     return MOCK_MEETINGS;
   }
   return apiFetch<T.Meeting[]>('/api/v1/meetings');
+}
+
+export async function createMeeting(input: {
+  title: string;
+  date: string;
+  duration?: number;
+  location?: string;
+  agenda?: string[];
+}): Promise<T.Meeting> {
+  return apiFetch<T.Meeting>('/api/v1/meetings', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateMeeting(
+  meetingId: string,
+  input: {
+    title?: string;
+    date?: string;
+    duration?: number;
+    status?: string;
+    location?: string;
+    agenda?: string[];
+    summary?: string;
+  },
+): Promise<T.Meeting> {
+  return apiFetch<T.Meeting>(`/api/v1/meetings/${meetingId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 // --- Documents ---

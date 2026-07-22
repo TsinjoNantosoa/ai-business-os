@@ -12,6 +12,7 @@ from app.models.finance_invoice import FinanceInvoice
 from app.models.invitation import Invitation
 from app.models.lead import Lead
 from app.models.notification import Notification
+from app.models.ops import CalendarEvent, Campaign, Meeting, Project, SalesOrder
 from app.models.organization import Organization
 from app.models.task import Task
 from app.models.ticket import Ticket, TicketMessage
@@ -313,6 +314,86 @@ def api_key_to_dict(api_key: ApiKey) -> dict:
         "createdAt": api_key.created_at.isoformat(),
         "lastUsedAt": api_key.last_used_at.isoformat() if api_key.last_used_at else None,
         "revokedAt": api_key.revoked_at.isoformat() if api_key.revoked_at else None,
+    }
+
+
+def sales_order_to_dict(order: SalesOrder) -> dict:
+    return {
+        "id": order.id,
+        "orderNumber": order.order_number,
+        "customerId": order.customer_id,
+        "customerName": order.customer_name,
+        "status": order.status,
+        "amount": order.amount,
+        "currency": order.currency,
+        "date": order.date,
+        "salesRepId": order.sales_rep_id,
+        "salesRepName": order.sales_rep_name,
+        "lineItems": order.line_items or [],
+    }
+
+
+def campaign_to_dict(campaign: Campaign) -> dict:
+    return {
+        "id": campaign.id,
+        "name": campaign.name,
+        "type": campaign.type,
+        "status": campaign.status,
+        "reach": campaign.reach,
+        "openRate": campaign.open_rate,
+        "clickRate": campaign.click_rate,
+        "conversions": campaign.conversions,
+        "budget": campaign.budget,
+        "spent": campaign.spent,
+        "startDate": campaign.start_date,
+        "endDate": campaign.end_date,
+    }
+
+
+def project_to_dict(project: Project) -> dict:
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "status": project.status,
+        "progress": project.progress,
+        "startDate": project.start_date,
+        "endDate": project.end_date,
+        "budget": project.budget,
+        "spent": project.spent,
+        "teamMembers": project.team_members or [],
+        "taskCount": project.task_count,
+        "completedTasks": project.completed_tasks,
+        "color": project.color,
+    }
+
+
+def calendar_event_to_dict(event: CalendarEvent) -> dict:
+    return {
+        "id": event.id,
+        "title": event.title,
+        "type": event.type,
+        "startDate": event.start_date,
+        "endDate": event.end_date,
+        "color": event.color,
+        "location": event.location,
+        "attendees": event.attendees or [],
+        "description": event.description,
+    }
+
+
+def meeting_to_dict(meeting: Meeting) -> dict:
+    return {
+        "id": meeting.id,
+        "title": meeting.title,
+        "date": meeting.date,
+        "duration": meeting.duration,
+        "status": meeting.status,
+        "location": meeting.location,
+        "attendees": meeting.attendees or [],
+        "agenda": meeting.agenda or [],
+        "summary": meeting.summary,
+        "actionItems": meeting.action_items or [],
     }
 
 

@@ -152,3 +152,105 @@ class InvitationAcceptBody(BaseModel):
     firstName: str = Field(min_length=1, max_length=128)
     lastName: str = Field(min_length=1, max_length=128)
     password: str = Field(min_length=6, max_length=128)
+
+
+class OrderLineItemBody(BaseModel):
+    description: str = Field(min_length=1, max_length=255)
+    quantity: int = Field(ge=1)
+    unitPrice: float = Field(ge=0)
+
+
+class OrderCreateBody(BaseModel):
+    customerName: str = Field(min_length=1, max_length=255)
+    customerId: str | None = None
+    status: str = "draft"
+    currency: str = "EUR"
+    date: str | None = None
+    lineItems: list[OrderLineItemBody] = Field(min_length=1)
+
+
+class OrderUpdateBody(BaseModel):
+    customerName: str | None = Field(default=None, min_length=1, max_length=255)
+    status: str | None = None
+    lineItems: list[OrderLineItemBody] | None = None
+
+
+class CampaignCreateBody(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    type: str = "email"
+    status: str = "draft"
+    budget: float = Field(ge=0, default=0)
+    startDate: str | None = None
+    endDate: str | None = None
+
+
+class CampaignUpdateBody(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    type: str | None = None
+    status: str | None = None
+    budget: float | None = Field(default=None, ge=0)
+    spent: float | None = Field(default=None, ge=0)
+    startDate: str | None = None
+    endDate: str | None = None
+
+
+class ProjectCreateBody(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    status: str = "planning"
+    startDate: str | None = None
+    endDate: str | None = None
+    budget: float = Field(ge=0, default=0)
+    color: str = Field(default="#4f46e5", max_length=16)
+
+
+class ProjectUpdateBody(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    status: str | None = None
+    progress: int | None = Field(default=None, ge=0, le=100)
+    startDate: str | None = None
+    endDate: str | None = None
+    budget: float | None = Field(default=None, ge=0)
+    spent: float | None = Field(default=None, ge=0)
+    color: str | None = Field(default=None, max_length=16)
+
+
+class CalendarEventCreateBody(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    type: str = "meeting"
+    startDate: str
+    endDate: str | None = None
+    color: str = Field(default="#4f46e5", max_length=16)
+    location: str | None = Field(default=None, max_length=255)
+    attendees: list[str] = Field(default_factory=list)
+    description: str | None = Field(default=None, max_length=2000)
+
+
+class CalendarEventUpdateBody(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    type: str | None = None
+    startDate: str | None = None
+    endDate: str | None = None
+    color: str | None = Field(default=None, max_length=16)
+    location: str | None = Field(default=None, max_length=255)
+    attendees: list[str] | None = None
+    description: str | None = Field(default=None, max_length=2000)
+
+
+class MeetingCreateBody(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    date: str
+    duration: int = Field(ge=5, le=600, default=30)
+    location: str | None = Field(default=None, max_length=255)
+    agenda: list[str] = Field(default_factory=list)
+
+
+class MeetingUpdateBody(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    date: str | None = None
+    duration: int | None = Field(default=None, ge=5, le=600)
+    status: str | None = None
+    location: str | None = Field(default=None, max_length=255)
+    agenda: list[str] | None = None
+    summary: str | None = Field(default=None, max_length=4000)

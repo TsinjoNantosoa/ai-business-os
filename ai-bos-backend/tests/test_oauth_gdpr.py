@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, urlparse
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
@@ -9,6 +10,15 @@ from app.main import app
 from app.services.oauth_service import create_oauth_login_code
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _oauth_mock_mode(monkeypatch):
+    """Force mock mode even if real OAuth credentials are present in .env."""
+    monkeypatch.setattr(settings, "google_client_id", None)
+    monkeypatch.setattr(settings, "google_client_secret", None)
+    monkeypatch.setattr(settings, "microsoft_client_id", None)
+    monkeypatch.setattr(settings, "microsoft_client_secret", None)
 
 
 def login(email: str = "ceo@demo.aibos.io") -> str:

@@ -1,24 +1,68 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Mail, Megaphone, Users, MousePointerClick, Target,
-  DollarSign, Eye, Calendar, ArrowRight, Check,
+  DollarSign, Eye, Calendar, Loader2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { getCampaigns } from '@/lib/api/services';
+import { createCampaign, getCampaigns } from '@/lib/api/services';
+import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { cn, formatCurrency, formatNumber, formatPercent, formatDate } from '@/lib/utils';
+import { toast } from 'sonner';
+
+const CAMPAIGN_TYPES = [
+  { value: 'email', label: 'Email' },
+  { value: 'social', label: 'Réseaux sociaux' },
+  { value: 'ads', label: 'Publicité (Ads)' },
+  { value: 'webinar', label: 'Webinar' },
+  { value: 'content', label: 'Contenu / SEO' },
+  { value: 'sms', label: 'SMS' },
+];
 
 export function MarketingCampaignsPage() {
   const { t } = useI18n();
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('marketing.campaign.write');
+  const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
-  const [wizardStep, setWizardStep] = useState(0);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('email');
+  const [budget, setBudget] = useState('');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState('');
   const { data: campaigns } = useQuery({ queryKey: ['campaigns'], queryFn: getCampaigns });
+
+  const createMutation = useMutation({
+    mutationFn: createCampaign,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      setCreateOpen(false);
+      setName('');
+      setType('email');
+      setBudget('');
+      setEndDate('');
+      toast.success('Campagne créée');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Impossible de créer la campagne'),
+  });
+
+  const handleCreate = () => {
+    createMutation.mutate({
+      name: name.trim(),
+      type,
+      budget: budget ? Number(budget) : 0,
+      startDate,
+      endDate: endDate || undefined,
+    });
+  };
 
   const totalReach = (campaigns || []).reduce((s, c) => s + c.reach, 0);
   const totalConversions = (campaigns || []).reduce((s, c) => s + c.conversions, 0);
@@ -29,7 +73,7 @@ export function MarketingCampaignsPage() {
       <PageHeader
         title={t('nav.marketing')}
         description="Gérez vos campagnes marketing"
-        actions={<Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />Nouvelle campagne</Button>}
+        actions={canWrite ? <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />Nouvelle campagne</Button> : undefined}
       />
 
       {/* Summary */}
@@ -60,11 +104,13 @@ export function MarketingCampaignsPage() {
                     c.type === 'social' && 'bg-pink-50 text-pink-600',
                     c.type === 'sms' && 'bg-emerald-50 text-emerald-600',
                     c.type === 'webinar' && 'bg-amber-50 text-amber-600',
+                    (c.type === 'ads' || c.type === 'content') && 'bg-violet-50 text-violet-600',
                   )}>
                     {c.type === 'email' && <Mail className="h-5 w-5" />}
                     {c.type === 'social' && <Megaphone className="h-5 w-5" />}
                     {c.type === 'sms' && <Mail className="h-5 w-5" />}
                     {c.type === 'webinar' && <Users className="h-5 w-5" />}
+                    {(c.type === 'ads' || c.type === 'content') && <Target className="h-5 w-5" />}
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold">{c.name}</h3>
@@ -105,63 +151,50 @@ export function MarketingCampaignsPage() {
         ))}
       </div>
 
-      {/* Create wizard */}
+      {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Créer une campagne</DialogTitle>
-            <DialogDescription>Étape {wizardStep + 1} sur 3</DialogDescription>
+            <DialogDescription>La campagne est créée en brouillon.</DialogDescription>
           </DialogHeader>
-          <div className="flex items-center justify-between mb-4">
-            {['Audience', 'Contenu', 'Planification'].map((step, i) => (
-              <div key={i} className="flex items-center">
-                <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium',
-                  i <= wizardStep ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
-                )}>
-                  {i < wizardStep ? <Check className="h-4 w-4" /> : i + 1}
-                </div>
-                {i < 2 && <div className={cn('mx-1 h-0.5 w-12', i < wizardStep ? 'bg-primary' : 'bg-muted')} />}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="campaign-name">Nom</Label>
+              <Input id="campaign-name" placeholder="Ex : Newsletter rentrée 2026" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CAMPAIGN_TYPES.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
+              <div className="space-y-2">
+                <Label htmlFor="campaign-budget">Budget (€)</Label>
+                <Input id="campaign-budget" type="number" min="0" placeholder="5000" value={budget} onChange={(e) => setBudget(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="campaign-start">Début</Label>
+                <Input id="campaign-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="campaign-end">Fin (optionnel)</Label>
+                <Input id="campaign-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+            </div>
           </div>
-          {wizardStep === 0 && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Sélectionnez votre audience cible</p>
-              {['Tous les contacts', 'Clients actifs', 'Leads qualifiés', 'Clients inactifs'].map((a) => (
-                <div key={a} className="flex items-center justify-between rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/50">
-                  <span className="text-sm">{a}</span>
-                  <span className="text-xs text-muted-foreground">{Math.floor(Math.random() * 500)} contacts</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {wizardStep === 1 && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Contenu de la campagne</p>
-              <div className="rounded-lg border border-border p-3">
-                <p className="text-xs text-muted-foreground mb-1">Aperçu email</p>
-                <p className="text-sm font-semibold">Objet: Offre spéciale été 2024</p>
-                <p className="mt-2 text-sm text-muted-foreground">Bonjour {`{prénom}`}, découvrez nos offres exclusives...</p>
-              </div>
-            </div>
-          )}
-          {wizardStep === 2 && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Planification</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/50">
-                  <p className="text-sm font-medium">Envoyer maintenant</p>
-                </div>
-                <div className="rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/50">
-                  <p className="text-sm font-medium">Planifier</p>
-                </div>
-              </div>
-            </div>
-          )}
           <DialogFooter>
-            {wizardStep > 0 && <Button variant="outline" onClick={() => setWizardStep(wizardStep - 1)}>Retour</Button>}
-            <Button onClick={() => wizardStep < 2 ? setWizardStep(wizardStep + 1) : setCreateOpen(false)}>
-              {wizardStep < 2 ? <>Suivant <ArrowRight className="h-4 w-4" /></> : 'Créer la campagne'}
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button onClick={handleCreate} disabled={!name.trim() || createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer la campagne'}
             </Button>
           </DialogFooter>
         </DialogContent>
