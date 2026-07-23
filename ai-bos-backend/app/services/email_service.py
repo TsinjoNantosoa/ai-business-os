@@ -76,6 +76,10 @@ class EmailService:
             ),
         )
 
+    def send(self, *, recipient: str, subject: str, text: str) -> None:
+        """Generic transactional send (workflows, alerts)."""
+        self._send(recipient=recipient, subject=subject, text=text)
+
     def _send(self, *, recipient: str, subject: str, text: str) -> None:
         delivery = EmailDelivery(recipient=recipient, subject=subject, text=text)
         if self.mode == "log":
@@ -89,7 +93,7 @@ class EmailService:
         message["Subject"] = subject
         message.set_content(text)
 
-        with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as smtp:
+        with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=8) as smtp:
             if self.smtp_use_tls:
                 smtp.starttls()
             if self.smtp_user:

@@ -55,8 +55,10 @@ def bootstrap_demo_data(session: Session) -> None:
     _bootstrap_leads_and_activities(session)
     _bootstrap_finance_invoices(session)
     _bootstrap_workflows(session)
+    _bootstrap_webhooks(session)
     _bootstrap_tasks(session)
     _bootstrap_ops(session)
+    _bootstrap_catalog(session)
     _bootstrap_tickets(session)
     _bootstrap_documents(session)
     _bootstrap_audit_logs(session)
@@ -65,6 +67,214 @@ def bootstrap_demo_data(session: Session) -> None:
     _bootstrap_notifications(session)
     _bootstrap_api_keys(session)
     session.commit()
+
+
+def _bootstrap_catalog(session: Session) -> None:
+    """Seed remaining modules (HR, procurement, analytics, …) into DB for org-1."""
+    from app.data.seed_ops import DEMO_BI_REPORTS, DEMO_EMPLOYEES, DEMO_FINANCE_OVERVIEW
+    from app.models.catalog import (
+        AiAgent,
+        Candidate,
+        Contract,
+        Employee,
+        FinanceTransaction,
+        InventoryItem,
+        JobOpening,
+        KnowledgeArticle,
+        PurchaseOrder,
+        Supplier,
+    )
+    from app.repositories.catalog_repository import CatalogRepository
+
+    repo = CatalogRepository(session)
+    org_id = "org-1"
+
+    if repo.count_all(Employee) == 0:
+        for i, emp in enumerate(DEMO_EMPLOYEES):
+            manager_id = None
+            if i > 0:
+                manager_id = DEMO_EMPLOYEES[max(0, (i - 1) // 3)]["id"] if i > 2 else DEMO_EMPLOYEES[0]["id"]
+            session.add(
+                Employee(
+                    id=emp["id"],
+                    org_id=org_id,
+                    first_name=emp["firstName"],
+                    last_name=emp["lastName"],
+                    email=emp["email"],
+                    phone=emp.get("phone"),
+                    position=emp["position"],
+                    department=emp["department"],
+                    start_date=emp["startDate"],
+                    status=emp["status"],
+                    avatar_color=emp.get("avatarColor"),
+                    salary=emp.get("salary"),
+                    location=emp.get("location"),
+                    manager_id=manager_id,
+                )
+            )
+
+    if repo.count_all(JobOpening) == 0:
+        for job in seed.JOB_OPENINGS:
+            session.add(
+                JobOpening(
+                    id=job["id"],
+                    org_id=org_id,
+                    title=job["title"],
+                    department=job["department"],
+                    status=job["status"],
+                    applicants=job["applicants"],
+                    posted_date=str(job["postedDate"])[:10] if job.get("postedDate") else "",
+                    location=job["location"],
+                    type=job["type"],
+                )
+            )
+
+    if repo.count_all(Candidate) == 0:
+        for cand in seed.CANDIDATES:
+            session.add(
+                Candidate(
+                    id=cand["id"],
+                    org_id=org_id,
+                    name=cand["name"],
+                    email=cand["email"],
+                    job_id=cand.get("jobId"),
+                    job_title=cand.get("jobTitle"),
+                    stage=cand["stage"],
+                    score=cand["score"],
+                    avatar_color=cand.get("avatarColor"),
+                    applied_at=str(cand["appliedAt"])[:32],
+                )
+            )
+
+    if repo.count_all(Supplier) == 0:
+        for s in seed.SUPPLIERS:
+            session.add(
+                Supplier(
+                    id=s["id"],
+                    org_id=org_id,
+                    name=s["name"],
+                    email=s["email"],
+                    phone=s.get("phone"),
+                    rating=s["rating"],
+                    country=s["country"],
+                    status=s["status"],
+                )
+            )
+
+    if repo.count_all(PurchaseOrder) == 0:
+        for po in seed.PURCHASE_ORDERS:
+            session.add(
+                PurchaseOrder(
+                    id=po["id"],
+                    org_id=org_id,
+                    po_number=po["poNumber"],
+                    supplier_id=po.get("supplierId"),
+                    supplier_name=po["supplierName"],
+                    status=po["status"],
+                    total_amount=po["totalAmount"],
+                    currency=po["currency"],
+                    created_at_iso=str(po["createdAt"])[:32],
+                    expected_at=str(po["expectedAt"])[:32],
+                    owner_name=po["ownerName"],
+                    item_count=po["itemCount"],
+                )
+            )
+
+    if repo.count_all(Contract) == 0:
+        for c in seed.CONTRACTS:
+            session.add(
+                Contract(
+                    id=c["id"],
+                    org_id=org_id,
+                    title=c["title"],
+                    type=c["type"],
+                    counterparty=c["counterparty"],
+                    value=c["value"],
+                    currency=c["currency"],
+                    start_date=str(c["startDate"])[:32],
+                    end_date=str(c["endDate"])[:32] if c.get("endDate") else None,
+                    status=c["status"],
+                    owner=c["owner"],
+                )
+            )
+
+    if repo.count_all(InventoryItem) == 0:
+        for item in seed.INVENTORY_ITEMS:
+            session.add(
+                InventoryItem(
+                    id=item["id"],
+                    org_id=org_id,
+                    sku=item["sku"],
+                    name=item["name"],
+                    category=item["category"],
+                    quantity=item["quantity"],
+                    reorder_level=item["reorderLevel"],
+                    warehouse=item["warehouse"],
+                    unit_price=item["unitPrice"],
+                    status=item["status"],
+                )
+            )
+
+    if repo.count_all(FinanceTransaction) == 0:
+        for tx in DEMO_FINANCE_OVERVIEW["recentTransactions"]:
+            session.add(
+                FinanceTransaction(
+                    id=tx["id"],
+                    org_id=org_id,
+                    description=tx["description"],
+                    amount=tx["amount"],
+                    type=tx["type"],
+                    category=tx["category"],
+                    date=tx["date"],
+                    account=tx["account"],
+                )
+            )
+
+    if repo.count_all(KnowledgeArticle) == 0:
+        for art in seed.KNOWLEDGE_ARTICLES:
+            session.add(
+                KnowledgeArticle(
+                    id=art["id"],
+                    org_id=org_id,
+                    title=art["title"],
+                    category=art["category"],
+                    excerpt=art["excerpt"],
+                    content=art["content"],
+                    author=art["author"],
+                    updated_at_iso=str(art["updatedAt"])[:32],
+                    views=art["views"],
+                    helpful=art["helpful"],
+                )
+            )
+
+    if repo.count_all(AiAgent) == 0:
+        for agent in seed.AI_AGENTS:
+            session.add(
+                AiAgent(
+                    id=agent["id"],
+                    org_id=org_id,
+                    slug=agent["slug"],
+                    name=agent["name"],
+                    description=agent["description"],
+                    status=agent["status"],
+                    category=agent["category"],
+                    icon=agent["icon"],
+                    tools_count=agent["toolsCount"],
+                    last_used=str(agent["lastUsed"])[:32] if agent.get("lastUsed") else None,
+                    conversations=agent["conversations"],
+                )
+            )
+
+    if repo.get_dataset(org_id, "finance_overview") is None:
+        repo.upsert_dataset(org_id, "finance_overview", DEMO_FINANCE_OVERVIEW)
+    if repo.get_dataset(org_id, "analytics_kpis") is None:
+        repo.upsert_dataset(org_id, "analytics_kpis", seed.ANALYTICS_KPIS)
+    if repo.get_dataset(org_id, "bi_reports") is None:
+        repo.upsert_dataset(org_id, "bi_reports", {"items": DEMO_BI_REPORTS})
+    for horizon in ("7d", "30d", "90d"):
+        key = f"forecast_{horizon}"
+        if repo.get_dataset(org_id, key) is None:
+            repo.upsert_dataset(org_id, key, seed.forecast_data(horizon))
 
 
 def _bootstrap_organizations_and_users(session: Session) -> None:
@@ -465,6 +675,21 @@ def _bootstrap_workflows(session: Session) -> None:
                 success_rate=workflow_data["success_rate"],
             )
         )
+
+
+def _bootstrap_webhooks(session: Session) -> None:
+    """Default inbound webhook for org-1 (Lot F / S33)."""
+    from app.services.event_bus import WebhookEndpointRepository
+
+    repo = WebhookEndpointRepository(session)
+    if repo.count_by_org("org-1") > 0:
+        return
+    repo.create(
+        org_id="org-1",
+        name="Inbound démo",
+        description="Webhook entrant démo — Lot F / S33",
+        event_types=["webhook.inbound", "crm.lead.created"],
+    )
 
 
 def _bootstrap_tasks(session: Session) -> None:

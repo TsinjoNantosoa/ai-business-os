@@ -33,13 +33,22 @@ class WorkflowRepository:
         )
         return list(self._session.scalars(stmt).all())
 
-    def create_execution(self, *, org_id: str, workflow_id: str) -> WorkflowExecution:
+    def create_execution(
+        self,
+        *,
+        org_id: str,
+        workflow_id: str,
+        event_id: str | None = None,
+        trigger_source: str | None = None,
+    ) -> WorkflowExecution:
         execution = WorkflowExecution(
             id=f"wfx-{secrets.token_hex(6)}",
             org_id=org_id,
             workflow_id=workflow_id,
             status="running",
             started_at=datetime.now(timezone.utc),
+            event_id=event_id,
+            trigger_source=trigger_source,
         )
         self._session.add(execution)
         self._session.flush()

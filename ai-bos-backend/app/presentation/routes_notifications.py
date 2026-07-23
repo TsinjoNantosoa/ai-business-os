@@ -82,6 +82,9 @@ def build_notifications_router() -> APIRouter:
         def event_generator() -> Iterator[str]:
             q = notification_hub.subscribe(org_id)
             sent = 0
+            idle_pings = 0
+            # Cap stream lifetime so uvicorn --reload is not stuck on open SSE sockets.
+            max_idle_pings = 15  # ~5 min with 20s timeout
             try:
                 yield encode_sse({"type": "connected", "orgId": org_id})
                 sent += 1
@@ -90,12 +93,17 @@ def build_notifications_router() -> APIRouter:
                 while True:
                     try:
                         event = q.get(timeout=5 if max_events else 20)
+                        idle_pings = 0
                         yield encode_sse(event)
                         sent += 1
                         if max_events is not None and sent >= max_events:
                             return
                     except queue.Empty:
                         if max_events is not None:
+                            return
+                        idle_pings += 1
+                        if idle_pings >= max_idle_pings:
+                            yield encode_sse({"type": "reconnect", "reason": "idle_timeout"})
                             return
                         yield ": ping\n\n"
             finally:

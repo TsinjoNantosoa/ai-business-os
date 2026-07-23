@@ -488,6 +488,47 @@ export async function getEmployees(): Promise<T.Employee[]> {
   return apiFetch<T.Employee[]>('/api/v1/hr/employees');
 }
 
+export async function createEmployee(input: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  position: string;
+  department: string;
+  startDate?: string;
+  status?: string;
+  salary?: number;
+  location?: string;
+  managerId?: string;
+}): Promise<T.Employee> {
+  return apiFetch<T.Employee>('/api/v1/hr/employees', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateEmployee(
+  employeeId: string,
+  input: Partial<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    position: string;
+    department: string;
+    startDate: string;
+    status: string;
+    salary: number;
+    location: string;
+    managerId: string;
+  }>,
+): Promise<T.Employee> {
+  return apiFetch<T.Employee>(`/api/v1/hr/employees/${employeeId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getJobOpenings(): Promise<T.JobOpening[]> {
   if (USE_MOCKS) {
     const { MOCK_JOB_OPENINGS } = await import('./mocks/projects');
@@ -496,12 +537,74 @@ export async function getJobOpenings(): Promise<T.JobOpening[]> {
   return apiFetch<T.JobOpening[]>('/api/v1/hr/jobs');
 }
 
+export async function createJobOpening(input: {
+  title: string;
+  department: string;
+  status?: string;
+  location: string;
+  type?: string;
+  postedDate?: string;
+}): Promise<T.JobOpening> {
+  return apiFetch<T.JobOpening>('/api/v1/hr/jobs', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateJobOpening(
+  jobId: string,
+  input: Partial<{
+    title: string;
+    department: string;
+    status: string;
+    location: string;
+    type: string;
+    applicants: number;
+  }>,
+): Promise<T.JobOpening> {
+  return apiFetch<T.JobOpening>(`/api/v1/hr/jobs/${jobId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getCandidates(): Promise<T.Candidate[]> {
   if (USE_MOCKS) {
     const { MOCK_CANDIDATES } = await import('./mocks/projects');
     return MOCK_CANDIDATES;
   }
   return apiFetch<T.Candidate[]>('/api/v1/hr/candidates');
+}
+
+export async function createCandidate(input: {
+  name: string;
+  email: string;
+  jobId?: string;
+  jobTitle?: string;
+  stage?: string;
+  score?: number;
+}): Promise<T.Candidate> {
+  return apiFetch<T.Candidate>('/api/v1/hr/candidates', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateCandidate(
+  candidateId: string,
+  input: Partial<{
+    name: string;
+    email: string;
+    jobId: string;
+    jobTitle: string;
+    stage: string;
+    score: number;
+  }>,
+): Promise<T.Candidate> {
+  return apiFetch<T.Candidate>(`/api/v1/hr/candidates/${candidateId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 // --- Marketing ---
@@ -667,6 +770,33 @@ export async function getWorkflowExecutions(): Promise<T.WorkflowExecution[]> {
   return apiFetch<T.WorkflowExecution[]>('/api/v1/workflows/executions');
 }
 
+export async function getDomainEvents(): Promise<T.DomainEvent[]> {
+  return apiFetch<T.DomainEvent[]>('/api/v1/events');
+}
+
+export async function getEventCatalog(): Promise<T.EventCatalogItem[]> {
+  return apiFetch<T.EventCatalogItem[]>('/api/v1/events/catalog');
+}
+
+export async function getWebhookEndpoints(): Promise<T.WebhookEndpoint[]> {
+  return apiFetch<T.WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
+}
+
+export async function createWebhookEndpoint(payload: {
+  name: string;
+  description?: string;
+  eventTypes?: string[];
+}): Promise<T.WebhookEndpoint> {
+  return apiFetch<T.WebhookEndpoint>('/api/v1/webhooks/endpoints', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteWebhookEndpoint(endpointId: string): Promise<void> {
+  await apiFetch(`/api/v1/webhooks/endpoints/${endpointId}`, { method: 'DELETE' });
+}
+
 // --- Agents ---
 export async function getAgents(): Promise<T.Agent[]> {
   if (USE_MOCKS) {
@@ -676,6 +806,22 @@ export async function getAgents(): Promise<T.Agent[]> {
   return apiFetch<T.Agent[]>('/api/v1/ai/agents');
 }
 
+export async function getAiUsageSummary(days = 30): Promise<T.AiUsageSummary> {
+  return apiFetch<T.AiUsageSummary>(`/api/v1/ai/usage/summary?days=${days}`);
+}
+
+export async function getAiTraces(limit = 30): Promise<T.AiTrace[]> {
+  return apiFetch<T.AiTrace[]>(`/api/v1/ai/traces?limit=${limit}`);
+}
+
+export async function getAgentDocs(): Promise<T.AgentDocs> {
+  return apiFetch<T.AgentDocs>('/api/v1/ai/docs');
+}
+
+export async function getAgentDocsGuide(): Promise<T.AgentDocsGuide> {
+  return apiFetch<T.AgentDocsGuide>('/api/v1/ai/docs/guide');
+}
+
 // --- Inventory ---
 export async function getInventory(): Promise<T.InventoryItem[]> {
   if (USE_MOCKS) {
@@ -683,6 +829,41 @@ export async function getInventory(): Promise<T.InventoryItem[]> {
     return MOCK_INVENTORY;
   }
   return apiFetch<T.InventoryItem[]>('/api/v1/inventory/items');
+}
+
+export async function createInventoryItem(input: {
+  sku: string;
+  name: string;
+  category: string;
+  quantity?: number;
+  reorderLevel?: number;
+  warehouse: string;
+  unitPrice?: number;
+  status?: string;
+}): Promise<T.InventoryItem> {
+  return apiFetch<T.InventoryItem>('/api/v1/inventory/items', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateInventoryItem(
+  itemId: string,
+  input: Partial<{
+    sku: string;
+    name: string;
+    category: string;
+    quantity: number;
+    reorderLevel: number;
+    warehouse: string;
+    unitPrice: number;
+    status: string;
+  }>,
+): Promise<T.InventoryItem> {
+  return apiFetch<T.InventoryItem>(`/api/v1/inventory/items/${itemId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 // --- Calendar ---
@@ -860,6 +1041,37 @@ export async function getTransactions(): Promise<T.Transaction[]> {
   return apiFetch<T.Transaction[]>('/api/v1/finance/transactions');
 }
 
+export async function createTransaction(input: {
+  description: string;
+  amount: number;
+  type?: string;
+  category: string;
+  date?: string;
+  account: string;
+}): Promise<T.Transaction> {
+  return apiFetch<T.Transaction>('/api/v1/finance/transactions', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateTransaction(
+  txId: string,
+  input: Partial<{
+    description: string;
+    amount: number;
+    type: string;
+    category: string;
+    date: string;
+    account: string;
+  }>,
+): Promise<T.Transaction> {
+  return apiFetch<T.Transaction>(`/api/v1/finance/transactions/${txId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 // --- Procurement ---
 export async function getSuppliers(): Promise<T.Supplier[]> {
   if (USE_MOCKS) {
@@ -869,12 +1081,76 @@ export async function getSuppliers(): Promise<T.Supplier[]> {
   return apiFetch<T.Supplier[]>('/api/v1/procurement/suppliers');
 }
 
+export async function createSupplier(input: {
+  name: string;
+  email: string;
+  phone?: string;
+  rating?: number;
+  country?: string;
+  status?: string;
+}): Promise<T.Supplier> {
+  return apiFetch<T.Supplier>('/api/v1/procurement/suppliers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateSupplier(
+  supplierId: string,
+  input: Partial<{
+    name: string;
+    email: string;
+    phone: string;
+    rating: number;
+    country: string;
+    status: string;
+  }>,
+): Promise<T.Supplier> {
+  return apiFetch<T.Supplier>(`/api/v1/procurement/suppliers/${supplierId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getPurchaseOrders(): Promise<T.PurchaseOrder[]> {
   if (USE_MOCKS) {
     const { MOCK_PURCHASE_ORDERS } = await import('./mocks/procurement');
     return MOCK_PURCHASE_ORDERS;
   }
   return apiFetch<T.PurchaseOrder[]>('/api/v1/procurement/purchase-orders');
+}
+
+export async function createPurchaseOrder(input: {
+  supplierId?: string;
+  supplierName: string;
+  status?: string;
+  totalAmount?: number;
+  currency?: string;
+  expectedAt?: string;
+  itemCount?: number;
+}): Promise<T.PurchaseOrder> {
+  return apiFetch<T.PurchaseOrder>('/api/v1/procurement/purchase-orders', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updatePurchaseOrder(
+  poId: string,
+  input: Partial<{
+    supplierId: string;
+    supplierName: string;
+    status: string;
+    totalAmount: number;
+    currency: string;
+    expectedAt: string;
+    itemCount: number;
+  }>,
+): Promise<T.PurchaseOrder> {
+  return apiFetch<T.PurchaseOrder>(`/api/v1/procurement/purchase-orders/${poId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 // --- Audit Logs ---

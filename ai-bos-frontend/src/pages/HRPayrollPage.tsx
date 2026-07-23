@@ -1,19 +1,21 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Search, FileText } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Search, FileText, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ExportMenu } from '@/components/shared/ExportMenu'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { useAuth } from '@/lib/auth/store'
 import { useI18n } from '@/lib/i18n/store'
 import { formatCurrency } from '@/lib/utils'
-import { getEmployees } from '@/lib/api/services'
+import { getEmployees, updateEmployee } from '@/lib/api/services'
 import type { Employee } from '@/lib/api/types'
 import { exportTextPdf, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
@@ -24,6 +26,9 @@ type PayrollRow = Employee & { gross: number; net: number; taxes: number }
 
 export function HRPayrollPage() {
   const { t } = useI18n()
+  const { hasPermission } = useAuth()
+  const canWrite = hasPermission('hr.employee.write')
+  const queryClient = useQueryClient()
 
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: getEmployees })
 
@@ -36,6 +41,7 @@ export function HRPayrollPage() {
   const [department, setDepartment] = useState<string>('all')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Employee | null>(null)
+  const [salaryEdit, setSalaryEdit] = useState('')
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -80,6 +86,22 @@ export function HRPayrollPage() {
     { header: 'Charges', value: (e) => e.taxes },
     { header: 'Net', value: (e) => e.net },
   ]
+
+  const openDetail = (e: Employee) => {
+    setSelected(e)
+    setSalaryEdit(String(e.salary || 0))
+  }
+
+  const updateSalaryMutation = useMutation({
+    mutationFn: ({ id, salary }: { id: string; salary: number }) => updateEmployee(id, { salary }),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: ['employees'] })
+      setSelected(updated)
+      setSalaryEdit(String(updated.salary || 0))
+      toast.success('Salaire mis à jour')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Mise à jour impossible'),
+  })
 
   return (
     <div>
@@ -183,7 +205,7 @@ export function HRPayrollPage() {
                       <TableCell className="text-right font-semibold">{formatCurrency(gross)}</TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(net)}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => setSelected(e)}>
+                        <Button size="sm" variant="outline" onClick={() => openDetail(e)}>
                           <FileText className="h-4 w-4 mr-2" />
                           Voir
                         </Button>
@@ -241,7 +263,41 @@ export function HRPayrollPage() {
                     </Card>
                   </div>
 
-                  <div className="flex justify-end">
+                  {canWrite && (
+                    <div className="space-y-2 rounded-lg border border-border p-4">
+                      <Label htmlFor="salary-edit">Salaire brut</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="salary-edit"
+                          type="number"
+                          min="0"
+                          value={salaryEdit}
+                          onChange={(e) => setSalaryEdit(e.target.value)}
+                        />
+                        <Button
+                          disabled={
+                            updateSalaryMutation.isPending ||
+                            !salaryEdit ||
+                            Number(salaryEdit) === (selected.salary || 0)
+                          }
+                          onClick={() =>
+                            updateSalaryMutation.mutate({
+                              id: selected.id,
+                              salary: Number(salaryEdit) || 0,
+                            })
+                          }
+                        >
+                          {updateSalaryMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            'Enregistrer'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <DialogFooter>
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -267,7 +323,7 @@ export function HRPayrollPage() {
                       <FileText className="h-4 w-4 mr-2" />
                       Télécharger PDF
                     </Button>
-                  </div>
+                  </DialogFooter>
                 </div>
               )
             })()}
@@ -277,4 +333,3 @@ export function HRPayrollPage() {
     </div>
   )
 }
-

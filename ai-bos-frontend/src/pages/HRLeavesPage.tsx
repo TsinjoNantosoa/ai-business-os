@@ -1,38 +1,65 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Palmtree, Search } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Palmtree, Search, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { getEmployees } from '@/lib/api/services';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { getEmployees, updateEmployee } from '@/lib/api/services';
+import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { PageLoader } from '@/components/shared/PageLoader';
+import { toast } from 'sonner';
 
-/**
- * Leaves view — Phase 1 access page backed by existing GET /hr/employees.
- * Filters employees currently on leave; mutations come in a later phase.
- */
 export function HRLeavesPage() {
   const { t } = useI18n();
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('hr.leave.write') || hasPermission('hr.employee.write');
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [employeeId, setEmployeeId] = useState('');
+
   const { data: employees, isLoading, isError, refetch } = useQuery({
     queryKey: ['employees'],
     queryFn: getEmployees,
   });
 
+  const isOnLeave = (status: string | undefined) => {
+    const s = (status || '').toLowerCase();
+    return s === 'on_leave' || s === 'leave' || s.includes('leave');
+  };
+
   const onLeave = useMemo(() => {
     const list = employees || [];
     return list.filter((e) => {
-      const status = (e.status || '').toLowerCase();
-      const matchesLeave = status === 'on_leave' || status === 'leave' || status.includes('leave');
-      if (!matchesLeave) return false;
+      if (!isOnLeave(e.status)) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       const name = `${e.firstName || ''} ${e.lastName || ''}`.toLowerCase();
       return name.includes(q) || (e.department || '').toLowerCase().includes(q) || (e.email || '').toLowerCase().includes(q);
     });
   }, [employees, search]);
+
+  const activeEmployees = useMemo(
+    () => (employees || []).filter((e) => (e.status || '').toLowerCase() === 'active'),
+    [employees],
+  );
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => updateEmployee(id, { status }),
+    onSuccess: (_data, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ['employees'] });
+      setLeaveOpen(false);
+      setEmployeeId('');
+      toast.success(vars.status === 'active' ? 'Retour enregistré' : 'Congé enregistré');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Mise à jour impossible'),
+  });
 
   if (isLoading) return <PageLoader />;
 
@@ -41,6 +68,13 @@ export function HRLeavesPage() {
       <PageHeader
         title={t('nav.leaves')}
         description="Employés actuellement en congé (données RH live)"
+        actions={
+          canWrite ? (
+            <Button onClick={() => setLeaveOpen(true)}>
+              Mettre en congé
+            </Button>
+          ) : undefined
+        }
       />
 
       <div className="mb-4 relative max-w-md">
@@ -88,11 +122,55 @@ export function HRLeavesPage() {
                   <Badge variant="muted">{emp.status}</Badge>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">{emp.department}</p>
+                {canWrite && (
+                  <Button
+                    className="mt-3"
+                    size="sm"
+                    variant="outline"
+                    disabled={statusMutation.isPending}
+                    onClick={() => statusMutation.mutate({ id: emp.id, status: 'active' })}
+                  >
+                    {statusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Retour'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mettre en congé</DialogTitle>
+            <DialogDescription>Sélectionnez un employé actif.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Employé</Label>
+            <Select value={employeeId} onValueChange={setEmployeeId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir…" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeEmployees.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.firstName} {e.lastName} — {e.department}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLeaveOpen(false)}>Annuler</Button>
+            <Button
+              disabled={!employeeId || statusMutation.isPending}
+              onClick={() => statusMutation.mutate({ id: employeeId, status: 'on_leave' })}
+            >
+              {statusMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

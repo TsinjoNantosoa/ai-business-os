@@ -85,6 +85,19 @@ def build_sales_marketing_router() -> APIRouter:
             line_items=line_items,
         )
         record_audit(db, claims, action="CREATE", resource="SalesOrder", resource_id=order.id, details=order.order_number, request=request)
+        from app.services.event_bus import EventBus
+
+        EventBus(db).publish(
+            org_id=org_id,
+            event_type="sales.order.created",
+            payload={
+                "orderId": order.id,
+                "orderNumber": order.order_number,
+                "customerName": order.customer_name,
+                "amount": order.amount,
+            },
+            source="sales",
+        )
         db.commit()
         db.refresh(order)
         return sales_order_to_dict(order)

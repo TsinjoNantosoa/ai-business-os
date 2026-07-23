@@ -57,6 +57,18 @@ def build_crm_contacts_router() -> APIRouter:
             message=f"{contact.first_name} {contact.last_name} ({contact.email}) a été ajouté",
             link="/app/crm/contacts",
         )
+        from app.services.event_bus import EventBus
+
+        EventBus(db).publish(
+            org_id=org_id,
+            event_type="crm.contact.created",
+            payload={
+                "contactId": contact.id,
+                "email": contact.email,
+                "name": f"{contact.first_name} {contact.last_name}",
+            },
+            source="crm",
+        )
         db.commit()
         db.refresh(contact)
         return contact_to_dict(contact)

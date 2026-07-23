@@ -13,8 +13,12 @@ export const ACTION_PALETTE = [
 export const TRIGGER_PALETTE = [
   'Manuel',
   'Lead créé',
+  'Contact créé',
+  'Facture créée',
   'Facture en retard',
-  'Employé ajouté',
+  'Commande créée',
+  'Employé créé',
+  'Webhook entrant',
   'Planification hebdo',
   'Stock bas',
 ] as const;

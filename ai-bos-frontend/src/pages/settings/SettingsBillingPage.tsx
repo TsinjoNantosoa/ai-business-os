@@ -38,13 +38,14 @@ export function SettingsBillingPage() {
     );
   }
 
-  const { subscription, invoices } = data;
+  const { subscription, invoices, quotas } = data;
   const plan = subscription.plan;
   const usageCards = [
     { icon: Users, label: 'Sièges', ...subscription.usage.seats, color: 'bg-primary' },
     { icon: Zap, label: 'Tokens IA', ...subscription.usage.aiTokens, color: 'bg-violet-500' },
     { icon: Database, label: 'Stockage (Go)', ...subscription.usage.storageGb, color: 'bg-emerald-500' },
   ];
+  const rpmLimit = quotas?.aiRpm ?? plan.aiRpm ?? subscription.usage.aiRpm?.limit ?? 20;
 
   const invoiceColumns: ExportColumn<BillingInvoice>[] = [
     { header: 'N°', value: (inv) => inv.invoiceNumber },
@@ -96,7 +97,7 @@ export function SettingsBillingPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {usageCards.map((u) => (
             <Card key={u.label}>
               <CardContent className="p-5">
@@ -119,6 +120,25 @@ export function SettingsBillingPage() {
               </CardContent>
             </Card>
           ))}
+          <Card>
+            <CardContent className="p-5">
+              <div className="mb-4 flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white">
+                  <Zap className="h-4 w-4" />
+                </div>
+                <span className="text-sm font-medium">RPM Copilot</span>
+              </div>
+              <p className="text-lg font-semibold tabular-nums">{rpmLimit} / min</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Hard limit plan {plan.name} (S35)
+              </p>
+              {quotas?.tokensExhausted && (
+                <p className="mt-3 text-xs font-medium text-destructive">
+                  Quota tokens épuisé — upgradez le plan.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <Card>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Plus, Users, MapPin, Calendar, Award } from 'lucide-react';
+import { Plus, Users, MapPin, Calendar, Award, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,11 +9,16 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { getJobOpenings, getCandidates } from '@/lib/api/services';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { createJobOpening, getJobOpenings, getCandidates } from '@/lib/api/services';
 import type { Candidate } from '@/lib/api/types';
+import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { cn, initials, formatDate } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const STAGES: { id: Candidate['stage']; label: string; bg: string }[] = [
   { id: 'applied', label: 'Candidatures', bg: 'bg-slate-100' },
@@ -25,15 +30,51 @@ const STAGES: { id: Candidate['stage']; label: string; bg: string }[] = [
 
 export function RecruitmentPage() {
   const { t } = useI18n();
+  const { hasPermission } = useAuth();
+  const canWrite = hasPermission('hr.recruitment.write');
+  const queryClient = useQueryClient();
   const { data: jobs } = useQuery({ queryKey: ['jobs'], queryFn: getJobOpenings });
   const { data: candidates } = useQuery({ queryKey: ['candidates'], queryFn: getCandidates });
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [department, setDepartment] = useState('');
+  const [location, setLocation] = useState('');
+  const [type, setType] = useState('full_time');
+
+  const reset = () => {
+    setTitle('');
+    setDepartment('');
+    setLocation('');
+    setType('full_time');
+  };
+
+  const createMutation = useMutation({
+    mutationFn: createJobOpening,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      setCreateOpen(false);
+      reset();
+      toast.success('Offre créée');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Impossible de créer l\'offre'),
+  });
+
+  const canSubmit = title.trim() && department.trim() && location.trim();
 
   return (
     <div>
       <PageHeader
         title={t('nav.recruitment')}
         description="Gérez vos offres d'emploi et candidats"
-        actions={<Button><Plus className="h-4 w-4" />Nouvelle offre</Button>}
+        actions={
+          canWrite ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nouvelle offre
+            </Button>
+          ) : undefined
+        }
       />
 
       <Tabs defaultValue="jobs">
@@ -42,7 +83,6 @@ export function RecruitmentPage() {
           <TabsTrigger value="pipeline">Candidats</TabsTrigger>
         </TabsList>
 
-        {/* Job openings */}
         <TabsContent value="jobs">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(jobs || []).map((job) => (
@@ -70,7 +110,6 @@ export function RecruitmentPage() {
           </div>
         </TabsContent>
 
-        {/* Candidate pipeline */}
         <TabsContent value="pipeline">
           <div className="flex gap-4 overflow-x-auto scrollbar-thin pb-4">
             {STAGES.map((stage) => {
@@ -118,6 +157,59 @@ export function RecruitmentPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nouvelle offre</DialogTitle>
+            <DialogDescription>Créer une offre d&apos;emploi.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="job-title">Titre</Label>
+              <Input id="job-title" placeholder="Ex : Développeur Full Stack" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="job-department">Département</Label>
+              <Input id="job-department" placeholder="Ex : Engineering" value={department} onChange={(e) => setDepartment(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="job-location">Lieu</Label>
+              <Input id="job-location" placeholder="Ex : Paris / Remote" value={location} onChange={(e) => setLocation(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full_time">Temps plein</SelectItem>
+                  <SelectItem value="part_time">Temps partiel</SelectItem>
+                  <SelectItem value="contract">Contrat</SelectItem>
+                  <SelectItem value="internship">Stage</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button
+              disabled={!canSubmit || createMutation.isPending}
+              onClick={() =>
+                createMutation.mutate({
+                  title: title.trim(),
+                  department: department.trim(),
+                  location: location.trim(),
+                  type,
+                })
+              }
+            >
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer l\'offre'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

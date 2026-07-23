@@ -159,12 +159,14 @@ def plan_to_dict(plan: BillingPlan) -> dict:
         "currency": plan.currency,
         "seatsLimit": plan.seats_limit,
         "aiTokensLimit": plan.ai_tokens_limit,
+        "aiRpm": int(getattr(plan, "ai_rpm", None) or 20),
         "storageGbLimit": plan.storage_gb_limit,
     }
 
 
-def subscription_to_dict(subscription: Subscription) -> dict:
+def subscription_to_dict(subscription: Subscription, *, live_tokens: int | None = None) -> dict:
     plan = subscription.plan
+    tokens_used = live_tokens if live_tokens is not None else subscription.ai_tokens_used
     return {
         "id": subscription.id,
         "orgId": subscription.org_id,
@@ -175,8 +177,9 @@ def subscription_to_dict(subscription: Subscription) -> dict:
         "renewalDate": subscription.current_period_end.isoformat(),
         "usage": {
             "seats": {"used": subscription.seats_used, "limit": plan.seats_limit if plan else 0},
-            "aiTokens": {"used": subscription.ai_tokens_used, "limit": plan.ai_tokens_limit if plan else 0},
+            "aiTokens": {"used": tokens_used, "limit": plan.ai_tokens_limit if plan else 0},
             "storageGb": {"used": subscription.storage_gb_used, "limit": plan.storage_gb_limit if plan else 0},
+            "aiRpm": {"limit": int(getattr(plan, "ai_rpm", None) or 20) if plan else 20},
         },
         "stripeCustomerId": subscription.stripe_customer_id,
         "stripeSubscriptionId": subscription.stripe_subscription_id,
@@ -248,6 +251,8 @@ def workflow_execution_to_dict(execution: WorkflowExecution, workflow_name: str 
         "durationMs": execution.duration_ms,
         "resultMessage": execution.result_message,
         "errorMessage": execution.error_message,
+        "eventId": getattr(execution, "event_id", None),
+        "triggerSource": getattr(execution, "trigger_source", None),
     }
 
 

@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.data import seed
+from app.models.catalog import KnowledgeArticle
 from app.presentation.deps import claims_org_id, require_auth, require_permission
+from app.repositories.catalog_repository import CatalogRepository, article_to_dict
 from app.repositories.kb_repository import KbRepository
 from app.services.rag_ingest import ingest_product_documents, ingest_seed_articles
 from app.services.rag_service import hits_to_sources, retrieve
@@ -15,8 +16,12 @@ def build_knowledge_router() -> APIRouter:
     router = APIRouter(prefix="/api/v1/knowledge", tags=["knowledge"])
 
     @router.get("/articles")
-    def knowledge_articles(_claims: dict = Depends(require_auth)) -> list[dict]:
-        return seed.KNOWLEDGE_ARTICLES
+    def knowledge_articles(
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_auth),
+    ) -> list[dict]:
+        rows = CatalogRepository(db).list_by_org(KnowledgeArticle, claims_org_id(claims))
+        return [article_to_dict(a) for a in rows]
 
     @router.get("/search")
     def knowledge_search(

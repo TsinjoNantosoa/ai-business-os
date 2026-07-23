@@ -148,3 +148,71 @@ def test_list_pending_approvals() -> None:
     assert listed.status_code == 200
     ids = {item["id"] for item in listed.json()["items"]}
     assert approval_id in ids
+
+
+def test_mock_planner_parses_lead_company_and_value() -> None:
+    planned = plan_mock_tool_calls("Crée un lead Acme à 12 000 €")
+    assert len(planned) == 1
+    assert planned[0].name == "crm_create_lead"
+    assert planned[0].arguments["company"] == "Acme"
+    assert planned[0].arguments["value"] == 12000.0
+
+
+def test_hitl_lead_message_includes_company_value() -> None:
+    with client.stream(
+        "POST",
+        "/api/v1/ai/chat",
+        headers=auth_headers(),
+        json={"message": "Crée un lead Acme à 12 000 €", "agentId": "sales"},
+    ) as response:
+        events = _sse_events(response)
+    approval = next(e for e in events if e.get("type") == "approval_required")
+    assert approval["name"] == "crm_create_lead"
+    assert "Acme" in (approval.get("message") or "")
+    assert "12000" in (approval.get("message") or "").replace(" ", "")
+    # No mock analysis dump after HITL pause
+    chunks = "".join(e.get("content") or "" for e in events if e.get("type") == "chunk")
+    assert "Voici mon analyse concernant" not in chunks
+
+
+def test_mock_reply_uses_tool_context_not_generic_template() -> None:
+    from app.services.llm_service import LLMService
+
+    tool_ctx = (
+        '- crm_search_contacts: OK → {"count": 1, "contacts": ['
+        '{"firstName": "Jean", "lastName": "Bernard", "email": "j@x.com", '
+        '"company": "Tech", "phone": "+33"}]}'
+    )
+    text = LLMService()._build_mock_response(
+        "montre-moi les contacts CRM",
+        "system\n- Contacts actifs: 80\n",
+        tool_context=tool_ctx,
+    )
+    assert "Jean Bernard" in text
+    assert "Voici mon analyse concernant" not in text
+    assert "OK →" not in text
+
+
+def test_stream_chat_does_not_append_mock_after_partial_openai(monkeypatch) -> None:
+    import asyncio
+
+    from app.services.llm_service import LLMService
+
+    svc = LLMService()
+
+    async def boom_stream(*_a, **_k):
+        yield "Voici les contacts CRM."
+        raise RuntimeError("late stream failure")
+
+    monkeypatch.setattr(settings, "openai_api_key", "sk-test")
+    monkeypatch.setattr(svc, "_stream_openai", boom_stream)
+
+    async def collect() -> str:
+        parts: list[str] = []
+        async for chunk in svc.stream_chat(system_prompt="sys", user_message="contacts"):
+            parts.append(chunk)
+        return "".join(parts)
+
+    text = asyncio.run(collect())
+    assert text == "Voici les contacts CRM."
+    assert "Voici mon analyse concernant" not in text

@@ -12,6 +12,7 @@
 |---|----------|-------------|
 | ETAT | [README_ETAT_IMPLEMENTATION](README_ETAT_IMPLEMENTATION.md) | Suivi d'avancement global et checklist cochée |
 | NEXT | [README_ETAPE_SUIVANTE](README_ETAPE_SUIVANTE.md) | Déjà fait vs reste — plan d'exécution étape suivante |
+| GUIDE | [GUIDE_AGENTS_CLIENT](GUIDE_AGENTS_CLIENT.md) | Guide client Agents / Copilot / HITL / quotas |
 | FULL | [ETAT_PROJET_COMPLET](ETAT_PROJET_COMPLET.md) | État détaillé du projet (maturité par domaine) |
 | TRACK | [IMPLEMENTATION_TRACKER](IMPLEMENTATION_TRACKER.md) | Tracker pas à pas (P0→P2 + Sxx) |
 

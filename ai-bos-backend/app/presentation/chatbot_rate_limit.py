@@ -17,13 +17,14 @@ class ChatbotRateLimiter:
         self._lock = Lock()
         self._windows: dict[str, _Window] = {}
 
-    def check(self, key: str) -> int | None:
+    def check(self, key: str, max_per_minute: int | None = None) -> int | None:
+        limit = self.max_per_minute if max_per_minute is None else max(1, int(max_per_minute))
         now = time()
         with self._lock:
             window = self._windows.setdefault(key, _Window())
             while window.hits and now - window.hits[0] > 60:
                 window.hits.popleft()
-            if len(window.hits) >= self.max_per_minute:
+            if len(window.hits) >= limit:
                 retry = int(60 - (now - window.hits[0]))
                 return max(retry, 1)
             window.hits.append(now)

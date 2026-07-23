@@ -142,7 +142,11 @@
 - [x] Phase 1 / S9-S20 — Platform MVP multi-tenant opérationnel
 - [x] Phase 2 / S21–S28 — Base Agent Engine + Workflows (chat SSE, RAG, run)
 - [x] Phase 2 / S29–S32 — Tool registry, orchestration, HITL, designer workflows (Lots C–E)
-- [ ] Phase 2 / S33–S36 — Triggers, observabilité agents, quotas
+- [x] Phase 2 / S33 — Triggers event-driven + exécuteurs workflow (Lots F–G)
+- [x] Phase 2 / S34 — Observabilité agents (Lot H)
+- [x] Phase 2 / S35 — Quotas / rate limits plans (Lot I)
+- [x] Phase 2 / S36 — Docs agents clients (Lot J)
+- [x] Lot K — CRUD catalogue HR / Inventory / Procurement / Accounting
 - [ ] Phase 3 / S37-S52 — Verticales Edu/Legal + scale cloud
 
 ---
@@ -294,6 +298,11 @@
 | 2026-07-22 08:50 | Lot C / S29 terminé : tool registry (5 tools CRM/Finance/Tasks/Projects), SSE tool_call/tool_result, RBAC, UI chips Copilot, GET /ai/tools | ✅ |
 | 2026-07-22 10:05 | Lot D / S30–S31 : orchestration multi-step, HITL (`ai_pending_actions`), SSE approval_required, ApprovalCard Copilot | ✅ |
 | 2026-07-22 15:10 | Lot E / S32 : designer workflows React Flow, `definition` JSON, POST/PATCH/GET workflows, migration 019 | ✅ |
+| 2026-07-23 15:40 | Lot F / S33 : domain events + webhooks entrants + dispatch workflows ; Lot G : exécuteurs email/tâche/notify/CRM (migration 021) | ✅ |
+| 2026-07-23 16:00 | Lot H / S34 : ai_traces + ai_llm_calls, usage summary, SSE coûts, UI Agents (migration 022) | ✅ |
+| 2026-07-23 16:10 | Lot I / S35 : ai_rpm plans, hard quotas tokens/RPM/sièges, billing quotas UI (migration 023) | ✅ |
+| 2026-07-23 16:20 | Lot J / S36 : GUIDE_AGENTS_CLIENT + API /ai/docs + templates workflows + onglet Documentation Agents | ✅ |
+| 2026-07-23 17:10 | Lot K : CRUD catalogue (HR/recruitment/inventory/procurement/transactions) POST/PATCH + UI Create ; payroll/leaves via employee | ✅ |
 
 ---
 

@@ -1,0 +1,27 @@
+# Postgres local pour développement (API / frontend hors Docker)
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+# Puis dans ai-bos-backend/.env :
+#   DATABASE_URL=postgresql+psycopg2://aibos:aibos_dev@localhost:5433/aibos
+#   alembic upgrade head
+#   uvicorn app.main:app --reload
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aibos
+      POSTGRES_PASSWORD: aibos_dev
+      POSTGRES_DB: aibos
+    ports:
+      - "5433:5432"
+    volumes:
+      - aibos_pg_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aibos -d aibos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  aibos_pg_dev_data:

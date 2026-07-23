@@ -40,6 +40,14 @@ def build_crm_leads_router() -> APIRouter:
             stage=body.stage,
             expected_close_date=parse_iso_datetime(body.expectedCloseDate),
         )
+        from app.services.event_bus import EventBus
+
+        EventBus(db).publish(
+            org_id=claims_org_id(claims),
+            event_type="crm.lead.created",
+            payload={"leadId": lead.id, "title": lead.title, "company": lead.company, "value": lead.value},
+            source="crm",
+        )
         db.commit()
         db.refresh(lead)
         return lead_to_dict(lead)

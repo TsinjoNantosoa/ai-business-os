@@ -13,7 +13,11 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WorkflowCanvas } from '@/components/workflows/WorkflowCanvas';
 import {
+  createWebhookEndpoint,
   createWorkflow,
+  deleteWebhookEndpoint,
+  getDomainEvents,
+  getWebhookEndpoints,
   getWorkflowExecutions,
   getWorkflows,
   runWorkflow,
@@ -41,6 +45,8 @@ export function WorkflowsPage() {
 
   const { data: workflows } = useQuery({ queryKey: ['workflows'], queryFn: getWorkflows });
   const { data: executions } = useQuery({ queryKey: ['workflow-executions'], queryFn: getWorkflowExecutions });
+  const { data: domainEvents } = useQuery({ queryKey: ['domain-events'], queryFn: getDomainEvents });
+  const { data: webhooks } = useQuery({ queryKey: ['webhook-endpoints'], queryFn: getWebhookEndpoints });
 
   const editingWorkflow = useMemo(
     () => (editingId ? (workflows || []).find((wf) => wf.id === editingId) || null : null),
@@ -74,6 +80,29 @@ export function WorkflowsPage() {
     onError: (err: Error) => toast.error(err.message || 'Échec enregistrement'),
   });
 
+  const webhookMutation = useMutation({
+    mutationFn: () =>
+      createWebhookEndpoint({
+        name: `Webhook ${new Date().toLocaleTimeString('fr-FR')}`,
+        description: 'Endpoint entrant Lot F',
+        eventTypes: ['webhook.inbound'],
+      }),
+    onSuccess: (ep) => {
+      queryClient.invalidateQueries({ queryKey: ['webhook-endpoints'] });
+      toast.success(`Webhook créé — secret: ${ep.secret || '—'}`);
+    },
+    onError: (err: Error) => toast.error(err.message || 'Échec création webhook'),
+  });
+
+  const deleteWebhookMutation = useMutation({
+    mutationFn: deleteWebhookEndpoint,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webhook-endpoints'] });
+      toast.success('Webhook supprimé');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Échec suppression'),
+  });
+
   const openCreate = () => {
     setIsCreating(true);
     setEditingId(null);
@@ -105,7 +134,7 @@ export function WorkflowsPage() {
     <div>
       <PageHeader
         title={t('nav.workflows')}
-        description="Automatisez vos processus métier — designer visuel S32"
+        description="Automatisez vos processus — triggers event-driven S33 + designer S32"
         actions={
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
@@ -118,6 +147,8 @@ export function WorkflowsPage() {
         <TabsList>
           <TabsTrigger value="list">Workflows</TabsTrigger>
           <TabsTrigger value="builder">Constructeur visuel</TabsTrigger>
+          <TabsTrigger value="events">Événements</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
         </TabsList>
 
@@ -224,6 +255,92 @@ export function WorkflowsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="events">
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Workflows</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Payload</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(domainEvents || []).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        Aucun événement — créez un lead ou appelez un webhook entrant.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    (domainEvents || []).map((ev) => (
+                      <TableRow key={ev.id}>
+                        <TableCell className="font-medium">{ev.eventType}</TableCell>
+                        <TableCell>{ev.source}</TableCell>
+                        <TableCell>{ev.triggeredWorkflowIds?.length || 0}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatRelativeTime(ev.createdAt)}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
+                          {JSON.stringify(ev.payload)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="webhooks">
+          <div className="mb-4 flex justify-end">
+            <Button onClick={() => webhookMutation.mutate()} disabled={webhookMutation.isPending}>
+              <Plus className="h-4 w-4" />
+              Nouveau webhook
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>URL entrante</TableHead>
+                    <TableHead>Reçus</TableHead>
+                    <TableHead>Dernier</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(webhooks || []).map((wh) => (
+                    <TableRow key={wh.id}>
+                      <TableCell className="font-medium">{wh.name}</TableCell>
+                      <TableCell className="max-w-md truncate font-mono text-xs">{wh.url}</TableCell>
+                      <TableCell>{wh.receiveCount}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {wh.lastReceivedAt ? formatRelativeTime(wh.lastReceivedAt) : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteWebhookMutation.mutate(wh.id)}
+                        >
+                          Supprimer
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="history">
           <Card>
             <CardContent className="p-0">
@@ -232,6 +349,7 @@ export function WorkflowsPage() {
                   <TableRow>
                     <TableHead>Workflow</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead>Démarré</TableHead>
                     <TableHead>Durée</TableHead>
                     <TableHead>Résultat</TableHead>
@@ -243,6 +361,9 @@ export function WorkflowsPage() {
                       <TableCell className="font-medium">{ex.workflowName || ex.workflowId}</TableCell>
                       <TableCell>
                         <StatusBadge status={ex.status} />
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {ex.triggerSource || 'manual'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{formatRelativeTime(ex.startedAt)}</TableCell>
                       <TableCell>{ex.durationMs != null ? `${ex.durationMs} ms` : '—'}</TableCell>

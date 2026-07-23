@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Search,
   Truck,
@@ -8,26 +8,33 @@ import {
   Plus,
   Eye,
   Boxes,
+  Loader2,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ExportMenu } from '@/components/shared/ExportMenu'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { useAuth } from '@/lib/auth/store'
 import { useI18n } from '@/lib/i18n/store'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { getPurchaseOrders, getSuppliers } from '@/lib/api/services'
+import { createPurchaseOrder, getPurchaseOrders, getSuppliers } from '@/lib/api/services'
 import type { PurchaseOrder, Supplier } from '@/lib/api/types'
 import type { ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 
 export function ProcurementPage() {
   const { t } = useI18n()
+  const { hasPermission } = useAuth()
+  const canWrite = hasPermission('inventory.write')
+  const queryClient = useQueryClient()
 
   const { data: purchaseOrders = [] } = useQuery({ queryKey: ['purchase-orders'], queryFn: getPurchaseOrders })
   const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: getSuppliers })
@@ -36,6 +43,13 @@ export function ProcurementPage() {
   const [status, setStatus] = useState<'all' | PurchaseOrder['status']>('all')
   const [selected, setSelected] = useState<PurchaseOrder | null>(null)
   const [supplierSelected, setSupplierSelected] = useState<Supplier | null>(null)
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [supplierId, setSupplierId] = useState('')
+  const [supplierName, setSupplierName] = useState('')
+  const [totalAmount, setTotalAmount] = useState('')
+  const [expectedAt, setExpectedAt] = useState('')
+  const [itemCount, setItemCount] = useState('1')
 
   const filteredPOs = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -71,11 +85,42 @@ export function ProcurementPage() {
     { header: 'Email', value: (s) => s.email || '' },
   ]
 
+  const resetCreate = () => {
+    setSupplierId('')
+    setSupplierName('')
+    setTotalAmount('')
+    setExpectedAt('')
+    setItemCount('1')
+  }
+
+  const createMutation = useMutation({
+    mutationFn: createPurchaseOrder,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+      setCreateOpen(false)
+      resetCreate()
+      toast.success('Demande créée')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Création impossible'),
+  })
+
+  const resolvedSupplierName =
+    supplierName.trim() || suppliers.find((s) => s.id === supplierId)?.name || ''
+  const canSubmit = !!resolvedSupplierName && !!totalAmount
+
   return (
     <div>
       <PageHeader
         title={t('nav.procurement')}
         description="Achats & fournisseurs : commandes, statuts et suivi."
+        actions={
+          canWrite ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nouvelle demande
+            </Button>
+          ) : undefined
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4 mb-6">
@@ -112,7 +157,11 @@ export function ProcurementPage() {
         <Card className="hidden lg:block">
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Action</p>
-            <Button className="mt-3 w-full" onClick={() => {}}>
+            <Button
+              className="mt-3 w-full"
+              disabled={!canWrite}
+              onClick={() => canWrite && setCreateOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Nouvelle demande
             </Button>
@@ -274,7 +323,6 @@ export function ProcurementPage() {
         </TabsContent>
       </Tabs>
 
-      {/* PO details */}
       <Dialog open={!!selected} onOpenChange={(o) => setSelected(o ? selected : null)}>
         {selected && (
           <DialogContent className="max-w-2xl">
@@ -309,7 +357,6 @@ export function ProcurementPage() {
         )}
       </Dialog>
 
-      {/* Supplier details */}
       <Dialog open={!!supplierSelected} onOpenChange={(o) => setSupplierSelected(o ? supplierSelected : null)}>
         {supplierSelected && (
           <DialogContent className="max-w-2xl">
@@ -333,7 +380,105 @@ export function ProcurementPage() {
           </DialogContent>
         )}
       </Dialog>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nouvelle demande</DialogTitle>
+            <DialogDescription>Créer une commande d&apos;achat.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {suppliers.length > 0 && (
+              <div className="space-y-2">
+                <Label>Fournisseur</Label>
+                <Select
+                  value={supplierId || '_manual'}
+                  onValueChange={(v) => {
+                    if (v === '_manual') {
+                      setSupplierId('')
+                      return
+                    }
+                    setSupplierId(v)
+                    const s = suppliers.find((x) => x.id === v)
+                    if (s) setSupplierName(s.name)
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_manual">Saisie manuelle</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="po-supplier">Nom fournisseur</Label>
+              <Input
+                id="po-supplier"
+                placeholder="Ex : Acme Supplies"
+                value={supplierName}
+                onChange={(e) => {
+                  setSupplierName(e.target.value)
+                  setSupplierId('')
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="po-amount">Montant</Label>
+                <Input
+                  id="po-amount"
+                  type="number"
+                  min="0"
+                  placeholder="1000"
+                  value={totalAmount}
+                  onChange={(e) => setTotalAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="po-items">Articles</Label>
+                <Input
+                  id="po-items"
+                  type="number"
+                  min="1"
+                  value={itemCount}
+                  onChange={(e) => setItemCount(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="po-expected">Date prévue</Label>
+              <Input
+                id="po-expected"
+                type="date"
+                value={expectedAt}
+                onChange={(e) => setExpectedAt(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button
+              disabled={!canSubmit || createMutation.isPending}
+              onClick={() =>
+                createMutation.mutate({
+                  supplierId: supplierId || undefined,
+                  supplierName: resolvedSupplierName,
+                  totalAmount: Number(totalAmount) || 0,
+                  expectedAt: expectedAt || undefined,
+                  itemCount: Number(itemCount) || 1,
+                })
+              }
+            >
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

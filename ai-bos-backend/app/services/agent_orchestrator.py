@@ -10,6 +10,7 @@ from fastapi import Request
 from sqlalchemy.orm import Session
 
 from app.repositories.ai_pending_action_repository import AiPendingActionRepository
+from app.services.ai_observability import AiObservabilityRepository
 from app.services.audit_service import record_audit
 from app.services.llm_service import LLMService
 from app.services.tool_registry import (
@@ -23,14 +24,30 @@ from app.services.tool_registry import (
 MAX_TOOL_ROUNDS = 3
 
 
+def _approval_message(name: str, arguments: dict[str, Any] | Any) -> str:
+    args = arguments if isinstance(arguments, dict) else {}
+    if name == "crm_create_lead":
+        company = args.get("company") or "ce client"
+        value = args.get("value")
+        value_txt = f" à {value:g} €" if isinstance(value, (int, float)) else ""
+        return (
+            f"La création d'un lead pour {company}{value_txt} nécessite une approbation humaine. "
+            "Validez ou refusez pour continuer."
+        )
+    return (
+        f"Action sensible « {name} » en attente d'approbation. "
+        "Validez ou refusez pour continuer."
+    )
+
+
 def summarize_tool_results(results: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     for item in results:
         name = item["name"]
         if item["ok"]:
             payload = json.dumps(item["result"], ensure_ascii=False, default=str)
-            if len(payload) > 1200:
-                payload = payload[:1200] + "…"
+            if len(payload) > 4000:
+                payload = payload[:4000] + "…"
             lines.append(f"- {name}: OK → {payload}")
         else:
             lines.append(f"- {name}: ERREUR → {item.get('error')}")
@@ -72,8 +89,34 @@ async def run_chat_orchestration(
     executed: list[dict[str, Any]] = []
     used_live_llm = False
     pending_repo = AiPendingActionRepository(db)
+    obs = AiObservabilityRepository(db)
+    correlation_id = request.headers.get("X-Correlation-ID")
+    trace = obs.start_trace(
+        org_id=tool_ctx.org_id,
+        user_id=tool_ctx.user_id,
+        agent_id=agent_id,
+        conversation_id=conversation_id,
+        correlation_id=correlation_id,
+        source="chat",
+    )
+    db.commit()
+
     prior_messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
     tools_schema = openai_tools_schema()
+
+    def _record_usage(purpose: str, usage: dict[str, Any] | None) -> None:
+        if not usage:
+            return
+        obs.record_llm_call(
+            trace=trace,
+            purpose=purpose,
+            provider=str(usage.get("provider") or "mock"),
+            model=str(usage.get("model") or "mock"),
+            input_tokens=int(usage.get("input_tokens") or 0),
+            output_tokens=int(usage.get("output_tokens") or 0),
+            latency_ms=int(usage.get("latency_ms") or 0),
+        )
+        db.commit()
 
     for round_idx in range(MAX_TOOL_ROUNDS):
         planned_calls: list[dict[str, Any]] = []
@@ -85,6 +128,7 @@ async def run_chat_orchestration(
                 tools=tools_schema,
                 prior_messages=prior_messages if round_idx > 0 else None,
             )
+            _record_usage("plan_tools", planned.get("usage"))
             if planned.get("fallback_mock"):
                 if round_idx == 0:
                     planned_calls = [
@@ -102,8 +146,20 @@ async def run_chat_orchestration(
                 planned_calls = list(planned.get("tool_calls") or [])
                 content = planned.get("content")
                 if content and not planned_calls:
-                    # Final assistant text without tools — stream later via stream_chat
-                    break
+                    # LLM answered in prose but user asked for a gated mutation — force tool plan (HITL).
+                    forced = [
+                        {
+                            "id": call.call_id,
+                            "name": call.name,
+                            "arguments": call.arguments,
+                        }
+                        for call in plan_mock_tool_calls(user_message)
+                        if (tdef := get_tool(call.name)) and tdef.requires_approval
+                    ]
+                    if forced:
+                        planned_calls = forced
+                    else:
+                        break
         else:
             if round_idx == 0:
                 planned_calls = [
@@ -124,9 +180,9 @@ async def run_chat_orchestration(
             "type": "step",
             "round": round_idx + 1,
             "toolCount": len(planned_calls),
+            "traceId": trace.id,
         }
 
-        # OpenAI assistant message with tool_calls (for next round context)
         assistant_tool_msg: dict[str, Any] | None = None
         if used_live_llm:
             assistant_tool_msg = {
@@ -172,6 +228,11 @@ async def run_chat_orchestration(
                     conversation_id=conversation_id,
                     agent_id=agent_id,
                 )
+                obs.finish_trace(
+                    trace,
+                    status="waiting_approval",
+                    tools_used=[item["name"] for item in executed],
+                )
                 db.commit()
                 yield {
                     "type": "approval_required",
@@ -179,10 +240,7 @@ async def run_chat_orchestration(
                     "name": name,
                     "arguments": arguments,
                     "callId": call_id,
-                    "message": (
-                        f"Action sensible « {name} » en attente d'approbation. "
-                        "Validez ou refusez pour continuer."
-                    ),
+                    "message": _approval_message(name, arguments),
                 }
                 yield {
                     "type": "done",
@@ -191,6 +249,11 @@ async def run_chat_orchestration(
                     "toolsUsed": [item["name"] for item in executed],
                     "status": "waiting_approval",
                     "approvalId": row.id,
+                    "traceId": trace.id,
+                    "inputTokens": trace.input_tokens,
+                    "outputTokens": trace.output_tokens,
+                    "costUsd": trace.cost_usd,
+                    "latencyMs": trace.latency_ms,
                 }
                 paused_for_approval = True
                 break
@@ -243,7 +306,6 @@ async def run_chat_orchestration(
         if paused_for_approval:
             return
 
-        # Mock path: only one planning round
         if not used_live_llm:
             break
 
@@ -257,10 +319,23 @@ async def run_chat_orchestration(
     ):
         yield {"type": "chunk", "content": chunk}
 
+    _record_usage("stream_reply", llm.last_usage)
+    obs.finish_trace(
+        trace,
+        status="completed",
+        tools_used=[item["name"] for item in executed],
+    )
+    db.commit()
+
     yield {
         "type": "done",
         "provider": provider,
         "sources": sources,
         "toolsUsed": [item["name"] for item in executed],
         "status": "completed",
+        "traceId": trace.id,
+        "inputTokens": trace.input_tokens,
+        "outputTokens": trace.output_tokens,
+        "costUsd": trace.cost_usd,
+        "latencyMs": trace.latency_ms,
     }

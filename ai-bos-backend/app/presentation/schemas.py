@@ -277,3 +277,153 @@ class WorkflowUpdateBody(BaseModel):
     description: str | None = Field(default=None, max_length=512)
     status: str | None = Field(default=None, min_length=1, max_length=32)
     definition: WorkflowDefinitionBody | None = None
+
+
+# --- Catalog CRUD (HR / Inventory / Procurement / Accounting) ---
+
+
+class EmployeeCreateBody(BaseModel):
+    firstName: str = Field(min_length=1, max_length=128)
+    lastName: str = Field(min_length=1, max_length=128)
+    email: str = Field(min_length=3, max_length=255)
+    phone: str | None = Field(default=None, max_length=64)
+    position: str = Field(min_length=1, max_length=128)
+    department: str = Field(min_length=1, max_length=128)
+    startDate: str | None = None
+    status: str = "active"
+    salary: float | None = Field(default=None, ge=0)
+    location: str | None = Field(default=None, max_length=128)
+    managerId: str | None = None
+    avatarColor: str | None = Field(default=None, max_length=64)
+
+
+class EmployeeUpdateBody(BaseModel):
+    firstName: str | None = Field(default=None, min_length=1, max_length=128)
+    lastName: str | None = Field(default=None, min_length=1, max_length=128)
+    email: str | None = Field(default=None, min_length=3, max_length=255)
+    phone: str | None = Field(default=None, max_length=64)
+    position: str | None = Field(default=None, min_length=1, max_length=128)
+    department: str | None = Field(default=None, min_length=1, max_length=128)
+    startDate: str | None = None
+    status: str | None = None
+    salary: float | None = Field(default=None, ge=0)
+    location: str | None = Field(default=None, max_length=128)
+    managerId: str | None = None
+    avatarColor: str | None = Field(default=None, max_length=64)
+
+
+class JobCreateBody(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    department: str = Field(min_length=1, max_length=128)
+    status: str = "open"
+    location: str = Field(min_length=1, max_length=128)
+    type: str = "full_time"
+    postedDate: str | None = None
+
+
+class JobUpdateBody(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    department: str | None = Field(default=None, min_length=1, max_length=128)
+    status: str | None = None
+    location: str | None = Field(default=None, min_length=1, max_length=128)
+    type: str | None = None
+    applicants: int | None = Field(default=None, ge=0)
+
+
+class CandidateCreateBody(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    jobId: str | None = None
+    jobTitle: str | None = Field(default=None, max_length=255)
+    stage: str = "applied"
+    score: int = Field(default=0, ge=0, le=100)
+    avatarColor: str | None = Field(default=None, max_length=64)
+    appliedAt: str | None = None
+
+
+class CandidateUpdateBody(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: str | None = Field(default=None, min_length=3, max_length=255)
+    jobId: str | None = None
+    jobTitle: str | None = Field(default=None, max_length=255)
+    stage: str | None = None
+    score: int | None = Field(default=None, ge=0, le=100)
+    avatarColor: str | None = Field(default=None, max_length=64)
+
+
+class InventoryItemCreateBody(BaseModel):
+    sku: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=255)
+    category: str = Field(min_length=1, max_length=128)
+    quantity: int = Field(default=0, ge=0)
+    reorderLevel: int = Field(default=0, ge=0)
+    warehouse: str = Field(min_length=1, max_length=128)
+    unitPrice: float = Field(default=0, ge=0)
+    status: str | None = None
+
+
+class InventoryItemUpdateBody(BaseModel):
+    sku: str | None = Field(default=None, min_length=1, max_length=64)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    category: str | None = Field(default=None, min_length=1, max_length=128)
+    quantity: int | None = Field(default=None, ge=0)
+    reorderLevel: int | None = Field(default=None, ge=0)
+    warehouse: str | None = Field(default=None, min_length=1, max_length=128)
+    unitPrice: float | None = Field(default=None, ge=0)
+    status: str | None = None
+
+
+class SupplierCreateBody(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    phone: str | None = Field(default=None, max_length=64)
+    rating: float = Field(default=4.0, ge=0, le=5)
+    country: str = Field(default="", max_length=64)
+    status: str = "active"
+
+
+class SupplierUpdateBody(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: str | None = Field(default=None, min_length=3, max_length=255)
+    phone: str | None = Field(default=None, max_length=64)
+    rating: float | None = Field(default=None, ge=0, le=5)
+    country: str | None = Field(default=None, max_length=64)
+    status: str | None = None
+
+
+class PurchaseOrderCreateBody(BaseModel):
+    supplierId: str | None = None
+    supplierName: str = Field(min_length=1, max_length=255)
+    status: str = "draft"
+    totalAmount: float = Field(default=0, ge=0)
+    currency: str = "EUR"
+    expectedAt: str | None = None
+    itemCount: int = Field(default=1, ge=0)
+
+
+class PurchaseOrderUpdateBody(BaseModel):
+    supplierId: str | None = None
+    supplierName: str | None = Field(default=None, min_length=1, max_length=255)
+    status: str | None = None
+    totalAmount: float | None = Field(default=None, ge=0)
+    currency: str | None = None
+    expectedAt: str | None = None
+    itemCount: int | None = Field(default=None, ge=0)
+
+
+class TransactionCreateBody(BaseModel):
+    description: str = Field(min_length=1, max_length=255)
+    amount: float = Field(gt=0)
+    type: str = "expense"
+    category: str = Field(min_length=1, max_length=128)
+    date: str | None = None
+    account: str = Field(min_length=1, max_length=128)
+
+
+class TransactionUpdateBody(BaseModel):
+    description: str | None = Field(default=None, min_length=1, max_length=255)
+    amount: float | None = Field(default=None, gt=0)
+    type: str | None = None
+    category: str | None = Field(default=None, min_length=1, max_length=128)
+    date: str | None = None
+    account: str | None = Field(default=None, min_length=1, max_length=128)

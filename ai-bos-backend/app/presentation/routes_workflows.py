@@ -20,6 +20,14 @@ from app.services.workflow_graph import (
 def build_workflows_router() -> APIRouter:
     router = APIRouter(prefix="/api/v1/workflows", tags=["workflows"])
 
+    @router.get("/templates")
+    def list_workflow_templates(
+        _claims: dict = Depends(require_permission("workflow.read")),
+    ) -> list[dict]:
+        from app.services.agent_docs import WORKFLOW_TEMPLATES
+
+        return WORKFLOW_TEMPLATES
+
     @router.get("")
     def list_workflows(
         db: Session = Depends(get_db),
@@ -152,7 +160,13 @@ def build_workflows_router() -> APIRouter:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Workflow en brouillon non exécutable")
 
         try:
-            execution = WorkflowEngine(db).run(workflow, org_id)
+            from app.services.event_bus import _resolve_email_service
+
+            execution = WorkflowEngine(db, email_service=_resolve_email_service()).run(
+                workflow,
+                org_id,
+                trigger_source="manual",
+            )
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 

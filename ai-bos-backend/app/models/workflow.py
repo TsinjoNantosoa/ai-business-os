@@ -46,5 +46,7 @@ class WorkflowExecution(Base):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     result_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    trigger_source: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="executions")

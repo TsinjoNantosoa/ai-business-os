@@ -10,9 +10,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.data import seed
+from app.models.catalog import AiAgent
+from app.models.ai_observability import AiTrace, AiLlmCall
 from app.presentation.deps import (
-    chatbot_rate_limiter,
     claims_org_id,
     claims_user_id,
     require_permission,
@@ -20,11 +20,14 @@ from app.presentation.deps import (
 )
 from app.presentation.schemas import ApprovalDecisionBody, ChatBody
 from app.repositories.ai_pending_action_repository import AiPendingActionRepository
+from app.repositories.catalog_repository import CatalogRepository, agent_to_dict
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.invoice_repository import InvoiceRepository
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.user_repository import UserRepository
+from app.services.agent_docs import build_agent_docs_payload, load_client_guide_markdown
 from app.services.agent_orchestrator import pending_to_dict, run_chat_orchestration
+from app.services.ai_observability import AiObservabilityRepository, trace_to_dict
 from app.services.audit_service import record_audit
 from app.services.llm_service import LLMService
 from app.services.rag_service import format_rag_context, hits_to_sources, retrieve
@@ -40,13 +43,9 @@ AGENT_PERSONAS: dict[str, str] = {
 }
 
 
-def _find_agent(agent_id: str | None) -> dict | None:
-    if not agent_id:
-        return seed.AI_AGENTS[0]
-    for agent in seed.AI_AGENTS:
-        if agent["id"] == agent_id or agent.get("slug") == agent_id:
-            return agent
-    return None
+def _find_agent(db: Session, org_id: str, agent_id: str | None) -> dict | None:
+    row = CatalogRepository(db).get_agent(org_id, agent_id)
+    return agent_to_dict(row) if row else None
 
 
 def _agent_to_dict(agent: dict) -> dict:
@@ -58,7 +57,7 @@ def _agent_to_dict(agent: dict) -> dict:
         "status": agent["status"],
         "category": agent["category"],
         "icon": agent["icon"],
-        "toolsCount": len(list_tools()),
+        "toolsCount": agent.get("toolsCount") or len(list_tools()),
         "lastUsed": agent.get("lastUsed"),
         "conversations": agent["conversations"],
     }
@@ -129,11 +128,63 @@ def _can_decide_approval(claims: dict, pending_user_id: str) -> bool:
 def build_ai_router() -> APIRouter:
     router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
 
+    @router.get("/docs")
+    def agent_docs(
+        _claims: dict = Depends(require_permission("ai.agent.use")),
+    ) -> dict:
+        """S36 — structured client documentation for agents / Copilot."""
+        return build_agent_docs_payload()
+
+    @router.get("/docs/guide")
+    def agent_docs_guide(
+        _claims: dict = Depends(require_permission("ai.agent.use")),
+    ) -> dict:
+        return {
+            "title": "Guide client — Agents IA & Copilot",
+            "format": "markdown",
+            "content": load_client_guide_markdown(),
+        }
+
     @router.get("/agents")
     def list_agents(
-        _claims: dict = Depends(require_permission("ai.agent.use")),
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_permission("ai.agent.use")),
     ) -> list[dict]:
-        return [_agent_to_dict(agent) for agent in seed.AI_AGENTS]
+        rows = CatalogRepository(db).list_by_org(AiAgent, claims_org_id(claims))
+        return [_agent_to_dict(agent_to_dict(a)) for a in rows]
+
+    @router.get("/usage/summary")
+    def usage_summary(
+        days: int = Query(default=30, ge=1, le=90),
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_permission("ai.agent.use")),
+    ) -> dict:
+        return AiObservabilityRepository(db).usage_summary(claims_org_id(claims), days=days)
+
+    @router.get("/traces")
+    def list_traces(
+        agentId: str | None = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=200),
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_permission("ai.agent.use")),
+    ) -> list[dict]:
+        rows = AiObservabilityRepository(db).list_traces(
+            claims_org_id(claims), agent_id=agentId, limit=limit
+        )
+        return [trace_to_dict(t) for t in rows]
+
+    @router.get("/traces/{trace_id}")
+    def get_trace(
+        trace_id: str,
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_permission("ai.agent.use")),
+    ) -> dict:
+        obs = AiObservabilityRepository(db)
+        org_id = claims_org_id(claims)
+        trace = obs.get_trace(org_id, trace_id)
+        if not trace:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trace introuvable")
+        return trace_to_dict(trace, obs.list_calls(org_id, trace_id))
 
     @router.get("/tools")
     def list_ai_tools(
@@ -256,19 +307,15 @@ def build_ai_router() -> APIRouter:
         _chatbot_token: None = Depends(verify_chatbot_token),
     ) -> StreamingResponse:
         rate_key = claims_user_id(claims) or (request.client.host if request.client else "anonymous")
-        retry_after = chatbot_rate_limiter.check(rate_key)
-        if retry_after is not None:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Trop de requêtes IA. Réessayez dans {retry_after}s.",
-                headers={"Retry-After": str(retry_after)},
-            )
-
-        agent = _find_agent(body.agentId)
-        if not agent:
-            agent = seed.AI_AGENTS[0]
-
         org_id = claims_org_id(claims)
+        from app.services.quota_service import enforce_ai_chat_quota
+
+        enforce_ai_chat_quota(db, org_id=org_id, rate_key=rate_key)
+
+        agent = _find_agent(db, org_id, body.agentId)
+        if not agent:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent introuvable")
+
         user_id = claims_user_id(claims)
         hits = retrieve(db, org_id=org_id, query=body.message, limit=5)
         rag_block = format_rag_context(hits)

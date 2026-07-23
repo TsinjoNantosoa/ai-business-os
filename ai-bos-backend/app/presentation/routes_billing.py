@@ -44,10 +44,31 @@ def build_billing_router() -> APIRouter:
         subscription = repo.get_subscription_for_org(org_id)
         if not subscription:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Abonnement introuvable")
+        from app.services.quota_service import get_quota_snapshot
+
+        snap = get_quota_snapshot(db, org_id)
+        db.commit()
         return {
-            "subscription": subscription_to_dict(subscription),
+            "subscription": subscription_to_dict(
+                subscription,
+                live_tokens=snap.ai_tokens_used if snap else None,
+            ),
+            "quotas": snap.to_dict() if snap else None,
             "invoices": [billing_invoice_to_dict(inv) for inv in repo.list_invoices_for_org(org_id)],
         }
+
+    @router.get("/quotas")
+    def billing_quotas(
+        db: Session = Depends(get_db),
+        claims: dict = Depends(require_permission("settings.billing")),
+    ) -> dict:
+        from app.services.quota_service import get_quota_snapshot
+
+        snap = get_quota_snapshot(db, claims_org_id(claims))
+        if not snap:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Abonnement introuvable")
+        db.commit()
+        return snap.to_dict()
 
     @router.get("/invoices")
     def list_invoices(

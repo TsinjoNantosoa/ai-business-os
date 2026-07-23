@@ -529,6 +529,37 @@ export interface WorkflowExecution {
   durationMs?: number;
   resultMessage?: string;
   errorMessage?: string;
+  eventId?: string;
+  triggerSource?: string;
+}
+
+export interface DomainEvent {
+  id: string;
+  eventType: string;
+  source: string;
+  payload: Record<string, unknown>;
+  triggeredWorkflowIds: string[];
+  createdAt: string;
+}
+
+export interface EventCatalogItem {
+  eventType: string;
+  label: string;
+  description: string;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  name: string;
+  description: string;
+  token: string;
+  url: string;
+  eventTypes: string[];
+  isActive: boolean;
+  receiveCount: number;
+  lastReceivedAt?: string | null;
+  createdAt: string;
+  secret?: string;
 }
 
 export interface WorkflowRunResult {
@@ -556,6 +587,68 @@ export interface Agent {
   toolsCount: number;
   lastUsed?: string;
   conversations: number;
+}
+
+export interface AiUsageSummary {
+  periodDays: number;
+  traceCount: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
+  totalCostUsd: number;
+  byAgent: Array<{
+    agentId: string;
+    traces: number;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number;
+  }>;
+  byDay: Array<{ date: string; traces: number; tokens: number; costUsd: number }>;
+}
+
+export interface AiTrace {
+  id: string;
+  agentId?: string | null;
+  status: string;
+  provider: string;
+  model?: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  latencyMs: number;
+  toolsUsed: string[];
+  createdAt?: string | null;
+  finishedAt?: string | null;
+}
+
+export interface AgentDocs {
+  version: string;
+  title: string;
+  guidePath: string;
+  sections: Array<{ id: string; title: string; body: string }>;
+  agents: Array<{ id: string; name: string; mission: string; bestFor: string }>;
+  tools: Array<{
+    name: string;
+    description: string;
+    permissions: string[];
+    mutating: boolean;
+    requiresApproval: boolean;
+  }>;
+  workflowTemplates: Array<{
+    id: string;
+    name: string;
+    description: string;
+    trigger: string;
+    actions: string[];
+  }>;
+  quotas: Array<{ plan: string; aiRpm: number; aiTokensLimit: number }>;
+  api: Record<string, string>;
+}
+
+export interface AgentDocsGuide {
+  title: string;
+  format: string;
+  content: string;
 }
 
 // --- Inventory ---
@@ -655,6 +748,7 @@ export interface BillingPlan {
   currency: string
   seatsLimit: number
   aiTokensLimit: number
+  aiRpm?: number
   storageGbLimit: number
 }
 
@@ -675,7 +769,19 @@ export interface BillingSubscription {
     seats: BillingUsageMeter
     aiTokens: BillingUsageMeter
     storageGb: BillingUsageMeter
+    aiRpm?: { limit: number }
   }
+}
+
+export interface BillingQuotas {
+  planCode: string
+  planName: string
+  aiRpm: number
+  periodStart?: string | null
+  periodEnd?: string | null
+  usage: BillingSubscription['usage']
+  tokensRemaining: number
+  tokensExhausted: boolean
 }
 
 export interface BillingInvoice {
@@ -693,6 +799,7 @@ export interface BillingInvoice {
 export interface BillingOverview {
   subscription: BillingSubscription
   invoices: BillingInvoice[]
+  quotas?: BillingQuotas | null
 }
 
 export interface CheckoutSession {

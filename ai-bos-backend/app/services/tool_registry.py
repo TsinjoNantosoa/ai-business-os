@@ -309,17 +309,35 @@ def plan_mock_tool_calls(user_message: str) -> list[PlannedToolCall]:
 
     if re.search(r"cr[eé]e[rz]?\s+(un\s+)?lead|nouveau lead|create lead", text):
         company = "Client Demo"
+        value = 5000.0
         m = re.search(r"chez\s+([A-Za-z0-9 &\-]+)", user_message, re.I)
         if m:
             company = m.group(1).strip()
+        else:
+            m2 = re.search(
+                r"lead\s+([A-Za-z][A-Za-z0-9 &\-]{1,40}?)(?:\s+à|\s+de|\s+pour|\s*$)",
+                user_message,
+                re.I,
+            )
+            if m2:
+                company = m2.group(1).strip(" .,")
+        mv = re.search(r"(\d[\d\s]*[.,]?\d*)\s*€", user_message)
+        if not mv:
+            mv = re.search(r"(?:à|de|valeur|value)\s+(\d[\d\s]*[.,]?\d*)", user_message, re.I)
+        if mv:
+            raw = mv.group(1).replace(" ", "").replace(",", ".")
+            try:
+                value = float(raw)
+            except ValueError:
+                pass
         planned.append(
             PlannedToolCall(
                 name="crm_create_lead",
                 arguments={
-                    "title": "Lead Copilot",
+                    "title": f"Lead {company}",
                     "company": company,
                     "contactName": "Contact Copilot",
-                    "value": 5000,
+                    "value": value,
                 },
             )
         )

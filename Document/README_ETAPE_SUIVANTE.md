@@ -1,6 +1,6 @@
 # AI BOS — Étape suivante (déjà fait vs reste)
 
-> **Dernière mise à jour :** 2026-07-22 15:10 (UTC+3)
+> **Dernière mise à jour :** 2026-07-23 17:10 (UTC+3)
 > **Projet :** AI Business Operating System (`ai-bos`)  
 > **But :** Vue claire de ce qui est **déjà implémenté** et de ce qu’il reste à faire pour la **prochaine étape**.  
 > **Documents liés :** [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`IMPLEMENTATION_TRACKER.md`](./IMPLEMENTATION_TRACKER.md) · [`README_40_ImplementationRoadmap.md`](./README_40_ImplementationRoadmap.md) · [`README_ETAT_IMPLEMENTATION.md`](./README_ETAT_IMPLEMENTATION.md)
@@ -21,11 +21,26 @@
 | **Lot C — Outils IA pour le Copilot (S29 Tool registry)** | ✅ Terminé (5 tools + SSE tool_call/result + UI chips) |
 | **Lot D — S30 orchestration + S31 HITL** | ✅ Terminé (multi-step + pause approbation + ApprovalCard) |
 | **Lot E — S32 Workflow designer** | ✅ Terminé (React Flow + definition JSON + CRUD) |
-| **Prochaine étape produit** | 🟡 Phase 2 — S33 triggers event-driven |
+| **Lot F — S33 Triggers event-driven** | ✅ Terminé (domain events + webhooks entrants + dispatch) |
+| **Lot G — Exécuteurs workflow** | ✅ Terminé (email / tâche / notify / CRM / agent / API) |
+| **Lot H — S34 Observabilité agents** | ✅ Terminé (traces + tokens/coûts + UI Agents) |
+| **Lot I — S35 Quotas / rate limits** | ✅ Terminé (RPM plan + tokens mensuels + sièges) |
+| **Lot J — S36 Docs agents clients** | ✅ Terminé (guide + API `/ai/docs` + UI) |
+| **Persistance 100 % Postgres** | ✅ Terminé (catalog HR/procurement/analytics/agents + `docker-compose.dev.yml`) |
+| **Lot K — CRUD catalogue métier** | ✅ Terminé (HR, recruitment, inventory, procurement, accounting + payroll/leaves via employee) |
+| **Prochaine étape produit** | 🟡 Phase 3 — Edu AI / Legal / scale (S37+) |
 | Verticales Edu / Legal + scale cloud (Phase 3) | ❌ Pas démarré |
 
-**Aujourd’hui :** le produit est **démo-ready** en local (login → dashboard → CRM / factures / tâches / copilote HITL / designer workflows).  
-**Ensuite :** triggers event-driven (S33), observabilité agents, puis Phase 3.
+**Aujourd’hui :** Phase 2 agents **complète** + dette CRUD catalogue **livrée**.  
+**Ensuite :** verticales Edu/Legal (S37+) ou scale cloud.
+### Démarrage Postgres local
+
+```bash
+docker compose -f docker-compose.dev.yml up -d   # Postgres :5433
+# ai-bos-backend/.env → DATABASE_URL=postgresql+psycopg2://aibos:aibos_dev@localhost:5433/aibos
+cd ai-bos-backend && alembic upgrade head && uvicorn app.main:app --reload --port 8000
+cd ai-bos-frontend && npm run dev
+```
 
 ---
 
@@ -63,7 +78,7 @@
 | Agents / Copilot | 🟡 Base | Chat SSE + RAG `Document/*.md` + citations |
 | Organizations / Team / Invitations | ✅ | Onboarding + revoke |
 | Analytics / BI / ML | 🟡 | Lecture + CSV + BI NL ; forecast seed |
-| Sales / Marketing / Projects / HR / Inventory / Procurement / Accounting / Payroll | 🟡 | UI + GET seed — **peu ou pas de POST** |
+| Sales / Marketing / Projects / HR / Inventory / Procurement / Accounting / Payroll | ✅ | CRUD DB (POST/PATCH) + UI Create ; payroll/leaves via employee |
 
 ### 2.3 Frontend
 
@@ -112,10 +127,10 @@ Base déjà livrée : chat SSE, RAG, `workflows/{id}/run`.
 | **S30** | Orchestration multi-step (chaînes d’agents) | [x] ✅ Lot D |
 | **S31** | Human-in-the-loop (approbation avant action sensible) | [x] ✅ Lot D |
 | **S32** | Workflow designer UI (drag & drop, style React Flow) | [x] ✅ Lot E |
-| **S33** | Triggers event-driven (webhooks entrants) | [ ] |
-| **S34** | Observabilité agents (traces, coûts tokens) | [ ] |
-| **S35** | Rate limiting + quotas par plan (hard limits) | [ ] |
-| **S36** | Documentation agents pour clients | [ ] |
+| **S33** | Triggers event-driven (webhooks entrants) | [x] ✅ Lot F |
+| **S34** | Observabilité agents (traces, coûts tokens) | [x] ✅ Lot H |
+| **S35** | Rate limiting + quotas par plan (hard limits) | [x] ✅ Lot I |
+| **S36** | Documentation agents pour clients | [x] ✅ Lot J |
 
 ### 3.3 Extraction CORE packages (Phase 0 S2–S8) — dette structurelle
 
@@ -145,7 +160,7 @@ Fonctionne déjà **dans** `ai-bos-backend`, mais pas encore en packages `platfo
 
 | Sujet | Aujourd’hui | Cible |
 |-------|-------------|-------|
-| HR payroll, accounting détaillé, inventory write | UI + GET seed | CRUD DB |
+| HR payroll, accounting détaillé, inventory write | ✅ CRUD DB (Lot K) | — |
 | Stripe | Mock / sandbox | Clés live + customer portal |
 | Redis | In-memory process | Pub/sub multi-instance |
 | ABAC | Documenté seulement | Implémentation réelle |
@@ -205,6 +220,41 @@ Cocher au fur et à mesure. Mettre à jour la date/heure en tête de fichier à 
 
 > Le moteur d’exécution reste un stub sync (pas encore d’exécuteurs email/CRM réels). Triggers webhooks = S33.
 
+### Lot F — S33 Triggers event-driven — ✅ terminé le 2026-07-23 à 15:40 (UTC+3)
+
+- [x] F1. Tables `domain_events` + `webhook_endpoints` (migration 021) + `event_id` / `trigger_source` sur exécutions
+- [x] F2. `EventBus.publish` + matching workflows actifs via catalogue labels ↔ event types
+- [x] F3. API `GET /events`, `/events/catalog`, CRUD webhooks, `POST /webhooks/inbound/{token}` (HMAC optionnel)
+- [x] F4. Émission sur create lead / contact / invoice / order
+- [x] F5. UI Workflows : onglets Événements + Webhooks ; tests `test_events_s33.py`
+
+### Lot G — Exécuteurs workflow — ✅ terminé le 2026-07-23 à 15:40 (UTC+3)
+
+- [x] G1. `workflow_actions.py` : Envoyer email, Créer tâche, Notifier Slack, Mettre à jour CRM, Run AI agent, Call API
+- [x] G2. `WorkflowEngine` exécute les actions réelles + contexte événement
+- [x] G3. Tests `test_workflow_actions_lot_g.py` (email outbox, tâche créée, lead → qualified)
+
+### Lot H — S34 Observabilité agents — ✅ terminé le 2026-07-23 à 16:00 (UTC+3)
+
+- [x] H1. Tables `ai_traces` + `ai_llm_calls` (migration 022) + pricing tokens USD
+- [x] H2. Instrumentation `LLMService` + `run_chat_orchestration` (SSE `traceId` / tokens / cost)
+- [x] H3. API `GET /ai/traces`, `/ai/traces/{id}`, `/ai/usage/summary`
+- [x] H4. UI Agents : KPIs usage 30j + table traces ; tests `test_ai_observability_s34.py`
+
+### Lot I — S35 Quotas & rate limits — ✅ terminé le 2026-07-23 à 16:10 (UTC+3)
+
+- [x] I1. Colonne `ai_rpm` sur `billing_plans` (migration 023) — starter 10 / pro 60 / enterprise 200
+- [x] I2. `quota_service` : RPM plan + quota tokens mensuels (traces période) + sièges invitations
+- [x] I3. Enforcement `POST /ai/chat` → 429 ; `GET /billing/quotas` + overview enrichi
+- [x] I4. UI Facturation : RPM + tokens live ; tests `test_quotas_s35.py`
+
+### Lot J — S36 Docs agents clients — ✅ terminé le 2026-07-23 à 16:20 (UTC+3)
+
+- [x] J1. `Document/GUIDE_AGENTS_CLIENT.md` (guide FR Copilot / HITL / outils / quotas / workflows)
+- [x] J2. API `GET /ai/docs`, `/ai/docs/guide` + `GET /workflows/templates`
+- [x] J3. UI Agents onglet Documentation (outils, templates, guide)
+- [x] J4. Tests `test_agent_docs_s36.py`
+
 ---
 
 ## 5. Comment valider avant de passer au lot suivant
@@ -244,17 +294,10 @@ Checklist manuelle :
 ```text
 [✅ Doc] → [✅ P0 Auth/RBAC] → [✅ P1 GET APIs] → [✅ P2 DB/CRUD clés]
         → [✅ Phase 1 S9–S20 Platform MVP]
-        → [🟡 Phase 2 Agents] ──► VOUS ÊTES ICI (après Lot D)
-                                    │
-          ┌─────────────┬───────────┼───────────┬─────────────┐
-          ▼             ▼           ▼           ▼             ▼
-     Lot A Auth    Lot B CRUD  Lot C S29   Lot D S30–S31   S32+ …
-          │             │           │           │
-          └─────────────┴───────────┴───────────┘
+        → [✅ Phase 2 Agents S29–S36]
+        → [✅ Lot K CRUD catalogue]
                                     ▼
-                         S32–S36 Designer / triggers / quotas
-                                    ▼
-                         Phase 3 Edu / Legal / Scale
+                         Phase 3 Edu / Legal / Scale  ← VOUS ÊTES ICI
 ```
 
 ---

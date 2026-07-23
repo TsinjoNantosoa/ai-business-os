@@ -40,6 +40,7 @@ from app.presentation.routes_oauth import build_oauth_router
 from app.presentation.routes_gdpr import build_gdpr_router
 from app.presentation.routes_backup import build_backup_router
 from app.presentation.routes_knowledge import build_knowledge_router
+from app.presentation.routes_events import build_events_router
 from app.services.auth_service import AuthService
 from app.services.bootstrap import bootstrap_demo_data
 from app.services.email_service import EmailService
@@ -96,6 +97,9 @@ email_service = EmailService(
     smtp_password=settings.smtp_password,
     sender=settings.smtp_from,
 )
+from app.services.event_bus import set_email_service
+
+set_email_service(email_service)
 auth_service = AuthService(session_store=session_store, email_service=email_service)
 app.include_router(build_auth_router(auth_service))
 app.include_router(build_oauth_router(auth_service))
@@ -124,6 +128,7 @@ app.include_router(build_billing_router())
 app.include_router(build_feature_flags_router())
 app.include_router(build_notifications_router())
 app.include_router(build_api_keys_router())
+app.include_router(build_events_router())
 
 @app.middleware("http")
 async def request_context_middleware(request, call_next):

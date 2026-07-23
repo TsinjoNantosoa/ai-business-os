@@ -1,30 +1,46 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Search, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Search, ArrowUpRight, ArrowDownRight, Plus, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ExportMenu } from '@/components/shared/ExportMenu'
 import { KpiCard } from '@/components/shared/KpiCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { useAuth } from '@/lib/auth/store'
 import { useI18n } from '@/lib/i18n/store'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { getTransactions } from '@/lib/api/services'
+import { createTransaction, getTransactions } from '@/lib/api/services'
 import type { Transaction } from '@/lib/api/types'
 import type { ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 
 type TxType = 'all' | Transaction['type']
 
 export function FinanceAccountingPage() {
   const { t } = useI18n()
+  const { hasPermission } = useAuth()
+  const canWrite = hasPermission('finance.payment.write')
+  const queryClient = useQueryClient()
 
   const [query, setQuery] = useState('')
   const [type, setType] = useState<TxType>('all')
   const [category, setCategory] = useState('all')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
+  const [txType, setTxType] = useState<'income' | 'expense'>('expense')
+  const [txCategory, setTxCategory] = useState('')
+  const [account, setAccount] = useState('')
+  const [date, setDate] = useState('')
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['transactions'],
@@ -61,7 +77,6 @@ export function FinanceAccountingPage() {
     return { income, expense, net: income - expense }
   }, [filtered])
 
-  // Running balance in the *filtered* view (simple cumulative net).
   const ledgerRows = useMemo(() => {
     let balance = 0
     return filtered
@@ -92,20 +107,50 @@ export function FinanceAccountingPage() {
     { header: 'Solde cumulé', value: (r) => r.balance },
   ]
 
+  const resetCreate = () => {
+    setDescription('')
+    setAmount('')
+    setTxType('expense')
+    setTxCategory('')
+    setAccount('')
+    setDate('')
+  }
+
+  const createMutation = useMutation({
+    mutationFn: createTransaction,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      setCreateOpen(false)
+      resetCreate()
+      toast.success('Écriture créée')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Création impossible'),
+  })
+
+  const canSubmit = description.trim() && amount && txCategory.trim() && account.trim()
+
   return (
     <div>
       <PageHeader
         title={t('nav.accounting')}
         description="Grand livre : écritures, filtres et soldes cumulés"
         actions={
-          <ExportMenu
-            filename="grand-livre"
-            title="Grand livre AI BOS"
-            sheetName="Écritures"
-            columns={exportColumns}
-            rows={exportRows}
-            label={t('common.export')}
-          />
+          <div className="flex items-center gap-2">
+            {canWrite && (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Nouvelle écriture
+              </Button>
+            )}
+            <ExportMenu
+              filename="grand-livre"
+              title="Grand livre AI BOS"
+              sheetName="Écritures"
+              columns={exportColumns}
+              rows={exportRows}
+              label={t('common.export')}
+            />
+          </div>
         }
       />
 
@@ -237,7 +282,97 @@ export function FinanceAccountingPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nouvelle écriture</DialogTitle>
+            <DialogDescription>Ajouter une transaction au grand livre.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tx-description">Description</Label>
+              <Input
+                id="tx-description"
+                placeholder="Ex : Paiement fournisseur"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="tx-amount">Montant</Label>
+                <Input
+                  id="tx-amount"
+                  type="number"
+                  min="0"
+                  placeholder="100"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={txType} onValueChange={(v) => setTxType(v as 'income' | 'expense')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income">Revenu</SelectItem>
+                    <SelectItem value="expense">Dépense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tx-category">Catégorie</Label>
+              <Input
+                id="tx-category"
+                placeholder="Ex : Opérations"
+                value={txCategory}
+                onChange={(e) => setTxCategory(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tx-account">Compte</Label>
+              <Input
+                id="tx-account"
+                placeholder="Ex : Banque principale"
+                value={account}
+                onChange={(e) => setAccount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tx-date">Date (optionnel)</Label>
+              <Input
+                id="tx-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button
+              disabled={!canSubmit || createMutation.isPending}
+              onClick={() =>
+                createMutation.mutate({
+                  description: description.trim(),
+                  amount: Number(amount) || 0,
+                  type: txType,
+                  category: txCategory.trim(),
+                  account: account.trim(),
+                  date: date || undefined,
+                })
+              }
+            >
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Créer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

@@ -22,6 +22,7 @@ class BillingPlan(Base):
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="EUR")
     seats_limit: Mapped[int] = mapped_column(Integer, nullable=False)
     ai_tokens_limit: Mapped[int] = mapped_column(Integer, nullable=False)
+    ai_rpm: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
     storage_gb_limit: Mapped[int] = mapped_column(Integer, nullable=False)
     stripe_price_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
 

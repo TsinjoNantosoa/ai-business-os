@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password
-from app.data import seed
 from app.presentation.deps import claims_org_id, claims_user_id, require_auth, require_permission
 from app.presentation.schemas import InvitationAcceptBody, InvitationCreateBody, OrganizationUpdateBody
 from app.presentation.serializers import (
@@ -41,9 +40,9 @@ def build_platform_router(email_service: EmailService | None = None) -> APIRoute
     ) -> list[dict]:
         # Tenant isolation: only expose the caller's organization.
         org = OrganizationRepository(db).get_by_id(claims_org_id(claims))
-        if org:
-            return [organization_to_dict(org)]
-        return [o for o in seed.ORGANIZATIONS if o["id"] == claims_org_id(claims)]
+        if not org:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organisation introuvable")
+        return [organization_to_dict(org)]
 
     @router.get("/organizations/me")
     def my_organization(
@@ -116,6 +115,10 @@ def build_platform_router(email_service: EmailService | None = None) -> APIRoute
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Rôle non invitable. Autorisés: {', '.join(INVITABLE_ROLES)}",
             )
+
+        from app.services.quota_service import enforce_seat_quota
+
+        enforce_seat_quota(db, org_id)
 
         user_repo = UserRepository(db)
         if user_repo.get_by_email(body.email):
