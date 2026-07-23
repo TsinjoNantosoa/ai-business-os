@@ -34,6 +34,7 @@ export function SupportTicketsPage() {
   const [reply, setReply] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [subject, setSubject] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -106,9 +107,9 @@ export function SupportTicketsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-2">
-          <div className="relative mb-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:items-start">
+        <div className="flex min-h-0 flex-col lg:col-span-2 lg:max-h-[calc(100vh-12rem)]">
+          <div className="relative mb-3 shrink-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Rechercher..."
@@ -117,7 +118,7 @@ export function SupportTicketsPage() {
               className="pl-9"
             />
           </div>
-          <div className="space-y-2">
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin">
             {filtered.map((ticket) => (
               <Card
                 key={ticket.id}
@@ -128,7 +129,7 @@ export function SupportTicketsPage() {
                 onClick={() => setSelectedId(ticket.id)}
               >
                 <CardContent className="p-3">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-2xs text-muted-foreground">{ticket.ticketNumber}</span>
@@ -139,12 +140,12 @@ export function SupportTicketsPage() {
                     </div>
                     <StatusBadge status={ticket.status} />
                   </div>
-                  <div className="mt-2 flex items-center justify-between text-2xs text-muted-foreground">
+                  <div className="mt-2 flex items-center justify-between gap-2 text-2xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       SLA: {formatRelativeTime(ticket.slaDeadline)}
                     </span>
-                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-2xs font-medium text-slate-600">
+                    <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-2xs font-medium text-slate-600">
                       {ticket.category === 'Billing' ? 'Facturation' : ticket.category === 'Technical' ? 'Technique' : ticket.category}
                     </span>
                   </div>
@@ -156,11 +157,11 @@ export function SupportTicketsPage() {
 
         <div className="lg:col-span-3">
           {selected && (
-            <Card className="flex h-[calc(100vh-14rem)] flex-col">
-              <CardContent className="flex h-full flex-col p-5">
-                <div className="border-b border-border pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
+            <Card className="flex h-[min(70vh,calc(100vh-12rem))] flex-col overflow-hidden">
+              <CardContent className="flex min-h-0 flex-1 flex-col p-5">
+                <div className="shrink-0 border-b border-border pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <h3 className="font-semibold">{selected.subject}</h3>
                       <p className="text-sm text-muted-foreground">
                         {selected.ticketNumber} • {selected.customerName}
@@ -170,7 +171,7 @@ export function SupportTicketsPage() {
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-3 overflow-y-auto py-4 scrollbar-thin">
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto py-4 scrollbar-thin">
                   {selected.messages.map((msg) => (
                     <div key={msg.id} className={cn('flex gap-3', msg.author === 'Customer' && 'flex-row-reverse')}>
                       <Avatar className="h-8 w-8 shrink-0">
@@ -212,24 +213,16 @@ export function SupportTicketsPage() {
                   ))}
                 </div>
 
-                <div className="mt-4 shrink-0 space-y-3 border-t border-border pt-4">
-                  <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30 p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-lg gradient-ai">
-                        <Sparkles className="h-3 w-3 text-white" />
-                      </div>
-                      <span className="text-xs font-semibold">Suggestion IA</span>
-                    </div>
-                    <p className="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground line-clamp-4">
-                      {aiSuggestedReply}
-                    </p>
+                <div className="shrink-0 space-y-3 border-t border-border pt-4">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="mt-3 text-xs"
-                      onClick={() => setReply(aiSuggestedReply)}
+                      className="gap-1.5 text-xs"
+                      onClick={() => setAiOpen(true)}
                     >
-                      Utiliser cette suggestion
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Suggestion IA
                     </Button>
                   </div>
 
@@ -238,6 +231,7 @@ export function SupportTicketsPage() {
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
                     rows={3}
+                    className="resize-none"
                   />
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <Button variant={isInternal ? 'default' : 'outline'} onClick={() => setIsInternal((v) => !v)}>
@@ -254,6 +248,32 @@ export function SupportTicketsPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={aiOpen} onOpenChange={setAiOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Suggestion IA
+            </DialogTitle>
+            <DialogDescription>Proposition de réponse pour ce ticket.</DialogDescription>
+          </DialogHeader>
+          <p className="max-h-[40vh] overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 text-sm leading-relaxed scrollbar-thin">
+            {aiSuggestedReply}
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setAiOpen(false)}>Fermer</Button>
+            <Button
+              onClick={() => {
+                setReply(aiSuggestedReply);
+                setAiOpen(false);
+              }}
+            >
+              Utiliser cette suggestion
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>

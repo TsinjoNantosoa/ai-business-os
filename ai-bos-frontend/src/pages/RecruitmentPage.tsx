@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Users, MapPin, Calendar, Award, Loader2 } from 'lucide-react';
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createJobOpening, getJobOpenings, getCandidates } from '@/lib/api/services';
-import type { Candidate } from '@/lib/api/types';
+import type { Candidate, JobOpening } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { cn, initials, formatDate } from '@/lib/utils';
@@ -36,6 +36,9 @@ export function RecruitmentPage() {
   const { data: jobs } = useQuery({ queryKey: ['jobs'], queryFn: getJobOpenings });
   const { data: candidates } = useQuery({ queryKey: ['candidates'], queryFn: getCandidates });
 
+  const [tab, setTab] = useState('jobs');
+  const [filterJobId, setFilterJobId] = useState<string | null>(null);
+  const [candidatesJob, setCandidatesJob] = useState<JobOpening | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
@@ -62,6 +65,28 @@ export function RecruitmentPage() {
 
   const canSubmit = title.trim() && department.trim() && location.trim();
 
+  const jobCandidates = useMemo(() => {
+    if (!candidatesJob) return [];
+    return (candidates || []).filter((c) => c.jobId === candidatesJob.id || c.jobTitle === candidatesJob.title);
+  }, [candidates, candidatesJob]);
+
+  const pipelineCandidates = useMemo(() => {
+    const list = candidates || [];
+    if (!filterJobId) return list;
+    const job = (jobs || []).find((j) => j.id === filterJobId);
+    return list.filter((c) => c.jobId === filterJobId || (job && c.jobTitle === job.title));
+  }, [candidates, filterJobId, jobs]);
+
+  const openCandidates = (job: JobOpening) => {
+    setCandidatesJob(job);
+  };
+
+  const goToPipeline = (job: JobOpening) => {
+    setFilterJobId(job.id);
+    setCandidatesJob(null);
+    setTab('pipeline');
+  };
+
   return (
     <div>
       <PageHeader
@@ -77,19 +102,21 @@ export function RecruitmentPage() {
         }
       />
 
-      <Tabs defaultValue="jobs">
+      <Tabs value={tab} onValueChange={(v) => { setTab(v); if (v === 'jobs') setFilterJobId(null); }}>
         <TabsList>
-          <TabsTrigger value="jobs">Offres d'emploi</TabsTrigger>
-          <TabsTrigger value="pipeline">Candidats</TabsTrigger>
+          <TabsTrigger value="jobs">Offres d&apos;emploi</TabsTrigger>
+          <TabsTrigger value="pipeline">
+            Candidats{filterJobId ? ' (filtrés)' : ''}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="jobs">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(jobs || []).map((job) => (
-              <Card key={job.id} className="transition-all hover:shadow-elevated">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
+              <Card key={job.id} className="flex flex-col transition-all hover:shadow-elevated">
+                <CardContent className="flex flex-1 flex-col p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
                       <h3 className="text-sm font-semibold">{job.title}</h3>
                       <p className="text-xs text-muted-foreground">{job.department}</p>
                     </div>
@@ -100,9 +127,11 @@ export function RecruitmentPage() {
                     <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" />Publiée le {formatDate(job.postedDate)}</div>
                     <div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" />{job.applicants} candidats</div>
                   </div>
-                  <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3">
                     <StatusBadge status={job.type} />
-                    <Button variant="outline" size="sm">Voir candidats</Button>
+                    <Button variant="outline" size="sm" className="shrink-0" onClick={() => openCandidates(job)}>
+                      Voir candidats
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -111,9 +140,18 @@ export function RecruitmentPage() {
         </TabsContent>
 
         <TabsContent value="pipeline">
+          {filterJobId && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Filtre :</span>
+              <Badge variant="muted">{(jobs || []).find((j) => j.id === filterJobId)?.title || 'Offre'}</Badge>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setFilterJobId(null)}>
+                Tout afficher
+              </Button>
+            </div>
+          )}
           <div className="flex gap-4 overflow-x-auto scrollbar-thin pb-4">
             {STAGES.map((stage) => {
-              const stageCandidates = (candidates || []).filter((c) => c.stage === stage.id);
+              const stageCandidates = pipelineCandidates.filter((c) => c.stage === stage.id);
               return (
                 <div key={stage.id} className="w-72 shrink-0">
                   <div className="mb-3 flex items-center justify-between">
@@ -123,7 +161,7 @@ export function RecruitmentPage() {
                       <span className="text-xs text-muted-foreground">{stageCandidates.length}</span>
                     </div>
                   </div>
-                  <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-2 min-h-[150px]">
+                  <div className="min-h-[150px] space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-2">
                     {stageCandidates.map((c) => (
                       <motion.div
                         key={c.id}
@@ -136,13 +174,13 @@ export function RecruitmentPage() {
                               {initials(c.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{c.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{c.jobTitle}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{c.name}</p>
+                            <p className="truncate text-xs text-muted-foreground">{c.jobTitle}</p>
                           </div>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
-                          <Badge variant={c.score >= 80 ? 'success' : c.score >= 60 ? 'warning' : 'muted'} className="text-2xs gap-1">
+                          <Badge variant={c.score >= 80 ? 'success' : c.score >= 60 ? 'warning' : 'muted'} className="gap-1 text-2xs">
                             <Award className="h-2.5 w-2.5" />
                             Score: {c.score}
                           </Badge>
@@ -157,6 +195,48 @@ export function RecruitmentPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!candidatesJob} onOpenChange={(open) => !open && setCandidatesJob(null)}>
+        <DialogContent className="max-w-lg">
+          {candidatesJob && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Candidats — {candidatesJob.title}</DialogTitle>
+                <DialogDescription>
+                  {jobCandidates.length} candidat(s) pour cette offre
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[50vh] space-y-2 overflow-y-auto py-1 scrollbar-thin">
+                {jobCandidates.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Aucun candidat pour cette offre.</p>
+                ) : (
+                  jobCandidates.map((c) => (
+                    <div key={c.id} className="flex items-center gap-4 rounded-lg border border-border p-3">
+                      <Avatar className="h-9 w-9 shrink-0" style={{ backgroundColor: `${c.avatarColor}20` }}>
+                        <AvatarFallback style={{ color: c.avatarColor, backgroundColor: 'transparent' }} className="text-xs">
+                          {initials(c.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{c.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{c.email}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2 pl-2">
+                        <StatusBadge status={c.stage} />
+                        <p className="text-2xs text-muted-foreground">Score {c.score}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <DialogFooter className="flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-3">
+                <Button variant="outline" onClick={() => setCandidatesJob(null)}>Fermer</Button>
+                <Button onClick={() => goToPipeline(candidatesJob)}>Ouvrir le pipeline</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
