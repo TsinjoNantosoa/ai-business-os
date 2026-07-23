@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, Search, Download, MoreHorizontal, Mail, Phone, Tag,
+  Plus, Search, MoreHorizontal, Mail, Phone, Tag,
   ChevronLeft, ChevronRight, Pencil, Trash2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ExportMenu } from '@/components/shared/ExportMenu';
 import { TableSkeleton } from '@/components/shared/Skeletons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import {
@@ -27,6 +28,7 @@ import { useI18n } from '@/lib/i18n/store';
 import { initials, formatRelativeTime } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/store';
 import { toast } from 'sonner';
+import type { ExportColumn } from '@/lib/export';
 
 const PAGE_SIZE = 10;
 
@@ -134,41 +136,17 @@ export function CRMContactsPage() {
     setEditOpen(true);
   };
 
-  const exportCsv = () => {
-    const rows = filtered;
-    if (!rows.length) {
-      toast.error('Aucun contact à exporter');
-      return;
-    }
-    const header = ['id', 'firstName', 'lastName', 'email', 'phone', 'company', 'position', 'status', 'ownerName', 'tags'];
-    const csv = [
-      header.join(','),
-      ...rows.map((c) =>
-        [
-          c.id,
-          c.firstName,
-          c.lastName,
-          c.email,
-          c.phone || '',
-          c.company,
-          c.position || '',
-          c.status,
-          c.ownerName || '',
-          (c.tags || []).join('|'),
-        ]
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-          .join(','),
-      ),
-    ].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `contacts-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`${rows.length} contact(s) exportés`);
-  };
+  const exportColumns: ExportColumn<Contact>[] = [
+    { header: 'Prénom', value: (c) => c.firstName },
+    { header: 'Nom', value: (c) => c.lastName },
+    { header: 'Email', value: (c) => c.email },
+    { header: 'Téléphone', value: (c) => c.phone || '' },
+    { header: 'Entreprise', value: (c) => c.company },
+    { header: 'Poste', value: (c) => c.position || '' },
+    { header: 'Statut', value: (c) => c.status },
+    { header: 'Responsable', value: (c) => c.ownerName || '' },
+    { header: 'Tags', value: (c) => (c.tags || []).join('|') },
+  ];
 
   return (
     <div>
@@ -177,10 +155,14 @@ export function CRMContactsPage() {
         description="Gérez vos contacts et comptes clients"
         actions={
           <>
-            <Button variant="outline" onClick={exportCsv}>
-              <Download className="h-4 w-4" />
-              {t('common.export')}
-            </Button>
+            <ExportMenu
+              filename="contacts"
+              title="Contacts AI BOS"
+              sheetName="Contacts"
+              columns={exportColumns}
+              rows={filtered}
+              label={t('common.export')}
+            />
             {canWrite && (
               <Button
                 onClick={() => {

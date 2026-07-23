@@ -12,6 +12,7 @@ import {
   Play,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { ExportMenu } from '@/components/shared/ExportMenu'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +24,8 @@ import { useI18n } from '@/lib/i18n/store'
 import { cn, formatRelativeTime, formatDate } from '@/lib/utils'
 import { getBIReports } from '@/lib/api/services'
 import type { BIReport } from '@/lib/api/types'
+import { exportTable, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 
 const CHART_ICONS: Record<string, React.ElementType> = {
   bar: BarChart3,
@@ -31,29 +34,14 @@ const CHART_ICONS: Record<string, React.ElementType> = {
   area: AreaChart,
 }
 
-function downloadTextFile(filename: string, content: string, mime = 'text/plain') {
-  const blob = new Blob([content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-function exportReportsCSV(reports: BIReport[]) {
-  const header = ['id', 'name', 'category', 'chartType', 'lastRun', 'schedule']
-  const lines = reports.map((r) => [
-    r.id,
-    r.name.replace(/"/g, '""'),
-    r.category,
-    r.chartType,
-    r.lastRun,
-    r.schedule || '',
-  ])
-  const csv = [header.join(','), ...lines.map((cells) => cells.map((c) => `"${c}"`).join(','))].join('\n')
-  downloadTextFile('finance-reports.csv', csv, 'text/csv')
-}
+const REPORT_COLUMNS: ExportColumn<BIReport>[] = [
+  { header: 'Nom', value: (r) => r.name },
+  { header: 'Catégorie', value: (r) => r.category },
+  { header: 'Type', value: (r) => r.chartType },
+  { header: 'Dernière exécution', value: (r) => r.lastRun },
+  { header: 'Planning', value: (r) => r.schedule || '' },
+  { header: 'Description', value: (r) => r.description },
+]
 
 export function FinanceReportsPage() {
   const { t } = useI18n()
@@ -79,28 +67,35 @@ export function FinanceReportsPage() {
     })
   }, [allReports, category, query])
 
+  const exportOne = (report: BIReport) => {
+    try {
+      exportTable({
+        filename: `rapport-${report.name}`,
+        title: report.name,
+        sheetName: 'Rapport',
+        columns: REPORT_COLUMNS,
+        rows: [report],
+        format: 'pdf',
+      })
+      toast.success('PDF téléchargé')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Export impossible')
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title={t('nav.reports')}
-        description="Galerie de rapports finance + exports (mock)."
+        description="Galerie de rapports finance et exports"
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => exportReportsCSV(filtered)}>
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
-            <Button variant="outline" onClick={() => {
-              downloadTextFile(
-                'finance-reports.pdf',
-                filtered.map((r) => `- ${r.name} (${r.category}) — ${r.chartType}`).join('\n'),
-                'application/pdf',
-              )
-            }}>
-              <FileText className="h-4 w-4" />
-              Export PDF
-            </Button>
-          </div>
+          <ExportMenu
+            filename="rapports-finance"
+            title="Rapports finance AI BOS"
+            sheetName="Rapports"
+            columns={REPORT_COLUMNS}
+            rows={filtered}
+          />
         }
       />
 
@@ -118,7 +113,7 @@ export function FinanceReportsPage() {
 
           <div className="w-full sm:w-56">
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger>
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -133,110 +128,93 @@ export function FinanceReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((report) => {
           const Icon = CHART_ICONS[report.chartType] || BarChart3
           return (
-            <Card key={report.id} className="group cursor-pointer transition-all hover:shadow-elevated" onClick={() => setSelected(report)}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary">
-                    <Icon className="h-5 w-5" />
+            <Card key={report.id} className="transition-shadow hover:shadow-elevated">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{report.name}</CardTitle>
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{report.description}</p>
+                    </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      exportReportsCSV([report])
-                    }}
-                    title="Exporter"
-                  >
+                  <Badge variant="muted">{report.category}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {formatRelativeTime(report.lastRun)}
+                  </span>
+                  <span>{report.schedule || 'Manuel'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" className="flex-1" onClick={() => setSelected(report)}>
+                    <Play className="h-4 w-4" />
+                    Ouvrir
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => exportOne(report)} title="Exporter PDF">
                     <Download className="h-4 w-4" />
                   </Button>
-                </div>
-                <h3 className="mt-3 text-sm font-semibold">{report.name}</h3>
-                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{report.description}</p>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                  <Badge variant="muted" className="text-2xs">{report.category}</Badge>
-                  <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    Dernier run: {formatRelativeTime(report.lastRun)}
-                  </span>
-                  {report.schedule && (
-                    <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
-                      <Play className="h-3 w-3" />
-                      Planifié: {report.schedule}
-                    </span>
-                  )}
                 </div>
               </CardContent>
             </Card>
           )
         })}
-
-        {filtered.length === 0 && (
-          <Card className="sm:col-span-2 lg:col-span-3">
-            <CardContent className="p-8 text-center text-sm text-muted-foreground">
-              Aucun rapport ne correspond au filtre.
-            </CardContent>
-          </Card>
-        )}
       </div>
 
-      <Dialog open={!!selected} onOpenChange={(o) => setSelected(o ? selected : null)}>
-        {selected && (
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{selected.name}</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="muted">{selected.category}</Badge>
-                <Badge variant="outline">{selected.chartType}</Badge>
-                <Badge variant="success">Dernier run {formatRelativeTime(selected.lastRun)}</Badge>
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-2xl">
+          {selected && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selected.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">{selected.description}</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Catégorie</p>
+                    <p className="font-medium">{selected.category}</p>
+                  </div>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Type</p>
+                    <p className="font-medium">{selected.chartType}</p>
+                  </div>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Dernière exécution</p>
+                    <p className="font-medium">{formatDate(selected.lastRun)}</p>
+                  </div>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Planning</p>
+                    <p className="font-medium">{selected.schedule || 'Manuel'}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => exportOne(selected)}>
+                    <FileText className="h-4 w-4" />
+                    PDF
+                  </Button>
+                  <ExportMenu
+                    filename={`rapport-${selected.name}`}
+                    title={selected.name}
+                    columns={REPORT_COLUMNS}
+                    rows={[selected]}
+                    size="sm"
+                  />
+                </div>
               </div>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Métadonnées</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Champ</TableHead>
-                        <TableHead>Valeur</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[
-                        ['ID', selected.id],
-                        ['Catégorie', selected.category],
-                        ['Type de chart', selected.chartType],
-                        ['Dernier run', selected.lastRun],
-                        ['Schedule', selected.schedule || '—'],
-                      ].map(([k, v]) => (
-                        <TableRow key={k}>
-                          <TableCell className="font-medium">{k}</TableCell>
-                          <TableCell>{v}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <div className="text-sm text-muted-foreground">
-                Dans une version connectée au backend, ce panneau afficherait la visualisation et les exports générés côté serveur.
-              </div>
-            </div>
-          </DialogContent>
-        )}
+            </>
+          )}
+        </DialogContent>
       </Dialog>
     </div>
   )
 }
-

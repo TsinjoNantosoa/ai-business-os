@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  Area, BarChart, Bar, Line, LineChart, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts';
-import { Download, FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ExportMenu } from '@/components/shared/ExportMenu';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { getAnalytics } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
-import { toast } from 'sonner';
+import type { ExportColumn } from '@/lib/export';
 
 const PERIODS = [
   { id: '3m', label: '3 mois', months: 3 },
@@ -41,37 +42,54 @@ export function AnalyticsPage() {
   const conversion = analytics?.conversion || [];
   const churn = useMemo(() => sliceTail(analytics?.churn || [], months), [analytics?.churn, months]);
 
-  const exportCsv = () => {
-    if (!revenue.length && !users.length) {
-      toast.error('Aucune donnée à exporter');
-      return;
-    }
-    const lines = [
-      'section,month,metric,value',
-      ...revenue.flatMap((r) => [
-        `revenue,${r.month},revenue,${r.revenue}`,
-        `revenue,${r.month},target,${r.target}`,
-      ]),
-      ...users.flatMap((u) => [
-        `users,${u.month},active,${u.active}`,
-        `users,${u.month},new,${u.new}`,
-      ]),
-      ...churn.map((c) => `churn,${c.month},rate,${c.rate}`),
-      ...conversion.map((c) => `conversion,${c.stage},value,${c.value}`),
-    ];
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `analytics-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Export CSV téléchargé');
-  };
+  const exportRows = useMemo(
+    () => [
+      ...revenue.map((r) => ({
+        section: 'Revenu',
+        label: r.month,
+        metric: 'revenu',
+        value: r.revenue,
+      })),
+      ...revenue.map((r) => ({
+        section: 'Revenu',
+        label: r.month,
+        metric: 'objectif',
+        value: r.target,
+      })),
+      ...users.map((u) => ({
+        section: 'Utilisateurs',
+        label: u.month,
+        metric: 'actifs',
+        value: u.active,
+      })),
+      ...users.map((u) => ({
+        section: 'Utilisateurs',
+        label: u.month,
+        metric: 'nouveaux',
+        value: u.new,
+      })),
+      ...churn.map((c) => ({
+        section: 'Churn',
+        label: c.month,
+        metric: 'taux',
+        value: c.rate,
+      })),
+      ...conversion.map((c) => ({
+        section: 'Conversion',
+        label: c.stage,
+        metric: 'valeur',
+        value: c.value,
+      })),
+    ],
+    [revenue, users, churn, conversion],
+  );
 
-  const exportPdfStub = () => {
-    toast.message('Export PDF bientôt disponible — utilisez CSV pour l’instant');
-  };
+  const exportColumns: ExportColumn<(typeof exportRows)[number]>[] = [
+    { header: 'Section', value: (r) => r.section },
+    { header: 'Période / Étape', value: (r) => r.label },
+    { header: 'Métrique', value: (r) => r.metric },
+    { header: 'Valeur', value: (r) => r.value },
+  ];
 
   return (
     <div>
@@ -87,19 +105,18 @@ export function AnalyticsPage() {
                 </Button>
               ))}
             </div>
-            <Button variant="outline" onClick={exportCsv}>
-              <Download className="h-4 w-4" />
-              CSV
-            </Button>
-            <Button variant="outline" onClick={exportPdfStub}>
-              <FileText className="h-4 w-4" />
-              PDF
-            </Button>
+            <ExportMenu
+              filename={`analytics-${period}`}
+              title={`Analytics AI BOS (${PERIODS.find((p) => p.id === period)?.label})`}
+              sheetName="Analytics"
+              columns={exportColumns}
+              rows={exportRows}
+            />
           </>
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 xl:gap-5">
         {kpis.map((kpi, i) => (
           <KpiCard
             key={i}
@@ -128,7 +145,7 @@ export function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={revenue}>
+            <ComposedChart data={revenue} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.2} />
@@ -136,7 +153,14 @@ export function AnalyticsPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 12, fill: '#64748b' }}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+                padding={{ left: 8, right: 8 }}
+              />
               <YAxis
                 tick={{ fontSize: 12, fill: '#64748b' }}
                 axisLine={false}
@@ -149,8 +173,8 @@ export function AnalyticsPage() {
               />
               <Legend />
               <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={2.5} fill="url(#rev)" name="Revenu" />
-              <Line type="monotone" dataKey="target" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" name="Objectif" />
-            </AreaChart>
+              <Line type="monotone" dataKey="target" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" name="Objectif" dot={false} />
+            </ComposedChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>

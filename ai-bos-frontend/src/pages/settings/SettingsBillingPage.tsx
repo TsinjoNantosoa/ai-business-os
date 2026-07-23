@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ExportMenu } from '@/components/shared/ExportMenu';
 import { TableSkeleton } from '@/components/shared/Skeletons';
 import { useI18n } from '@/lib/i18n/store';
 import { Check, Zap, Database, Users, Download } from 'lucide-react';
 import { createBillingCheckout, getBillingOverview } from '@/lib/api/services';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { exportTextPdf, type ExportColumn } from '@/lib/export';
+import type { BillingInvoice } from '@/lib/api/types';
 
 export function SettingsBillingPage() {
   const { t } = useI18n();
@@ -43,27 +46,47 @@ export function SettingsBillingPage() {
     { icon: Database, label: 'Stockage (Go)', ...subscription.usage.storageGb, color: 'bg-emerald-500' },
   ];
 
+  const invoiceColumns: ExportColumn<BillingInvoice>[] = [
+    { header: 'N°', value: (inv) => inv.invoiceNumber },
+    { header: 'Date', value: (inv) => inv.createdAt },
+    { header: 'Montant', value: (inv) => inv.amount },
+    { header: 'Devise', value: (inv) => inv.currency },
+    { header: 'Statut', value: (inv) => inv.status },
+  ];
+
   return (
     <div>
-      <PageHeader title={t('nav.settingsBilling')} description="Gérez votre abonnement et facturation" />
-      <div className="space-y-6 max-w-4xl">
+      <PageHeader
+        title={t('nav.settingsBilling')}
+        description="Gérez votre abonnement et facturation"
+        actions={
+          <ExportMenu
+            filename="factures-abonnement"
+            title="Factures abonnement AI BOS"
+            sheetName="Factures"
+            columns={invoiceColumns}
+            rows={invoices}
+          />
+        }
+      />
+      <div className="space-y-6">
         <Card className="border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between gap-4">
+          <CardContent className="p-6 sm:p-7">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="default">Plan {plan.name}</Badge>
                   <span className="text-sm text-muted-foreground">
                     Renouvellement le {formatDate(subscription.renewalDate)}
                   </span>
                 </div>
-                <p className="mt-2 text-3xl font-bold">
+                <p className="mt-3 text-3xl font-bold tracking-tight">
                   {formatCurrency(plan.priceMonthly, plan.currency)}
                   <span className="text-base font-normal text-muted-foreground">/mois</span>
                 </p>
               </div>
               <Button
-                variant="outline"
+                className="shrink-0"
                 disabled={checkoutMutation.isPending}
                 onClick={() => checkoutMutation.mutate(plan.code === 'enterprise' ? 'pro' : 'enterprise')}
               >
@@ -77,17 +100,17 @@ export function SettingsBillingPage() {
           {usageCards.map((u) => (
             <Card key={u.label}>
               <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${u.color} text-white`}>
+                <div className="mb-4 flex items-center gap-2.5">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${u.color} text-white`}>
                     <u.icon className="h-4 w-4" />
                   </div>
                   <span className="text-sm font-medium">{u.label}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="font-semibold">{u.used.toLocaleString()}</span>
-                  <span className="text-muted-foreground">{u.limit.toLocaleString()}</span>
+                <div className="mb-2 flex items-baseline justify-between gap-2 text-sm">
+                  <span className="text-lg font-semibold tabular-nums">{u.used.toLocaleString('fr-FR')}</span>
+                  <span className="text-muted-foreground tabular-nums">/ {u.limit.toLocaleString('fr-FR')}</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-2.5 overflow-hidden rounded-full bg-muted">
                   <div
                     className={`h-full rounded-full ${u.color}`}
                     style={{ width: `${Math.min(100, (u.used / Math.max(u.limit, 1)) * 100)}%` }}
@@ -127,15 +150,26 @@ export function SettingsBillingPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {inv.pdfUrl ? (
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={inv.pdfUrl} target="_blank" rel="noreferrer">
-                            <Download className="h-3.5 w-3.5" />PDF
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button variant="ghost" size="sm" disabled><Download className="h-3.5 w-3.5" />PDF</Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          try {
+                            exportTextPdf(inv.invoiceNumber, `Facture ${inv.invoiceNumber}`, [
+                              `Date: ${formatDate(inv.createdAt)}`,
+                              `Montant: ${inv.amount} ${inv.currency}`,
+                              `Statut: ${inv.status}`,
+                              `Plan: ${plan.name}`,
+                            ]);
+                            toast.success('PDF téléchargé');
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : 'Export PDF impossible');
+                          }
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        PDF
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

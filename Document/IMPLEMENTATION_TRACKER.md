@@ -235,10 +235,10 @@ Pour chaque module métier, ajouter dans l'ordre :
 ### Phase 2 — Agent Engine + Workflows (S21–S36)
 
 - [x] S21–S28 Base P2.C / P2.D (workflows run + chat SSE + RAG Document)
-- [ ] S29 Tool registry (CRM, Finance, HR tools pour agents)
-- [ ] S30 Agent orchestration multi-step
-- [ ] S31 Human-in-the-loop approvals
-- [ ] S32 Workflow designer UI (drag & drop)
+- [x] S29 Tool registry (CRM, Finance, Tasks, Projects tools pour agents) — Lot C 2026-07-22
+- [x] S30 Agent orchestration multi-step — Lot D 2026-07-22
+- [x] S31 Human-in-the-loop approvals — Lot D 2026-07-22
+- [x] S32 Workflow designer UI (drag & drop) — Lot E 2026-07-22
 - [ ] S33 Event-driven triggers (webhooks entrants)
 - [ ] S34 Observability agents (traces, coûts tokens)
 - [ ] S35 Rate limiting + quotas par plan
@@ -284,4 +284,7 @@ Voir aussi : [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`README_ET
 **Suite suggérée :**
 1. ~~Lot B : Marketing/Sales/Projects `POST` create~~ ✅ terminé le 2026-07-21 (migration 017, POST/PATCH + UI sur les 5 modules)
 2. ~~Calendar/Meetings create/update~~ ✅ terminé le 2026-07-21
-3. **S29** tool registry agents / finaliser **S6** email staging
+3. ~~**S29** tool registry agents~~ ✅ Lot C terminé le 2026-07-22 (5 tools + SSE + UI)
+4. ~~**S30–S31** orchestration multi-step / HITL~~ ✅ Lot D terminé le 2026-07-22
+5. ~~**S32** workflow designer~~ ✅ Lot E terminé le 2026-07-22
+6. **S33** triggers event-driven ; finaliser **S6** email staging

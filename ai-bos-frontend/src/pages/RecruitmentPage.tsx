@@ -61,7 +61,7 @@ export function RecruitmentPage() {
                     <div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" />{job.applicants} candidats</div>
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                    <Badge variant="muted" className="capitalize">{job.type.replace('_', ' ')}</Badge>
+                    <StatusBadge status={job.type} />
                     <Button variant="outline" size="sm">Voir candidats</Button>
                   </div>
                 </CardContent>

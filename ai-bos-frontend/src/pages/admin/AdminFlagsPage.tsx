@@ -7,12 +7,19 @@ import { useI18n } from '@/lib/i18n/store';
 import { Flag, Loader2 } from 'lucide-react';
 import { getAdminFeatureFlags, updateFeatureFlag } from '@/lib/api/services';
 import type { FeatureFlag } from '@/lib/api/types';
+import { cn } from '@/lib/utils';
 
-const ENV_COLORS: Record<string, string> = {
-  production: 'success',
-  beta: 'warning',
-  alpha: 'danger',
-  planned: 'muted',
+const ENV_META: Record<string, { variant: 'success' | 'warning' | 'danger' | 'muted'; label: string }> = {
+  production: { variant: 'success', label: 'Production' },
+  beta: { variant: 'warning', label: 'Bêta' },
+  alpha: { variant: 'danger', label: 'Alpha' },
+  planned: { variant: 'muted', label: 'Planifié' },
+};
+
+const SOURCE_LABEL: Record<string, string> = {
+  plan: 'plan',
+  org: 'organisation',
+  default: 'défaut',
 };
 
 export function AdminFlagsPage() {
@@ -62,38 +69,47 @@ export function AdminFlagsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {flags.map((flag) => (
-            <Card key={flag.key}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 text-primary">
-                      <Flag className="h-4 w-4" />
+          {flags.map((flag) => {
+            const env = ENV_META[flag.env] || { variant: 'muted' as const, label: flag.env };
+            const source = flag.source ? SOURCE_LABEL[flag.source] || flag.source : null;
+            return (
+              <Card key={flag.key} className="transition-shadow hover:shadow-elevated">
+                <CardContent className="flex h-full flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary">
+                        <Flag className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold leading-snug">{flag.name}</h3>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{flag.description}</p>
+                        <code className="mt-2 inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] text-slate-600">
+                          {flag.key}
+                        </code>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-semibold">{flag.name}</h3>
-                      <p className="text-xs text-muted-foreground">{flag.description}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">{flag.key}</p>
-                    </div>
+                    <Switch
+                      checked={flag.enabled}
+                      disabled={savingKey === flag.key}
+                      onCheckedChange={(checked) => void toggle(flag, checked)}
+                    />
                   </div>
-                  <Switch
-                    checked={flag.enabled}
-                    disabled={savingKey === flag.key}
-                    onCheckedChange={(checked) => void toggle(flag, checked)}
-                  />
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                  <Badge variant={(ENV_COLORS[flag.env] as 'success' | 'warning' | 'danger' | 'muted') || 'muted'} className="capitalize">
-                    {flag.env}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {flag.enabled ? 'Activé' : 'Désactivé'}
-                    {flag.source ? ` · ${flag.source}` : ''}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4 mt-4">
+                    <Badge variant={env.variant}>{env.label}</Badge>
+                    <span
+                      className={cn(
+                        'text-xs font-medium',
+                        flag.enabled ? 'text-emerald-600' : 'text-muted-foreground',
+                      )}
+                    >
+                      {flag.enabled ? 'Activé' : 'Désactivé'}
+                      {source ? ` · ${source}` : ''}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

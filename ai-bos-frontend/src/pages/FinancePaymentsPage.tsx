@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Download, Search, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Search, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { ExportMenu } from '@/components/shared/ExportMenu'
 import { KpiCard } from '@/components/shared/KpiCard'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
@@ -21,6 +21,7 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { getFinanceOverview, getInvoices, getTransactions } from '@/lib/api/services'
 import { useAuth } from '@/lib/auth/store'
 import type { Invoice, Transaction } from '@/lib/api/types'
+import type { ExportColumn } from '@/lib/export'
 
 export function FinancePaymentsPage() {
   const { t } = useI18n()
@@ -84,6 +85,19 @@ export function FinancePaymentsPage() {
   }, [finance])
 
   // We keep the page light: payments + AR aging, while the big cash-flow chart remains on /finance.
+  const exportRows = useMemo(
+    () => [...filteredTransactions.income, ...filteredTransactions.expense],
+    [filteredTransactions],
+  )
+  const exportColumns: ExportColumn<Transaction>[] = [
+    { header: 'Description', value: (tx) => tx.description },
+    { header: 'Type', value: (tx) => (tx.type === 'income' ? 'Encaissement' : 'Décaissement') },
+    { header: 'Catégorie', value: (tx) => tx.category },
+    { header: 'Compte', value: (tx) => tx.account },
+    { header: 'Date', value: (tx) => tx.date },
+    { header: 'Montant', value: (tx) => tx.amount },
+  ]
+
   return (
     <div>
       <PageHeader
@@ -168,10 +182,14 @@ export function FinancePaymentsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" onClick={() => {}}>
-                <Download className="h-4 w-4" />
-                {t('common.export')}
-              </Button>
+              <ExportMenu
+                filename="paiements"
+                title="Paiements & Trésorerie"
+                sheetName="Paiements"
+                columns={exportColumns}
+                rows={exportRows}
+                label={t('common.export')}
+              />
             </div>
           </CardContent>
         </Card>
@@ -282,7 +300,7 @@ function TxTable({
       <CardHeader className="pb-3">
         <CardTitle className="text-base">{title}</CardTitle>
         <div className="mt-2 text-sm text-muted-foreground">
-          {items.length} écriture(s) — triées par date (mock).
+          {items.length} écriture(s) — triées par date
         </div>
       </CardHeader>
       <CardContent className="p-0">

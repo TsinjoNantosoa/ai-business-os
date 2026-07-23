@@ -114,35 +114,37 @@ export function MarketingCampaignsPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold">{c.name}</h3>
-                    <p className="text-xs text-muted-foreground capitalize">{c.type}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {CAMPAIGN_TYPES.find((t) => t.value === c.type)?.label || c.type}
+                    </p>
                   </div>
                 </div>
                 <StatusBadge status={c.status} />
               </div>
 
-              <div className="mt-4 grid grid-cols-4 gap-2">
-                <div>
-                  <p className="text-2xs text-muted-foreground flex items-center gap-1"><Eye className="h-3 w-3" />Portée</p>
-                  <p className="text-sm font-semibold">{formatNumber(c.reach)}</p>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-lg bg-muted/40 px-2.5 py-2">
+                  <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1"><Eye className="h-3 w-3" />Portée</p>
+                  <p className="mt-0.5 text-sm font-semibold tabular-nums">{formatNumber(c.reach)}</p>
                 </div>
-                <div>
-                  <p className="text-2xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" />Ouverture</p>
-                  <p className="text-sm font-semibold">{formatPercent(c.openRate)}</p>
+                <div className="rounded-lg bg-muted/40 px-2.5 py-2">
+                  <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1"><Mail className="h-3 w-3" />Ouverture</p>
+                  <p className="mt-0.5 text-sm font-semibold tabular-nums">{formatPercent(c.openRate)}</p>
                 </div>
-                <div>
-                  <p className="text-2xs text-muted-foreground flex items-center gap-1"><MousePointerClick className="h-3 w-3" />Clics</p>
-                  <p className="text-sm font-semibold">{formatPercent(c.clickRate)}</p>
+                <div className="rounded-lg bg-muted/40 px-2.5 py-2">
+                  <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1"><MousePointerClick className="h-3 w-3" />Clics</p>
+                  <p className="mt-0.5 text-sm font-semibold tabular-nums">{formatPercent(c.clickRate)}</p>
                 </div>
-                <div>
-                  <p className="text-2xs text-muted-foreground flex items-center gap-1"><Target className="h-3 w-3" />Conv.</p>
-                  <p className="text-sm font-semibold">{c.conversions}</p>
+                <div className="rounded-lg bg-muted/40 px-2.5 py-2">
+                  <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1"><Target className="h-3 w-3" />Conv.</p>
+                  <p className="mt-0.5 text-sm font-semibold tabular-nums">{c.conversions}</p>
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{formatDate(c.startDate)}</span>
-                  <span>{formatCurrency(c.spent)} / {formatCurrency(c.budget)}</span>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
+                  <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{formatDate(c.startDate)}</span>
+                  <span className="font-medium text-foreground/80">{formatCurrency(c.spent)} / {formatCurrency(c.budget)}</span>
                 </div>
                 <Button variant="outline" size="sm">Voir détails</Button>
               </div>

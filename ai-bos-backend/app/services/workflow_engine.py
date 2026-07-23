@@ -21,7 +21,13 @@ class WorkflowEngine:
         started = time.perf_counter()
 
         try:
-            actions = workflow.actions or []
+            actions = list(workflow.actions or [])
+            if workflow.definition:
+                from app.services.workflow_graph import derive_trigger_actions, normalize_definition
+
+                _, derived = derive_trigger_actions(normalize_definition(workflow.definition))
+                if derived:
+                    actions = derived
             result_message = f"{len(actions)} action(s) exécutée(s): {', '.join(actions) or 'aucune'}"
             duration_ms = max(1, int((time.perf_counter() - started) * 1000))
             self._repo.finish_execution(

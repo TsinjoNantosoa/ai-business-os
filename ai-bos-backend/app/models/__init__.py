@@ -1,4 +1,5 @@
 from app.models.activity import Activity
+from app.models.ai_pending_action import AiPendingAction
 from app.models.api_key import ApiKey
 from app.models.audit_log import AuditLog
 from app.models.billing import BillingInvoice, BillingPlan, Subscription
@@ -21,6 +22,7 @@ from app.models.workflow import Workflow, WorkflowExecution
 
 __all__ = [
     "Activity",
+    "AiPendingAction",
     "ApiKey",
     "AuditLog",
     "BillingInvoice",

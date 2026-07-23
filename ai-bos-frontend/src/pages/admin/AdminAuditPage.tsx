@@ -1,20 +1,30 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, ShieldAlert, Download } from 'lucide-react';
+import { Search, ShieldAlert } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ExportMenu } from '@/components/shared/ExportMenu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { getAuditLogs } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
 import { formatRelativeTime } from '@/lib/utils';
+import type { AuditLog } from '@/lib/api/types';
+import type { ExportColumn } from '@/lib/export';
 
 const ACTION_COLORS: Record<string, string> = {
   LOGIN: 'default', LOGOUT: 'muted', CREATE: 'success', UPDATE: 'warning', DELETE: 'danger', EXPORT: 'secondary', VIEW: 'muted',
 };
+
+const COLUMNS: ExportColumn<AuditLog>[] = [
+  { header: 'Horodatage', value: (l) => l.timestamp },
+  { header: 'Utilisateur', value: (l) => l.userName },
+  { header: 'Action', value: (l) => l.action },
+  { header: 'Ressource', value: (l) => `${l.resource}${l.resourceId ? ` #${l.resourceId}` : ''}` },
+  { header: 'IP', value: (l) => l.ip },
+];
 
 export function AdminAuditPage() {
   const { t } = useI18n();
@@ -29,7 +39,19 @@ export function AdminAuditPage() {
 
   return (
     <div>
-      <PageHeader title={t('nav.adminAudit')} description="Journal d'audit des actions" actions={<Button variant="outline"><Download className="h-4 w-4" />Exporter</Button>} />
+      <PageHeader
+        title={t('nav.adminAudit')}
+        description="Journal d'audit des actions"
+        actions={
+          <ExportMenu
+            filename="audit-logs"
+            title="Journal d'audit AI BOS"
+            sheetName="Audit"
+            columns={COLUMNS}
+            rows={filtered}
+          />
+        }
+      />
       <Card className="mb-4">
         <CardContent className="flex gap-3 p-4">
           <div className="relative flex-1">
@@ -57,7 +79,7 @@ export function AdminAuditPage() {
                 <TableRow key={log.id}>
                   <TableCell className="text-sm text-muted-foreground">{formatRelativeTime(log.timestamp)}</TableCell>
                   <TableCell className="text-sm font-medium">{log.userName}</TableCell>
-                  <TableCell><Badge variant={(ACTION_COLORS[log.action] as any) || 'muted'}>{log.action}</Badge></TableCell>
+                  <TableCell><Badge variant={(ACTION_COLORS[log.action] as 'default' | 'muted' | 'success' | 'warning' | 'danger' | 'secondary') || 'muted'}>{log.action}</Badge></TableCell>
                   <TableCell className="text-sm">{log.resource}{log.resourceId && ` #${log.resourceId}`}</TableCell>
                   <TableCell className="text-sm text-muted-foreground font-mono">{log.ip}</TableCell>
                 </TableRow>

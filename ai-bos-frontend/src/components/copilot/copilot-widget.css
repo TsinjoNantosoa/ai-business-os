@@ -1,0 +1,597 @@
+/* AI BOS Copilot — design inspiré du chatbot ALAN.AI (H4H)
+   Scoped under .aibos-chat-root to avoid leaking into the app shell. */
+
+.aibos-chat-root {
+  --bos-navy-left: #132251;
+  --bos-navy: #0f1b42;
+  --bos-surface: #f8faff;
+  --bos-border: #e8effe;
+  --bos-text: #1e293b;
+  --bos-muted: #64748b;
+  font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+  box-sizing: border-box;
+}
+
+.aibos-chat-root *,
+.aibos-chat-root *::before,
+.aibos-chat-root *::after {
+  box-sizing: border-box;
+}
+
+/* FAB */
+.aibos-chat-root .bos-fab-wrap {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.aibos-chat-root .bos-fab {
+  pointer-events: auto;
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bos-navy);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(15, 82, 186, 0.4);
+  animation: bos-float 6s ease-in-out infinite;
+}
+
+.aibos-chat-root .bos-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(15, 82, 186, 0.5);
+}
+
+.aibos-chat-root .bos-fab-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--bos-navy);
+  background: rgba(12, 81, 198, 0.1);
+  animation: bos-pulse-ring 2.5s infinite;
+  z-index: -1;
+}
+
+.aibos-chat-root .bos-fab-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+}
+
+@keyframes bos-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes bos-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+@keyframes bos-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Widget shell */
+.aibos-chat-root .bos-widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  width: min(400px, calc(100vw - 24px));
+  height: min(640px, calc(100vh - 24px));
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow:
+    0 8px 32px rgba(26, 115, 232, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Header */
+.aibos-chat-root .bos-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 14px;
+  color: #fff;
+  background: linear-gradient(90deg, var(--bos-navy-left) 0%, var(--bos-navy) 100%);
+  overflow: visible;
+}
+
+.aibos-chat-root .bos-header-curve {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 36px;
+  display: block;
+  pointer-events: none;
+}
+
+.aibos-chat-root .bos-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.aibos-chat-root .bos-avatar-square {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.aibos-chat-root .bos-header-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.aibos-chat-root .bos-title {
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.aibos-chat-root .bos-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+
+.aibos-chat-root .bos-status {
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #d1fae5;
+}
+
+.aibos-chat-root .bos-online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+  animation: bos-dot-pulse 2s infinite;
+}
+
+.aibos-chat-root .bos-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.aibos-chat-root .bos-header-btn {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.aibos-chat-root .bos-header-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.aibos-chat-root .bos-agent-select {
+  max-width: 92px;
+  appearance: none;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.aibos-chat-root .bos-agent-select option {
+  color: #0f172a;
+}
+
+/* Body */
+.aibos-chat-root .bos-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bos-surface);
+  overflow: hidden;
+}
+
+.aibos-chat-root .bos-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 28px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(199, 214, 245, 0.55) transparent;
+}
+
+.aibos-chat-root .bos-msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.aibos-chat-root .bos-msg-row.user {
+  justify-content: flex-end;
+}
+
+.aibos-chat-root .bos-bot-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--bos-navy-left), var(--bos-navy));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(26, 115, 232, 0.15);
+}
+
+.aibos-chat-root .bos-bubble {
+  max-width: 78%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.04);
+}
+
+.aibos-chat-root .bos-bubble.bot {
+  background: #fff;
+  color: var(--bos-text);
+  border: 1.5px solid var(--bos-border);
+  border-bottom-left-radius: 6px;
+}
+
+.aibos-chat-root .bos-bubble.user {
+  background: linear-gradient(135deg, var(--bos-navy-left), var(--bos-navy));
+  color: #fff;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.14);
+}
+
+.aibos-chat-root .bos-bubble-text {
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.aibos-chat-root .bos-msg-time {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.55;
+  text-align: left;
+}
+
+.aibos-chat-root .bos-bubble.user .bos-msg-time {
+  text-align: right;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.aibos-chat-root .bos-chips {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aibos-chat-root .bos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #f8faff;
+  color: var(--bos-navy);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.aibos-chat-root .bos-chip.ok {
+  border-color: #a7f3d0;
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.aibos-chat-root .bos-chip.err {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.aibos-chat-root .bos-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  background: #fff;
+  border: 1.5px solid var(--bos-border);
+  color: var(--bos-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.aibos-chat-root .bos-typing-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.aibos-chat-root .bos-typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bos-navy);
+  animation: bos-dot-pulse 1.2s infinite;
+}
+
+.aibos-chat-root .bos-typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.aibos-chat-root .bos-typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Quick replies */
+.aibos-chat-root .bos-quick-choice {
+  margin-left: 42px;
+  margin-top: -2px;
+  max-width: calc(100% - 42px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.aibos-chat-root .bos-quick-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--bos-muted);
+  margin-left: 4px;
+}
+
+.aibos-chat-root .bos-quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.aibos-chat-root .bos-quick-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+  max-width: 260px;
+  padding: 10px 16px 10px 12px;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #fff;
+  color: var(--bos-navy);
+  box-shadow: 0 3px 10px rgba(26, 115, 232, 0.07);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+  text-align: left;
+}
+
+.aibos-chat-root .bos-quick-pill:hover {
+  transform: translateX(3px);
+  box-shadow: 0 6px 18px rgba(26, 115, 232, 0.13);
+  background: linear-gradient(135deg, #f0f8ff, #ffffff);
+  border-color: #93c5fd;
+}
+
+.aibos-chat-root .bos-quick-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #eef6ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.aibos-chat-root .bos-quick-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Composer */
+.aibos-chat-root .bos-composer {
+  border-top: 1px solid #eef2ff;
+  background: #fff;
+  padding: 8px 10px 6px;
+}
+
+.aibos-chat-root .bos-composer-wrap {
+  position: relative;
+  width: 100%;
+  --btn: 38px;
+  --gap: 8px;
+}
+
+.aibos-chat-root .bos-composer-input {
+  width: 100%;
+  min-height: 46px;
+  max-height: 120px;
+  resize: none;
+  border: 1.2px solid #e6eef8;
+  border-radius: 28px;
+  background: #f8faff;
+  padding: 12px calc(var(--btn) + var(--gap) + 36px) 12px 16px;
+  font-size: 14px;
+  line-height: 20px;
+  color: #0f1724;
+  outline: none;
+  font-family: inherit;
+}
+
+.aibos-chat-root .bos-composer-input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.aibos-chat-root .bos-char-count {
+  position: absolute;
+  right: calc(var(--btn) + var(--gap) + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.aibos-chat-root .bos-send-btn {
+  position: absolute;
+  right: var(--gap);
+  top: 50%;
+  margin-top: calc(var(--btn) / -2);
+  width: var(--btn);
+  height: var(--btn);
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--bos-navy-left), var(--bos-navy));
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 28px rgba(26, 115, 232, 0.16);
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    opacity 0.12s;
+}
+
+.aibos-chat-root .bos-send-btn:hover:not(:disabled) {
+  box-shadow: 0 16px 34px rgba(26, 115, 232, 0.2);
+  transform: scale(1.04);
+}
+
+.aibos-chat-root .bos-send-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.aibos-chat-root .bos-disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 12px;
+  background: #fff;
+  border-top: 1px solid #f1f5f9;
+  color: var(--bos-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.aibos-chat-root .bos-disclaimer-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+  color: #60a5fa;
+}
+
+@media (max-width: 600px) {
+  .aibos-chat-root .bos-widget {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .aibos-chat-root .bos-fab-wrap {
+    bottom: 16px;
+    right: 16px;
+  }
+}

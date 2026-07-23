@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, ArrowUpRight, ArrowDownRight, ListFilter } from 'lucide-react'
+import { Search, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { ExportMenu } from '@/components/shared/ExportMenu'
 import { KpiCard } from '@/components/shared/KpiCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,7 @@ import { useI18n } from '@/lib/i18n/store'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { getTransactions } from '@/lib/api/services'
 import type { Transaction } from '@/lib/api/types'
+import type { ExportColumn } from '@/lib/export'
 
 type TxType = 'all' | Transaction['type']
 
@@ -72,16 +73,39 @@ export function FinanceAccountingPage() {
       })
   }, [filtered])
 
+  const exportRows = ledgerRows.map(({ tx, balance }) => ({
+    date: tx.date,
+    description: tx.description,
+    category: tx.category,
+    account: tx.account,
+    debit: tx.type === 'income' ? tx.amount : 0,
+    credit: tx.type === 'expense' ? tx.amount : 0,
+    balance,
+  }))
+  const exportColumns: ExportColumn<(typeof exportRows)[number]>[] = [
+    { header: 'Date', value: (r) => r.date },
+    { header: 'Description', value: (r) => r.description },
+    { header: 'Catégorie', value: (r) => r.category },
+    { header: 'Compte', value: (r) => r.account },
+    { header: 'Débit', value: (r) => r.debit },
+    { header: 'Crédit', value: (r) => r.credit },
+    { header: 'Solde cumulé', value: (r) => r.balance },
+  ]
+
   return (
     <div>
       <PageHeader
         title={t('nav.accounting')}
-        description="Grand livre : écritures, filtres et soldes cumulés (mock)."
+        description="Grand livre : écritures, filtres et soldes cumulés"
         actions={
-          <Button variant="outline" onClick={() => {}}>
-            <ListFilter className="mr-2 h-4 w-4" />
-            {t('common.filter')}
-          </Button>
+          <ExportMenu
+            filename="grand-livre"
+            title="Grand livre AI BOS"
+            sheetName="Écritures"
+            columns={exportColumns}
+            rows={exportRows}
+            label={t('common.export')}
+          />
         }
       />
 

@@ -91,7 +91,7 @@ export function Sidebar({
                   </button>
                 )}
                 {isExpanded && (
-                  <div className="mt-0.5 space-y-0.5">
+                  <div className="mt-0.5 space-y-1">
                     {visibleItems.map((item) => {
                       const isActive = location.pathname === item.path;
                       const Icon = item.icon;

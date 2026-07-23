@@ -144,7 +144,9 @@ export function SupportTicketsPage() {
                       <Clock className="h-3 w-3" />
                       SLA: {formatRelativeTime(ticket.slaDeadline)}
                     </span>
-                    <span>{ticket.category}</span>
+                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-2xs font-medium text-slate-600">
+                      {ticket.category === 'Billing' ? 'Facturation' : ticket.category === 'Technical' ? 'Technique' : ticket.category}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -210,28 +212,34 @@ export function SupportTicketsPage() {
                   ))}
                 </div>
 
-                <div className="mb-3 rounded-xl border border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30 p-3">
-                  <div className="mb-1 flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg gradient-ai">
-                      <Sparkles className="h-3 w-3 text-white" />
+                <div className="mt-4 shrink-0 space-y-3 border-t border-border pt-4">
+                  <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30 p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-lg gradient-ai">
+                        <Sparkles className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-xs font-semibold">Suggestion IA</span>
                     </div>
-                    <span className="text-xs font-semibold">Suggestion IA</span>
+                    <p className="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground line-clamp-4">
+                      {aiSuggestedReply}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 text-xs"
+                      onClick={() => setReply(aiSuggestedReply)}
+                    >
+                      Utiliser cette suggestion
+                    </Button>
                   </div>
-                  <p className="whitespace-pre-wrap text-xs text-muted-foreground">{aiSuggestedReply}</p>
-                  <Button variant="outline" size="sm" className="mt-2 text-xs" onClick={() => setReply(aiSuggestedReply)}>
-                    Utiliser cette suggestion
-                  </Button>
-                </div>
 
-                <div className="border-t border-border pt-3">
                   <Textarea
                     placeholder="Écrivez votre réponse..."
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
                     rows={3}
-                    className="mb-2"
                   />
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     <Button variant={isInternal ? 'default' : 'outline'} onClick={() => setIsInternal((v) => !v)}>
                       Note interne
                     </Button>

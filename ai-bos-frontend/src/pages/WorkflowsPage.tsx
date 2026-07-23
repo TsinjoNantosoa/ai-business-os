@@ -1,59 +1,126 @@
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Play, Zap, Mail, Webhook, Database, Bot, CheckSquare,
-  GitBranch, Clock, Activity, Settings, Power,
+  GitBranch, Clock, Activity, Settings, Pencil,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { getWorkflowExecutions, getWorkflows, runWorkflow } from '@/lib/api/services';
+import { WorkflowCanvas } from '@/components/workflows/WorkflowCanvas';
+import {
+  createWorkflow,
+  getWorkflowExecutions,
+  getWorkflows,
+  runWorkflow,
+  updateWorkflow,
+} from '@/lib/api/services';
+import type { Workflow, WorkflowStatus, WorkflowUpsertPayload } from '@/lib/api/types';
 import { useI18n } from '@/lib/i18n/store';
-import { cn, formatRelativeTime } from '@/lib/utils';
-
-const TRIGGER_ICONS: Record<string, React.ElementType> = {
-  'Lead créé': Zap, 'Facture en retard': Mail, 'Employé ajouté': CheckSquare,
-  'Planification hebdo': Clock, 'Stock bas': Activity, 'Webhook': Webhook, 'Record created': Database,
-};
+import { formatRelativeTime } from '@/lib/utils';
 
 const ACTION_ICONS: Record<string, React.ElementType> = {
-  'Envoyer email': Mail, 'Créer tâche': CheckSquare, 'Notifier Slack': Zap,
-  'Mettre à jour CRM': Database, 'Run AI agent': Bot, 'Call API': Webhook,
+  'Envoyer email': Mail,
+  'Créer tâche': CheckSquare,
+  'Notifier Slack': Zap,
+  'Mettre à jour CRM': Database,
+  'Run AI agent': Bot,
+  'Call API': Webhook,
 };
 
 export function WorkflowsPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState('list');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
   const { data: workflows } = useQuery({ queryKey: ['workflows'], queryFn: getWorkflows });
   const { data: executions } = useQuery({ queryKey: ['workflow-executions'], queryFn: getWorkflowExecutions });
+
+  const editingWorkflow = useMemo(
+    () => (editingId ? (workflows || []).find((wf) => wf.id === editingId) || null : null),
+    [editingId, workflows],
+  );
 
   const runMutation = useMutation({
     mutationFn: runWorkflow,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
       queryClient.invalidateQueries({ queryKey: ['workflow-executions'] });
+      toast.success('Workflow exécuté');
     },
+    onError: (err: Error) => toast.error(err.message || 'Échec exécution'),
   });
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: WorkflowUpsertPayload & { id?: string }) => {
+      if (payload.id) {
+        const { id, ...body } = payload;
+        return updateWorkflow(id, body);
+      }
+      return createWorkflow(payload);
+    },
+    onSuccess: (wf) => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      setEditingId(wf.id);
+      setIsCreating(false);
+      toast.success('Workflow enregistré');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Échec enregistrement'),
+  });
+
+  const openCreate = () => {
+    setIsCreating(true);
+    setEditingId(null);
+    setTab('builder');
+  };
+
+  const openEdit = (wf: Workflow) => {
+    setIsCreating(false);
+    setEditingId(wf.id);
+    setTab('builder');
+  };
+
+  const handleSave = async (payload: {
+    name: string
+    description: string
+    status: WorkflowStatus
+    definition: NonNullable<Workflow['definition']>
+  }) => {
+    await saveMutation.mutateAsync({
+      id: editingWorkflow?.id,
+      name: payload.name,
+      description: payload.description,
+      status: payload.status,
+      definition: payload.definition,
+    });
+  };
 
   return (
     <div>
       <PageHeader
         title={t('nav.workflows')}
-        description="Automatisez vos processus métier"
-        actions={<Button><Plus className="h-4 w-4" />Nouveau workflow</Button>}
+        description="Automatisez vos processus métier — designer visuel S32"
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            Nouveau workflow
+          </Button>
+        }
       />
 
-      <Tabs defaultValue="list">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="list">Workflows</TabsTrigger>
           <TabsTrigger value="builder">Constructeur visuel</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
         </TabsList>
 
-        {/* Workflow list */}
         <TabsContent value="list">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {(workflows || []).map((wf) => (
@@ -67,17 +134,19 @@ export function WorkflowsPage() {
                     <StatusBadge status={wf.status} />
                   </div>
 
-                  {/* Flow visualization */}
                   <div className="mt-4 flex items-center gap-2 overflow-x-auto scrollbar-thin">
-                    <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700 shrink-0">
+                    <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700">
                       <Zap className="h-3.5 w-3.5" />
                       {wf.trigger}
                     </div>
-                    <GitBranch className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <GitBranch className="h-3 w-3 shrink-0 text-muted-foreground" />
                     {wf.actions.map((action, i) => {
                       const Icon = ACTION_ICONS[action] || CheckSquare;
                       return (
-                        <div key={i} className="flex items-center gap-1.5 rounded-lg bg-primary-50 px-2.5 py-1.5 text-xs font-medium text-primary shrink-0">
+                        <div
+                          key={`${wf.id}-${action}-${i}`}
+                          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary-50 px-2.5 py-1.5 text-xs font-medium text-primary"
+                        >
                           <Icon className="h-3.5 w-3.5" />
                           {action}
                         </div>
@@ -87,20 +156,31 @@ export function WorkflowsPage() {
 
                   <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Activity className="h-3 w-3" />{wf.runCount} exécutions</span>
-                      <span className="flex items-center gap-1"><CheckSquare className="h-3 w-3" />{wf.successRate}% succès</span>
+                      <span className="flex items-center gap-1">
+                        <Activity className="h-3 w-3" />
+                        {wf.runCount} exécutions
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <CheckSquare className="h-3 w-3" />
+                        {wf.successRate}% succès
+                      </span>
                       {wf.lastRun && <span>{formatRelativeTime(wf.lastRun)}</span>}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon-sm"><Settings className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon-sm"><Power className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon-sm" onClick={() => openEdit(wf)} title="Éditer">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" onClick={() => openEdit(wf)} title="Paramètres">
+                        <Settings className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         disabled={wf.status === 'draft' || runMutation.isPending}
                         onClick={() => runMutation.mutate(wf.id)}
                       >
-                        <Play className="h-3.5 w-3.5" />Exécuter
+                        <Play className="h-3.5 w-3.5" />
+                        Exécuter
                       </Button>
                     </div>
                   </div>
@@ -110,84 +190,40 @@ export function WorkflowsPage() {
           </div>
         </TabsContent>
 
-        {/* Visual builder */}
         <TabsContent value="builder">
           <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Constructeur de workflow</h3>
-                <Button size="sm"><Play className="h-4 w-4" />Tester</Button>
-              </div>
-              {/* Canvas */}
-              <div className="relative min-h-[400px] rounded-xl border-2 border-dashed border-border bg-muted/20 p-8">
-                <div className="flex items-center justify-center gap-8">
-                  {/* Trigger node */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 shadow-soft">
-                      <Zap className="h-7 w-7" />
-                    </div>
-                    <span className="text-xs font-medium">Déclencheur</span>
-                    <span className="text-2xs text-muted-foreground">Lead créé</span>
-                  </div>
-
-                  {/* Connection line */}
-                  <div className="h-0.5 w-16 bg-border" />
-
-                  {/* Condition node */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 shadow-soft">
-                      <GitBranch className="h-7 w-7" />
-                    </div>
-                    <span className="text-xs font-medium">Condition</span>
-                    <span className="text-2xs text-muted-foreground">Valeur &gt; 10k€</span>
-                  </div>
-
-                  <div className="h-0.5 w-16 bg-border" />
-
-                  {/* Action node */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 text-primary shadow-soft">
-                      <Mail className="h-7 w-7" />
-                    </div>
-                    <span className="text-xs font-medium">Action</span>
-                    <span className="text-2xs text-muted-foreground">Envoyer email</span>
-                  </div>
-
-                  <div className="h-0.5 w-16 bg-border" />
-
-                  {/* AI node */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-ai text-white shadow-soft">
-                      <Bot className="h-7 w-7" />
-                    </div>
-                    <span className="text-xs font-medium">Agent IA</span>
-                    <span className="text-2xs text-muted-foreground">Sales Agent</span>
-                  </div>
+                <div>
+                  <h3 className="text-sm font-semibold">
+                    {isCreating || !editingWorkflow ? 'Nouveau workflow' : `Édition · ${editingWorkflow.name}`}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Glissez les nœuds, ajoutez des actions, enregistrez puis activez pour exécuter.
+                  </p>
                 </div>
-
-                {/* Node palette */}
-                <div className="mt-8 flex flex-wrap gap-2 border-t border-border pt-4">
-                  <span className="text-xs font-medium text-muted-foreground mr-2">Ajouter un nœud:</span>
-                  {[
-                    { icon: Zap, label: 'Déclencheur', color: 'bg-amber-50 text-amber-600' },
-                    { icon: GitBranch, label: 'Condition', color: 'bg-violet-50 text-violet-600' },
-                    { icon: Mail, label: 'Email', color: 'bg-primary-50 text-primary' },
-                    { icon: Bot, label: 'Agent IA', color: 'bg-emerald-50 text-emerald-600' },
-                    { icon: CheckSquare, label: 'Tâche', color: 'bg-blue-50 text-blue-600' },
-                    { icon: Webhook, label: 'API', color: 'bg-pink-50 text-pink-600' },
-                  ].map((node) => (
-                    <button key={node.label} className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:shadow-soft', node.color)}>
-                      <node.icon className="h-3.5 w-3.5" />
-                      {node.label}
-                    </button>
-                  ))}
-                </div>
+                {editingWorkflow && editingWorkflow.status !== 'draft' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={runMutation.isPending}
+                    onClick={() => runMutation.mutate(editingWorkflow.id)}
+                  >
+                    <Play className="h-4 w-4" />
+                    Exécuter
+                  </Button>
+                )}
               </div>
+              <WorkflowCanvas
+                key={editingWorkflow?.id || 'new'}
+                workflow={isCreating ? null : editingWorkflow}
+                saving={saveMutation.isPending}
+                onSave={handleSave}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Execution history */}
         <TabsContent value="history">
           <Card>
             <CardContent className="p-0">
@@ -195,27 +231,23 @@ export function WorkflowsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Workflow</TableHead>
-                    <TableHead>Date</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Démarré</TableHead>
                     <TableHead>Durée</TableHead>
                     <TableHead>Résultat</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(executions || []).map((execution) => (
-                    <TableRow key={execution.id}>
-                      <TableCell className="font-medium">{execution.workflowName || execution.workflowId}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatRelativeTime(execution.startedAt)}
-                      </TableCell>
+                  {(executions || []).map((ex) => (
+                    <TableRow key={ex.id}>
+                      <TableCell className="font-medium">{ex.workflowName || ex.workflowId}</TableCell>
                       <TableCell>
-                        <StatusBadge status={execution.status === 'success' ? 'done' : execution.status === 'error' ? 'error' : 'in_progress'} />
+                        <StatusBadge status={ex.status} />
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {execution.durationMs ? `${(execution.durationMs / 1000).toFixed(1)}s` : '—'}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {execution.errorMessage || execution.resultMessage || '—'}
+                      <TableCell className="text-muted-foreground">{formatRelativeTime(ex.startedAt)}</TableCell>
+                      <TableCell>{ex.durationMs != null ? `${ex.durationMs} ms` : '—'}</TableCell>
+                      <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
+                        {ex.resultMessage || ex.errorMessage || '—'}
                       </TableCell>
                     </TableRow>
                   ))}

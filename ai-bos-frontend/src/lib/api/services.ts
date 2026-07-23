@@ -3,7 +3,7 @@
 // Every service: try apiFetch → catch → return mock data
 // ============================================================
 
-import { apiFetch, USE_MOCKS, API_URL } from './client';
+import { apiFetch, tryRefresh, ensureFreshAccessToken, USE_MOCKS, API_URL } from './client';
 import type * as T from './types';
 
 // --- Auth ---
@@ -641,6 +641,24 @@ export async function getWorkflows(): Promise<T.Workflow[]> {
   return apiFetch<T.Workflow[]>('/api/v1/workflows');
 }
 
+export async function getWorkflow(workflowId: string): Promise<T.Workflow> {
+  return apiFetch<T.Workflow>(`/api/v1/workflows/${workflowId}`);
+}
+
+export async function createWorkflow(payload: T.WorkflowUpsertPayload): Promise<T.Workflow> {
+  return apiFetch<T.Workflow>('/api/v1/workflows', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateWorkflow(workflowId: string, payload: T.WorkflowUpsertPayload): Promise<T.Workflow> {
+  return apiFetch<T.Workflow>(`/api/v1/workflows/${workflowId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function runWorkflow(workflowId: string): Promise<T.WorkflowRunResult> {
   return apiFetch<T.WorkflowRunResult>(`/api/v1/workflows/${workflowId}/run`, { method: 'POST' });
 }
@@ -983,14 +1001,76 @@ export type CopilotSource = {
   sourceUri?: string
 }
 
+export type CopilotToolEvent = {
+  type: 'tool_call' | 'tool_result'
+  name: string
+  callId?: string
+  arguments?: Record<string, unknown>
+  ok?: boolean
+  result?: unknown
+  error?: string
+  round?: number
+}
+
+export type CopilotApprovalEvent = {
+  type: 'approval_required'
+  approvalId: string
+  name: string
+  arguments?: Record<string, unknown>
+  callId?: string
+  message?: string
+}
+
+export type CopilotPendingAction = {
+  id: string
+  toolName: string
+  arguments: Record<string, unknown>
+  callId: string
+  status: string
+  conversationId?: string | null
+  agentId?: string | null
+  userMessage?: string
+  result?: unknown
+  error?: string | null
+  createdAt?: string | null
+  decidedAt?: string | null
+  decidedBy?: string | null
+}
+
 export type CopilotStreamEvent =
   | { type: 'chunk'; content: string }
-  | { type: 'done'; sources: CopilotSource[]; provider?: string }
+  | { type: 'step'; round: number; toolCount: number }
+  | { type: 'tool_call'; name: string; arguments?: Record<string, unknown>; callId?: string; round?: number }
+  | { type: 'tool_result'; name: string; callId?: string; ok: boolean; result?: unknown; error?: string; round?: number }
+  | CopilotApprovalEvent
+  | {
+      type: 'done'
+      sources: CopilotSource[]
+      provider?: string
+      toolsUsed?: string[]
+      status?: string
+      approvalId?: string
+    }
+
+export async function decideCopilotApproval(
+  approvalId: string,
+  decision: 'approve' | 'reject',
+): Promise<CopilotPendingAction> {
+  return apiFetch<CopilotPendingAction>(`/api/v1/ai/approvals/${approvalId}/decide`, {
+    method: 'POST',
+    body: JSON.stringify({ decision }),
+  });
+}
+
+export async function listCopilotApprovals(status = 'pending'): Promise<{ items: CopilotPendingAction[] }> {
+  return apiFetch<{ items: CopilotPendingAction[] }>(`/api/v1/ai/approvals?status=${encodeURIComponent(status)}`);
+}
 
 export async function* streamCopilotResponse(
   prompt: string,
   agentId?: string,
   context?: string,
+  conversationId?: string,
 ): AsyncGenerator<CopilotStreamEvent> {
   if (USE_MOCKS) {
     const responses = [
@@ -1029,22 +1109,43 @@ export async function* streamCopilotResponse(
   }
 
   const { useAuth } = await import('@/lib/auth/store');
-  const auth = useAuth.getState();
   const chatbotToken = import.meta.env.VITE_CHATBOT_API_TOKEN?.trim();
-  const res = await fetch(`${API_URL}/api/v1/ai/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: auth.token ? `Bearer ${auth.token}` : '',
-      'X-Correlation-ID': crypto.randomUUID(),
-      'X-Tenant-Id': auth.orgId || '',
-      ...(chatbotToken ? { 'X-Chatbot-Token': chatbotToken } : {}),
-    },
-    body: JSON.stringify({ message: prompt, agentId, context }),
-  });
+
+  // Access JWT expires in ~60 min; also recovers after backend restart via refresh JWT.
+  const ready = await ensureFreshAccessToken();
+  if (!ready) {
+    useAuth.getState().logout();
+    throw new Error('Session expirée — reconnectez-vous, puis réessayez.');
+  }
+
+  async function postChat(): Promise<Response> {
+    const auth = useAuth.getState();
+    return fetch(`${API_URL}/api/v1/ai/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: auth.token ? `Bearer ${auth.token}` : '',
+        'X-Correlation-ID': crypto.randomUUID(),
+        'X-Tenant-Id': auth.orgId || '',
+        ...(chatbotToken ? { 'X-Chatbot-Token': chatbotToken } : {}),
+      },
+      body: JSON.stringify({ message: prompt, agentId, context, conversationId }),
+    });
+  }
+
+  let res = await postChat();
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) res = await postChat();
+  }
 
   if (!res.ok) {
-    throw new Error(`Copilot API error: ${res.status}`);
+    if (res.status === 401) {
+      useAuth.getState().logout();
+      throw new Error('Session expirée — reconnectez-vous, puis réessayez.');
+    }
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Copilot API error: ${res.status}${detail ? ` — ${detail.slice(0, 180)}` : ''}`);
   }
 
   const reader = res.body?.getReader();
@@ -1068,12 +1169,63 @@ export async function* streamCopilotResponse(
           message?: string
           sources?: CopilotSource[]
           provider?: string
+          toolsUsed?: string[]
+          name?: string
+          arguments?: Record<string, unknown>
+          callId?: string
+          ok?: boolean
+          result?: unknown
+          error?: string
+          round?: number
+          toolCount?: number
+          approvalId?: string
+          status?: string
         };
         if (payload.type === 'chunk' && payload.content) {
           yield { type: 'chunk', content: payload.content };
         }
+        if (payload.type === 'step' && payload.round) {
+          yield { type: 'step', round: payload.round, toolCount: payload.toolCount || 0 };
+        }
+        if (payload.type === 'tool_call' && payload.name) {
+          yield {
+            type: 'tool_call',
+            name: payload.name,
+            arguments: payload.arguments,
+            callId: payload.callId,
+            round: payload.round,
+          };
+        }
+        if (payload.type === 'tool_result' && payload.name) {
+          yield {
+            type: 'tool_result',
+            name: payload.name,
+            callId: payload.callId,
+            ok: Boolean(payload.ok),
+            result: payload.result,
+            error: payload.error,
+            round: payload.round,
+          };
+        }
+        if (payload.type === 'approval_required' && payload.approvalId && payload.name) {
+          yield {
+            type: 'approval_required',
+            approvalId: payload.approvalId,
+            name: payload.name,
+            arguments: payload.arguments,
+            callId: payload.callId,
+            message: payload.message,
+          };
+        }
         if (payload.type === 'done') {
-          yield { type: 'done', sources: payload.sources || [], provider: payload.provider };
+          yield {
+            type: 'done',
+            sources: payload.sources || [],
+            provider: payload.provider,
+            toolsUsed: payload.toolsUsed,
+            status: payload.status,
+            approvalId: payload.approvalId,
+          };
         }
         if (payload.type === 'error') {
           throw new Error(payload.message || 'Copilot stream error');

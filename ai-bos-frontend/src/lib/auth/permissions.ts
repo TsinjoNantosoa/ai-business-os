@@ -6,6 +6,7 @@ export const APP_PERMISSIONS = [
   'dashboard.read',
   'ai.copilot.use',
   'ai.agent.use',
+  'ai.approval.decide',
   'crm.contact.read',
   'crm.contact.write',
   'crm.lead.read',

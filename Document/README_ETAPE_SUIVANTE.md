@@ -1,6 +1,6 @@
 # AI BOS — Étape suivante (déjà fait vs reste)
 
-> **Dernière mise à jour :** 2026-07-21 17:50 (UTC+3)
+> **Dernière mise à jour :** 2026-07-22 15:10 (UTC+3)
 > **Projet :** AI Business Operating System (`ai-bos`)  
 > **But :** Vue claire de ce qui est **déjà implémenté** et de ce qu’il reste à faire pour la **prochaine étape**.  
 > **Documents liés :** [`ETAT_PROJET_COMPLET.md`](./ETAT_PROJET_COMPLET.md) · [`IMPLEMENTATION_TRACKER.md`](./IMPLEMENTATION_TRACKER.md) · [`README_40_ImplementationRoadmap.md`](./README_40_ImplementationRoadmap.md) · [`README_ETAT_IMPLEMENTATION.md`](./README_ETAT_IMPLEMENTATION.md)
@@ -18,12 +18,14 @@
 | Base IA (chat SSE, RAG, workflows run) | ✅ Fait |
 | **Lot A — Auth & email** | ✅ Terminé (SMTP configurable ; credentials staging à fournir) |
 | **Lot B — CRUD Sales / Marketing / Projects / Calendar** | ✅ Terminé (DB multi-tenant + POST/PATCH + UI Create) |
-| **Prochaine étape produit** | 🟡 Lot C — Outils IA pour le Copilot (S29 Tool registry) |
-| **Prochaine étape technique (roadmap)** | 🟡 Phase 2 avancée — **S29 Tool registry** |
+| **Lot C — Outils IA pour le Copilot (S29 Tool registry)** | ✅ Terminé (5 tools + SSE tool_call/result + UI chips) |
+| **Lot D — S30 orchestration + S31 HITL** | ✅ Terminé (multi-step + pause approbation + ApprovalCard) |
+| **Lot E — S32 Workflow designer** | ✅ Terminé (React Flow + definition JSON + CRUD) |
+| **Prochaine étape produit** | 🟡 Phase 2 — S33 triggers event-driven |
 | Verticales Edu / Legal + scale cloud (Phase 3) | ❌ Pas démarré |
 
-**Aujourd’hui :** le produit est **démo-ready** en local (login → dashboard → CRM / factures / tâches / copilote / admin).  
-**Ensuite :** enrichir les modules encore en lecture seule, brancher l’email, puis industrialiser les agents (tools + designer workflows).
+**Aujourd’hui :** le produit est **démo-ready** en local (login → dashboard → CRM / factures / tâches / copilote HITL / designer workflows).  
+**Ensuite :** triggers event-driven (S33), observabilité agents, puis Phase 3.
 
 ---
 
@@ -57,7 +59,7 @@
 | Tasks | ✅ CRUD | Create + kanban status/assign |
 | Support tickets | ✅ CRUD | Create + messages + status |
 | Documents | ✅ | Upload / download (local ou S3) |
-| Workflows | 🟡 MVP | Persistance + `POST /run` + historique (pas de designer visuel) |
+| Workflows | 🟡 MVP + designer | Persistance + canvas React Flow + `POST /run` + historique |
 | Agents / Copilot | 🟡 Base | Chat SSE + RAG `Document/*.md` + citations |
 | Organizations / Team / Invitations | ✅ | Onboarding + revoke |
 | Analytics / BI / ML | 🟡 | Lecture + CSV + BI NL ; forecast seed |
@@ -106,10 +108,10 @@ Base déjà livrée : chat SSE, RAG, `workflows/{id}/run`.
 
 | ID | Tâche | Statut |
 |----|-------|--------|
-| **S29** | Tool registry (outils CRM / Finance / HR appelables par agents) | [ ] **← commencer ici côté IA** |
-| **S30** | Orchestration multi-step (chaînes d’agents) | [ ] |
-| **S31** | Human-in-the-loop (approbation avant action sensible) | [ ] |
-| **S32** | Workflow designer UI (drag & drop, style React Flow) | [ ] |
+| **S29** | Tool registry (outils CRM / Finance / HR appelables par agents) | [x] ✅ Lot C |
+| **S30** | Orchestration multi-step (chaînes d’agents) | [x] ✅ Lot D |
+| **S31** | Human-in-the-loop (approbation avant action sensible) | [x] ✅ Lot D |
+| **S32** | Workflow designer UI (drag & drop, style React Flow) | [x] ✅ Lot E |
 | **S33** | Triggers event-driven (webhooks entrants) | [ ] |
 | **S34** | Observabilité agents (traces, coûts tokens) | [ ] |
 | **S35** | Rate limiting + quotas par plan (hard limits) | [ ] |
@@ -174,13 +176,34 @@ Cocher au fur et à mesure. Mettre à jour la date/heure en tête de fichier à 
 
 > Les 5 modules sont passés du seed en mémoire à de vraies tables multi-tenant (org_id), avec permissions `*.write`, audit log et données démo migrées en DB au bootstrap.
 
-### Lot C — Agents S29 (dès Lot A/B stables ou en parallèle IA)
+### Lot C — Agents S29 — ✅ terminé le 2026-07-22 à 08:50 (UTC+3)
 
-- [ ] C1. Schéma Tool registry (nom, permissions, input/output JSON)
-- [ ] C2. 3–5 tools MVP : `crm.search_contacts`, `crm.create_lead`, `finance.list_invoices`, `tasks.create`
-- [ ] C3. Brancher tool-calling dans `POST /ai/chat` (LLM + garde RBAC)
-- [ ] C4. UI Copilot : afficher tool calls / résultats
-- [ ] C5. Tests agents + garde-fous (refus si permission manquante)
+- [x] C1. Schéma Tool registry (`app/services/tool_registry.py` : nom, permissions, input JSON, handler)
+- [x] C2. 5 tools MVP : `crm_search_contacts`, `crm_create_lead`, `finance_list_invoices`, `tasks_create`, `projects_list`
+- [x] C3. Tool-calling dans `POST /ai/chat` (OpenAI tools si clé ; mock heuristique sinon) + garde RBAC + audit sur outils mutants
+- [x] C4. UI Copilot / Widget : chips `outil · name` / `✓` / `✗` sur les events SSE `tool_call` / `tool_result`
+- [x] C5. Tests : `tests/test_ai_tools.py` (registry, 403 permission, SSE tool events) + `GET /api/v1/ai/tools`
+
+> Les agents affichent désormais `toolsCount` réel (= 5). HITL / orchestration multi-step = S30–S31 (Lot D).
+
+### Lot D — S30 orchestration + S31 HITL — ✅ terminé le 2026-07-22 à 10:05 (UTC+3)
+
+- [x] D1. `requires_approval` sur tools mutants + table `ai_pending_actions` (migration 018)
+- [x] D2. Orchestrateur multi-step (`agent_orchestrator.py` : rounds outils + pause HITL)
+- [x] D3. SSE `step` / `approval_required` + `GET/POST /ai/approvals*` (approve/reject)
+- [x] D4. UI `ApprovalCard` (Copilot page + widget) + refresh JWT Copilot
+- [x] D5. Tests `test_ai_orchestration.py` (multi-intent, HITL approve/reject)
+
+> Les créations lead/tâche via Copilot demandent une validation humaine avant exécution.
+
+### Lot E — S32 Workflow designer — ✅ terminé le 2026-07-22 à 15:10 (UTC+3)
+
+- [x] E1. Colonne `definition` (migration 019) + dérivation trigger/actions
+- [x] E2. API `POST/GET/PATCH /workflows` + canvas React Flow (`@xyflow/react`)
+- [x] E3. UI Constructeur : créer / éditer / enregistrer / activer / exécuter
+- [x] E4. Tests `test_workflow_designer.py` (7 pytest workflows)
+
+> Le moteur d’exécution reste un stub sync (pas encore d’exécuteurs email/CRM réels). Triggers webhooks = S33.
 
 ---
 
@@ -221,15 +244,15 @@ Checklist manuelle :
 ```text
 [✅ Doc] → [✅ P0 Auth/RBAC] → [✅ P1 GET APIs] → [✅ P2 DB/CRUD clés]
         → [✅ Phase 1 S9–S20 Platform MVP]
-        → [🟡 Phase 2 base IA] ──► VOUS ÊTES ICI
+        → [🟡 Phase 2 Agents] ──► VOUS ÊTES ICI (après Lot D)
                                     │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-              Lot A Auth/Email   Lot B CRUD     Lot C S29 Tools
-                    │               │               │
-                    └───────────────┼───────────────┘
+          ┌─────────────┬───────────┼───────────┬─────────────┐
+          ▼             ▼           ▼           ▼             ▼
+     Lot A Auth    Lot B CRUD  Lot C S29   Lot D S30–S31   S32+ …
+          │             │           │           │
+          └─────────────┴───────────┴───────────┘
                                     ▼
-                         S30–S36 Agents & Workflows
+                         S32–S36 Designer / triggers / quotas
                                     ▼
                          Phase 3 Edu / Legal / Scale
 ```

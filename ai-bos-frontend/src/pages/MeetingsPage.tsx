@@ -141,14 +141,20 @@ export function MeetingsPage() {
                 {/* Agenda */}
                 <div>
                   <h4 className="mb-2 text-sm font-semibold">Ordre du jour</h4>
-                  <ul className="space-y-1.5">
-                    {selected.agenda.map((item, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+                  {selected.agenda.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {selected.agenda.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
+                      Aucun point à l’ordre du jour pour cette réunion.
+                    </p>
+                  )}
                 </div>
 
                 {/* AI Summary */}

@@ -208,6 +208,18 @@ class AuthService:
         session_id = str(payload.get("sid", ""))
         user_id = str(payload.get("sub", ""))
         session = self._sessions.get(session_id)
+
+        # After a backend restart the in-memory store is empty while the refresh JWT
+        # can still be cryptographically valid — recreate the session so the SPA
+        # does not force a full re-login every time uvicorn reloads.
+        if session is None and session_id and user_id:
+            session = RefreshSession(
+                session_id=session_id,
+                user_id=user_id,
+                created_at=datetime.now(tz=timezone.utc),
+            )
+            self._sessions.save(session)
+
         if not session or session.revoked or session.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session invalide")
 

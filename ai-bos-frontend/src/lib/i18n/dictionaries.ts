@@ -89,7 +89,7 @@ const fr = {
     settingsNotifications: 'Notifications',
     settingsApiKeys: 'Clés API',
     adminAudit: 'Logs d\'audit',
-    adminFlags: 'Feature Flags',
+    adminFlags: 'Fonctionnalités',
   },
   auth: {
     login: 'Connexion',

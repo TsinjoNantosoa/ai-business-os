@@ -7,7 +7,7 @@ export const MOCK_ANALYTICS: AnalyticsData = {
     { label: 'Pipeline', value: 1240000, change: 8.3, unit: '€' },
     { label: 'Clients actifs', value: 342, change: 5.2, unit: '' },
     { label: 'Taux de conversion', value: 24.8, change: -2.1, unit: '%' },
-    { label: 'Churn rate', value: 3.2, change: -0.8, unit: '%' },
+    { label: 'Churn', value: 3.2, change: -0.8, unit: '%' },
     { label: 'NPS', value: 47, change: 4, unit: '' },
   ],
   revenue: Array.from({ length: 12 }, (_, i) => ({

@@ -74,3 +74,59 @@ class WorkflowRepository:
             workflow.success_rate = round(prior_successes / workflow.run_count * 100, 1)
         workflow.updated_at = datetime.now(timezone.utc)
         return workflow
+
+    def create(
+        self,
+        *,
+        org_id: str,
+        name: str,
+        description: str,
+        status: str,
+        trigger: str,
+        actions: list[str],
+        definition: dict | None,
+    ) -> Workflow:
+        now = datetime.now(timezone.utc)
+        workflow = Workflow(
+            id=f"wf-{secrets.token_hex(6)}",
+            org_id=org_id,
+            name=name,
+            description=description,
+            status=status,
+            trigger=trigger,
+            actions=actions,
+            definition=definition,
+            run_count=0,
+            success_rate=100.0,
+            created_at=now,
+            updated_at=now,
+        )
+        self._session.add(workflow)
+        self._session.flush()
+        return workflow
+
+    def update(
+        self,
+        workflow: Workflow,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        status: str | None = None,
+        trigger: str | None = None,
+        actions: list[str] | None = None,
+        definition: dict | None = None,
+    ) -> Workflow:
+        if name is not None:
+            workflow.name = name
+        if description is not None:
+            workflow.description = description
+        if status is not None:
+            workflow.status = status
+        if trigger is not None:
+            workflow.trigger = trigger
+        if actions is not None:
+            workflow.actions = actions
+        if definition is not None:
+            workflow.definition = definition
+        workflow.updated_at = datetime.now(timezone.utc)
+        return workflow

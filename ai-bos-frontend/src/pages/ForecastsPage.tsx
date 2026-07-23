@@ -127,14 +127,14 @@ export function ForecastsPage() {
                 Recommandations IA
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3 p-5 pt-0">
               <div className="space-y-3">
                 {forecast.recommendations.map((rec, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-2xs font-bold text-primary">
+                  <div key={i} className="flex items-start gap-3 rounded-lg bg-white/60 px-3 py-2.5">
+                    <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 text-2xs font-bold text-primary">
                       {i + 1}
                     </div>
-                    <p className="text-sm text-foreground">{rec}</p>
+                    <p className="text-sm leading-relaxed text-foreground">{rec}</p>
                   </div>
                 ))}
               </div>

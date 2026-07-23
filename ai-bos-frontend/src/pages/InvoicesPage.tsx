@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Download, Send, MoreHorizontal, FileText, Eye, Bell, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ExportMenu } from '@/components/shared/ExportMenu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import type { Invoice } from '@/lib/api/types';
+import { exportTextPdf, type ExportColumn } from '@/lib/export';
 
 type LineDraft = { description: string; quantity: string; unitPrice: string };
 
@@ -100,29 +102,15 @@ export function InvoicesPage() {
     setLines([emptyLine()]);
   };
 
-  const exportCsv = () => {
-    if (!filtered.length) {
-      toast.error('Aucune facture à exporter');
-      return;
-    }
-    const header = ['invoiceNumber', 'clientName', 'issueDate', 'dueDate', 'totalAmount', 'status'];
-    const csv = [
-      header.join(','),
-      ...filtered.map((inv) =>
-        [inv.invoiceNumber, inv.clientName, inv.issueDate, inv.dueDate, inv.totalAmount, inv.status]
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-          .join(','),
-      ),
-    ].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} facture(s) exportées`);
-  };
+  const exportColumns: ExportColumn<Invoice>[] = [
+    { header: 'N° Facture', value: (inv) => inv.invoiceNumber },
+    { header: 'Client', value: (inv) => inv.clientName },
+    { header: 'Émission', value: (inv) => inv.issueDate },
+    { header: 'Échéance', value: (inv) => inv.dueDate },
+    { header: 'Montant', value: (inv) => inv.totalAmount },
+    { header: 'Devise', value: (inv) => inv.currency },
+    { header: 'Statut', value: (inv) => inv.status },
+  ];
 
   const selectedContact = (contacts || []).find((c) => c.id === clientId);
   const canSubmit =
@@ -137,10 +125,14 @@ export function InvoicesPage() {
         description="Gérez vos factures et relances"
         actions={
           <>
-            <Button variant="outline" onClick={exportCsv}>
-              <Download className="h-4 w-4" />
-              {t('common.export')}
-            </Button>
+            <ExportMenu
+              filename="factures"
+              title="Factures AI BOS"
+              sheetName="Factures"
+              columns={exportColumns}
+              rows={filtered}
+              label={t('common.export')}
+            />
             {canWrite && (
               <Button
                 onClick={() => {
@@ -249,18 +241,22 @@ export function InvoicesPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
-                              const blob = new Blob(
-                                [
-                                  `Facture ${inv.invoiceNumber}\nClient: ${inv.clientName}\nTotal: ${inv.totalAmount} ${inv.currency}\nStatut: ${inv.status}\n`,
-                                ],
-                                { type: 'text/plain' },
-                              );
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `${inv.invoiceNumber}.txt`;
-                              a.click();
-                              URL.revokeObjectURL(url);
+                              try {
+                                exportTextPdf(inv.invoiceNumber, `Facture ${inv.invoiceNumber}`, [
+                                  `Client: ${inv.clientName}`,
+                                  `Émission: ${inv.issueDate}`,
+                                  `Échéance: ${inv.dueDate}`,
+                                  `Total: ${inv.totalAmount} ${inv.currency}`,
+                                  `Statut: ${inv.status}`,
+                                  ...(inv.lineItems || []).map(
+                                    (li) =>
+                                      `- ${li.description}: ${li.quantity} x ${li.unitPrice} = ${li.total}`,
+                                  ),
+                                ]);
+                                toast.success('PDF téléchargé');
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : 'Export PDF impossible');
+                              }
                             }}
                           >
                             <Download className="h-4 w-4" /> PDF

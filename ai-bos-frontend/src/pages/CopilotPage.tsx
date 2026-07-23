@@ -11,8 +11,10 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
-import { streamCopilotResponse, type CopilotSource } from '@/lib/api/services';
+import { streamCopilotResponse, type CopilotApprovalEvent, type CopilotSource, type CopilotToolEvent } from '@/lib/api/services';
 import { cn, initials } from '@/lib/utils';
+import { ApprovalCard } from '@/components/copilot/ApprovalCard';
+import { MarkdownContent } from '@/components/shared/MarkdownContent';
 
 interface Message {
   id: string;
@@ -20,6 +22,8 @@ interface Message {
   content: string;
   streaming?: boolean;
   sources?: CopilotSource[];
+  toolEvents?: CopilotToolEvent[];
+  approval?: CopilotApprovalEvent;
 }
 
 interface Conversation {
@@ -38,9 +42,9 @@ const AGENTS = [
 ];
 
 const SUGGESTED_PROMPTS = [
-  { key: 'ai.daySummary', icon: Calendar },
-  { key: 'ai.unpaidClients', icon: Wallet },
-  { key: 'ai.revenueForecast', icon: TrendingUp },
+  { key: 'ai.daySummary', icon: Calendar, text: 'montre-moi les contacts CRM' },
+  { key: 'ai.unpaidClients', icon: Wallet, text: 'quelles factures sont en retard ?' },
+  { key: 'ai.revenueForecast', icon: TrendingUp, text: 'crée une tâche Relancer client VIP' },
 ];
 
 export function CopilotPage() {
@@ -68,7 +72,7 @@ export function CopilotPage() {
 
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: text };
     const assistantId = crypto.randomUUID();
-    const assistantMsg: Message = { id: assistantId, role: 'assistant', content: '', streaming: true };
+    const assistantMsg: Message = { id: assistantId, role: 'assistant', content: '', streaming: true, toolEvents: [] };
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setInput('');
@@ -80,12 +84,44 @@ export function CopilotPage() {
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + event.content } : m)),
           );
+        } else if (event.type === 'tool_call' || event.type === 'tool_result') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, toolEvents: [...(m.toolEvents || []), event] }
+                : m,
+            ),
+          );
+        } else if (event.type === 'approval_required') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    approval: event,
+                    content:
+                      m.content ||
+                      event.message ||
+                      `Action « ${event.name} » en attente d'approbation.`,
+                  }
+                : m,
+            ),
+          );
         } else if (event.type === 'done') {
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, sources: event.sources } : m)),
           );
         }
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur Copilot';
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: m.content || `Désolé, une erreur est survenue : ${message}` }
+            : m,
+        ),
+      );
     } finally {
       setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)));
       setIsStreaming(false);
@@ -165,11 +201,11 @@ export function CopilotPage() {
                     return (
                       <button
                         key={prompt.key}
-                        onClick={() => handleSend(t(prompt.key))}
+                        onClick={() => handleSend(prompt.text || t(prompt.key))}
                         className="flex flex-col items-center gap-2 rounded-xl border border-border p-4 transition-all hover:border-primary/30 hover:shadow-soft"
                       >
                         <Icon className="h-5 w-5 text-primary" />
-                        <span className="text-xs font-medium text-center">{t(prompt.key)}</span>
+                        <span className="text-xs font-medium text-center">{prompt.text || t(prompt.key)}</span>
                       </button>
                     );
                   })}
@@ -199,10 +235,41 @@ export function CopilotPage() {
                   'max-w-[70%] rounded-2xl px-4 py-2.5 text-sm',
                   msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 )}>
-                  <p className="whitespace-pre-wrap leading-relaxed">
-                    {msg.content}
-                    {msg.streaming && <span className="ml-0.5 inline-block h-3 w-1 animate-pulse bg-current" />}
-                  </p>
+                  <MarkdownContent
+                    content={msg.content}
+                    streaming={msg.streaming}
+                    className={cn(msg.role === 'user' && 'text-primary-foreground')}
+                  />
+                  {msg.role === 'assistant' && msg.toolEvents && msg.toolEvents.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.toolEvents.map((tool, index) => (
+                        <Badge
+                          key={`${tool.type}-${tool.name}-${tool.callId || index}`}
+                          variant="outline"
+                          className={cn(
+                            'gap-1 text-2xs font-normal',
+                            tool.type === 'tool_result' && tool.ok === false && 'border-red-300 text-red-700',
+                            tool.type === 'tool_result' && tool.ok && 'border-emerald-300 text-emerald-700',
+                          )}
+                          title={
+                            tool.type === 'tool_call'
+                              ? JSON.stringify(tool.arguments || {})
+                              : tool.ok
+                                ? 'OK'
+                                : tool.error || 'Erreur'
+                          }
+                        >
+                          <Zap className="h-3 w-3 shrink-0" />
+                          <span className="truncate">
+                            {tool.type === 'tool_call' ? `outil · ${tool.name}` : tool.ok ? `✓ ${tool.name}` : `✗ ${tool.name}`}
+                          </span>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {msg.role === 'assistant' && msg.approval && (
+                    <ApprovalCard event={msg.approval} />
+                  )}
                   {msg.role === 'assistant' && !msg.streaming && msg.sources && msg.sources.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {msg.sources.map((s) => (

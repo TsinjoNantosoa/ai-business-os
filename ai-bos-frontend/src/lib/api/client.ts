@@ -56,9 +56,34 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   return JSON.parse(text) as T;
 }
 
+/** Decode JWT payload without verifying signature (client-side expiry check only). */
+export function readJwtExp(token: string | null | undefined): number | null {
+  if (!token) return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const json = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(json) as { exp?: number };
+    return typeof payload.exp === 'number' ? payload.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Refresh access token if missing/expired/near expiry (default 90s skew). */
+export async function ensureFreshAccessToken(skewSeconds = 90): Promise<boolean> {
+  const auth = await getAuthState();
+  if (!auth.token && !auth.refreshToken) return false;
+  const exp = readJwtExp(auth.token);
+  const now = Math.floor(Date.now() / 1000);
+  if (auth.token && exp !== null && exp > now + skewSeconds) return true;
+  return tryRefresh();
+}
+
 let refreshPromise: Promise<boolean> | null = null;
 
-async function tryRefresh(): Promise<boolean> {
+/** Refresh access token once; shared by apiFetch and streaming clients (Copilot SSE). */
+export async function tryRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
@@ -71,6 +96,7 @@ async function tryRefresh(): Promise<boolean> {
       });
       if (!res.ok) return false;
       const data = await res.json();
+      if (!data?.token || !data?.refreshToken) return false;
       auth.setTokens(data.token, data.refreshToken);
       return true;
     } catch {

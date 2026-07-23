@@ -1,6 +1,6 @@
 # État d’implémentation — AI BOS
 
-> **Dernière mise à jour :** 2026-07-21 17:50 (UTC+3)
+> **Dernière mise à jour :** 2026-07-22 08:50 (UTC+3)
 > **Projet :** AI BOS (AI Business Operating System)  
 > **But :** Suivre l’avancement global et cocher les étapes terminées.  
 > **Étape suivante :** voir [`README_ETAPE_SUIVANTE.md`](./README_ETAPE_SUIVANTE.md)
@@ -141,7 +141,8 @@
 - [ ] Phase 0 / S2-S8 — Extraction CORE réel depuis SIH IA (code backend)
 - [x] Phase 1 / S9-S20 — Platform MVP multi-tenant opérationnel
 - [x] Phase 2 / S21–S28 — Base Agent Engine + Workflows (chat SSE, RAG, run)
-- [ ] Phase 2 / S29-S36 — Tool registry, orchestration, designer, quotas
+- [x] Phase 2 / S29–S32 — Tool registry, orchestration, HITL, designer workflows (Lots C–E)
+- [ ] Phase 2 / S33–S36 — Triggers, observabilité agents, quotas
 - [ ] Phase 3 / S37-S52 — Verticales Edu/Legal + scale cloud
 
 ---
@@ -290,6 +291,9 @@
 | 2026-07-21 15:55 | Reset password par code 6 chiffres (verify-reset-code, anti brute-force, migration 016) + SMTP Gmail réel validé | ✅ |
 | 2026-07-21 17:10 | Lot A 100% : OAuth Google live (PKCE + code SPA à usage unique) testé bout en bout ; Microsoft prêt (credentials à fournir) | ✅ |
 | 2026-07-21 17:50 | Lot B terminé : Sales/Marketing/Projects/Calendar/Meetings passés en DB (migration 017, 5 tables multi-tenant), POST+PATCH backend avec permissions + audit, UI Create sur les 5 pages (136 pytest + 11 Vitest) | ✅ |
+| 2026-07-22 08:50 | Lot C / S29 terminé : tool registry (5 tools CRM/Finance/Tasks/Projects), SSE tool_call/tool_result, RBAC, UI chips Copilot, GET /ai/tools | ✅ |
+| 2026-07-22 10:05 | Lot D / S30–S31 : orchestration multi-step, HITL (`ai_pending_actions`), SSE approval_required, ApprovalCard Copilot | ✅ |
+| 2026-07-22 15:10 | Lot E / S32 : designer workflows React Flow, `definition` JSON, POST/PATCH/GET workflows, migration 019 | ✅ |
 
 ---
 

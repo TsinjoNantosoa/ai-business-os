@@ -66,6 +66,10 @@ class ChatBody(BaseModel):
     conversationId: str | None = None
 
 
+class ApprovalDecisionBody(BaseModel):
+    decision: str = Field(min_length=1, max_length=16)  # approve | reject
+
+
 class TaskCreateBody(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
@@ -254,3 +258,22 @@ class MeetingUpdateBody(BaseModel):
     location: str | None = Field(default=None, max_length=255)
     agenda: list[str] | None = None
     summary: str | None = Field(default=None, max_length=4000)
+
+
+class WorkflowDefinitionBody(BaseModel):
+    nodes: list[dict] = Field(default_factory=list)
+    edges: list[dict] = Field(default_factory=list)
+
+
+class WorkflowCreateBody(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(default="", max_length=512)
+    status: str = Field(default="draft", min_length=1, max_length=32)
+    definition: WorkflowDefinitionBody | None = None
+
+
+class WorkflowUpdateBody(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=512)
+    status: str | None = Field(default=None, min_length=1, max_length=32)
+    definition: WorkflowDefinitionBody | None = None

@@ -99,7 +99,7 @@ export function HROrgChartPage() {
     <div>
       <PageHeader
         title={t('nav.orgChart')}
-        description="Organigramme dynamique basé sur managerId (mock)."
+        description="Structure hiérarchique de l’équipe (basée sur le manager)."
         actions={
           <Button variant="outline" onClick={() => setSelected(null)}>
             Réinitialiser
@@ -182,10 +182,6 @@ export function HROrgChartPage() {
                 <div className="text-sm">
                   <p className="text-xs text-muted-foreground">Salaire annuel (brut)</p>
                   <p className="font-medium">{selected.salary ? formatCurrency(selected.salary) : '—'}</p>
-                </div>
-
-                <div className="pt-2 text-xs text-muted-foreground">
-                  Prochain pas : connecter au backend HR (employés, organigramme, mutations).
                 </div>
               </div>
             ) : (

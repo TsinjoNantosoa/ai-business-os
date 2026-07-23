@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, ArrowRight, Check, Trash2, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { ExportMenu } from '@/components/shared/ExportMenu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,8 @@ import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import type { Order } from '@/lib/api/types';
+import type { ExportColumn } from '@/lib/export';
 
 interface LineItemDraft {
   description: string;
@@ -81,7 +84,31 @@ export function SalesOrdersPage() {
       <PageHeader
         title={t('nav.salesOrders')}
         description="Gérez vos devis et commandes"
-        actions={canWrite ? <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />Nouveau devis</Button> : undefined}
+        actions={
+          <>
+            <ExportMenu
+              filename="devis-commandes"
+              title="Devis & Commandes"
+              sheetName="Commandes"
+              columns={[
+                { header: 'N°', value: (o) => o.orderNumber },
+                { header: 'Client', value: (o) => o.customerName },
+                { header: 'Date', value: (o) => o.date },
+                { header: 'Montant', value: (o) => o.amount },
+                { header: 'Statut', value: (o) => o.status },
+                { header: 'Commercial', value: (o) => o.salesRepName },
+              ] satisfies ExportColumn<Order>[]}
+              rows={filtered}
+              label={t('common.export')}
+            />
+            {canWrite ? (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Nouveau devis
+              </Button>
+            ) : undefined}
+          </>
+        }
       />
       <Card className="mb-4">
         <CardContent className="p-4">

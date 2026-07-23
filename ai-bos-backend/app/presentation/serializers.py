@@ -216,6 +216,13 @@ def finance_invoice_to_dict(invoice: FinanceInvoice) -> dict:
 
 
 def workflow_to_dict(workflow: Workflow) -> dict:
+    from app.services.workflow_graph import definition_from_legacy, normalize_definition
+
+    definition = workflow.definition
+    if not definition:
+        definition = definition_from_legacy(workflow.trigger, workflow.actions or [])
+    else:
+        definition = normalize_definition(definition)
     return {
         "id": workflow.id,
         "name": workflow.name,
@@ -223,6 +230,7 @@ def workflow_to_dict(workflow: Workflow) -> dict:
         "status": workflow.status,
         "trigger": workflow.trigger,
         "actions": workflow.actions or [],
+        "definition": definition,
         "lastRun": workflow.last_run.isoformat() if workflow.last_run else None,
         "runCount": workflow.run_count,
         "successRate": workflow.success_rate,

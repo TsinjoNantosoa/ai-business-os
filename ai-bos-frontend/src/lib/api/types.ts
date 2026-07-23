@@ -486,6 +486,24 @@ export interface ForecastData {
 // --- Workflows ---
 export type WorkflowStatus = 'active' | 'inactive' | 'draft';
 
+export interface WorkflowGraphNode {
+  id: string;
+  type: 'trigger' | 'action' | string;
+  position: { x: number; y: number };
+  data: { label: string; kind?: string };
+}
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+}
+
+export interface WorkflowDefinition {
+  nodes: WorkflowGraphNode[];
+  edges: WorkflowEdge[];
+}
+
 export interface Workflow {
   id: string;
   name: string;
@@ -493,6 +511,7 @@ export interface Workflow {
   status: WorkflowStatus;
   trigger: string;
   actions: string[];
+  definition?: WorkflowDefinition;
   lastRun?: string;
   runCount: number;
   successRate: number;
@@ -515,6 +534,13 @@ export interface WorkflowExecution {
 export interface WorkflowRunResult {
   execution: WorkflowExecution;
   workflow: Workflow;
+}
+
+export interface WorkflowUpsertPayload {
+  name: string;
+  description?: string;
+  status?: WorkflowStatus;
+  definition?: WorkflowDefinition;
 }
 
 // --- AI Agents ---

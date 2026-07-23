@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _force_mock_llm(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", None)
 
 
 def login(email: str = "ceo@demo.aibos.io") -> str:

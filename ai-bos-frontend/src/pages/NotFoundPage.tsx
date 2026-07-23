@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Compass, ArrowLeft } from 'lucide-react';
+import { Compass, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n/store';
 
@@ -15,10 +15,16 @@ export function NotFoundPage() {
       <h1 className="mt-6 text-6xl font-bold text-primary">404</h1>
       <p className="mt-2 text-lg font-medium">{t('errors.404')}</p>
       <p className="mt-1 max-w-md text-center text-muted-foreground">{t('errors.404Message')}</p>
-      <Button onClick={() => navigate('/app/dashboard')} className="mt-6">
-        <ArrowLeft className="h-4 w-4" />
-        {t('common.back')}
-      </Button>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <Button onClick={() => navigate(-1)} variant="outline">
+          <ArrowLeft className="h-4 w-4" />
+          {t('common.back')}
+        </Button>
+        <Button onClick={() => navigate('/app/dashboard')}>
+          <LayoutDashboard className="h-4 w-4" />
+          Tableau de bord
+        </Button>
+      </div>
     </div>
   );
 }

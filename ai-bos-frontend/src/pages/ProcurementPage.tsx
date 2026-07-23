@@ -7,10 +7,10 @@ import {
   Building,
   Plus,
   Eye,
-  Download,
   Boxes,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { ExportMenu } from '@/components/shared/ExportMenu'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,7 @@ import { useI18n } from '@/lib/i18n/store'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { getPurchaseOrders, getSuppliers } from '@/lib/api/services'
 import type { PurchaseOrder, Supplier } from '@/lib/api/types'
+import type { ExportColumn } from '@/lib/export'
 
 export function ProcurementPage() {
   const { t } = useI18n()
@@ -52,11 +53,29 @@ export function ProcurementPage() {
     return { committed, openCount, lowRatingSuppliers }
   }, [purchaseOrders, suppliers])
 
+  const poColumns: ExportColumn<PurchaseOrder>[] = [
+    { header: 'PO', value: (po) => po.poNumber },
+    { header: 'Fournisseur', value: (po) => po.supplierName },
+    { header: 'Statut', value: (po) => po.status },
+    { header: 'Prévu', value: (po) => po.expectedAt },
+    { header: 'Montant', value: (po) => po.totalAmount },
+    { header: 'Articles', value: (po) => po.itemCount },
+    { header: 'Owner', value: (po) => po.ownerName },
+  ]
+
+  const supplierColumns: ExportColumn<Supplier>[] = [
+    { header: 'Nom', value: (s) => s.name },
+    { header: 'Statut', value: (s) => s.status },
+    { header: 'Note', value: (s) => s.rating },
+    { header: 'Pays', value: (s) => s.country || '' },
+    { header: 'Email', value: (s) => s.email || '' },
+  ]
+
   return (
     <div>
       <PageHeader
         title={t('nav.procurement')}
-        description="Achats & fournisseurs : commandes, statuts et suivi (mock)."
+        description="Achats & fournisseurs : commandes, statuts et suivi."
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4 mb-6">
@@ -130,18 +149,22 @@ export function ProcurementPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="outline" onClick={() => {}}>
-                  <Download className="h-4 w-4" />
-                  {t('common.export')}
-                </Button>
+                <ExportMenu
+                  filename="commandes-achat"
+                  title="Commandes d'achat"
+                  sheetName="Commandes"
+                  columns={poColumns}
+                  rows={filteredPOs}
+                  label={t('common.export')}
+                />
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Purchase Orders</CardTitle>
+                <CardTitle className="text-base">Commandes d’achat</CardTitle>
                 <div className="mt-2 text-sm text-muted-foreground">
-                  {filteredPOs.length} commande(s) — mock.
+                  {filteredPOs.length} commande(s)
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -150,7 +173,7 @@ export function ProcurementPage() {
                     <TableRow>
                       <TableHead>PO</TableHead>
                       <TableHead>Fournisseur</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Statut</TableHead>
                       <TableHead className="hidden md:table-cell">Prévu</TableHead>
                       <TableHead className="text-right">Montant</TableHead>
                       <TableHead className="text-right">Articles</TableHead>
@@ -202,7 +225,7 @@ export function ProcurementPage() {
           <Card className="mt-5">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Annuaire fournisseurs</CardTitle>
-              <div className="mt-2 text-sm text-muted-foreground">{suppliers.length} fournisseur(s) — mock.</div>
+              <div className="mt-2 text-sm text-muted-foreground">{suppliers.length} fournisseur(s)</div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -280,10 +303,6 @@ export function ProcurementPage() {
                     <p className="mt-1 text-xs text-muted-foreground">{selected.ownerName}</p>
                   </CardContent>
                 </Card>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Cette page est prête à être branchée au backend procurement (API + data model). Pour l’instant : UI + mocks.
               </div>
             </div>
           </DialogContent>

@@ -192,13 +192,17 @@ export function CRMPipelinePage() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(stage.id)}
             >
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={cn('h-2.5 w-2.5 rounded-full', stage.bg)} />
-                  <h3 className="text-sm font-semibold">{stage.label}</h3>
-                  <span className="text-xs text-muted-foreground">{stageLeads.length}</span>
+              <div className="mb-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className={cn('h-2.5 w-2.5 shrink-0 rounded-full', stage.bg)} />
+                    <h3 className="truncate text-sm font-semibold text-foreground">{stage.label}</h3>
+                    <Badge variant="muted" className="shrink-0 text-2xs">{stageLeads.length}</Badge>
+                  </div>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground">{formatCurrency(getStageValue(stage.id))}</span>
+                <p className="mt-1 text-xs font-medium text-muted-foreground">
+                  {formatCurrency(getStageValue(stage.id))}
+                </p>
               </div>
 
               <div

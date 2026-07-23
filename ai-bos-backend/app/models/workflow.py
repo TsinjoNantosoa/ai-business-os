@@ -22,6 +22,7 @@ class Workflow(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
     trigger: Mapped[str] = mapped_column(String(255), nullable=False)
     actions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    definition: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     last_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     run_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     success_rate: Mapped[float] = mapped_column(Float, nullable=False, default=100.0)

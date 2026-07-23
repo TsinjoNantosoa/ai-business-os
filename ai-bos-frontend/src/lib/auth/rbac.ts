@@ -64,6 +64,7 @@ export const PERMS = {
   KNOWLEDGE_READ: 'knowledge.read',
   AI_USE: 'ai.agent.use',
   COPILOT_USE: 'ai.copilot.use',
+  AI_APPROVAL_DECIDE: 'ai.approval.decide',
   ANALYTICS_READ: 'analytics.read',
   BI_READ: 'bi.read',
   FORECAST_READ: 'ml.forecast.read',

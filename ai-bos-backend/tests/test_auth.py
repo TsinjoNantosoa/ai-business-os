@@ -32,6 +32,21 @@ def test_refresh_success() -> None:
     assert body["refreshToken"] != refresh_token
 
 
+def test_refresh_survives_in_memory_store_wipe() -> None:
+    """Backend restart clears InMemoryRefreshSessionStore; valid refresh JWT must still work."""
+    from app.main import auth_service
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "ceo@demo.aibos.io", "password": "demo1234"},
+    )
+    refresh_token = login.json()["refreshToken"]
+    auth_service._sessions._sessions.clear()
+    response = client.post("/api/v1/auth/refresh", json={"refreshToken": refresh_token})
+    assert response.status_code == 200
+    assert response.json()["token"]
+
+
 def test_me_requires_bearer() -> None:
     response = client.get("/api/v1/auth/me")
     assert response.status_code == 401

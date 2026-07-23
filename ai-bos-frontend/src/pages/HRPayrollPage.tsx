@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Download, FileText } from 'lucide-react'
+import { Search, FileText } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { ExportMenu } from '@/components/shared/ExportMenu'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,8 +15,12 @@ import { useI18n } from '@/lib/i18n/store'
 import { formatCurrency } from '@/lib/utils'
 import { getEmployees } from '@/lib/api/services'
 import type { Employee } from '@/lib/api/types'
+import { exportTextPdf, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 
 const NET_MULTIPLIER = 0.78
+
+type PayrollRow = Employee & { gross: number; net: number; taxes: number }
 
 export function HRPayrollPage() {
   const { t } = useI18n()
@@ -64,18 +69,31 @@ export function HRPayrollPage() {
     return { gross, net, taxes }
   }
 
+  const payrollRows: PayrollRow[] = filtered.map((e) => ({ ...e, ...payslipFor(e) }))
+  const exportColumns: ExportColumn<PayrollRow>[] = [
+    { header: 'Prénom', value: (e) => e.firstName },
+    { header: 'Nom', value: (e) => e.lastName },
+    { header: 'Département', value: (e) => e.department },
+    { header: 'Poste', value: (e) => e.position },
+    { header: 'Statut', value: (e) => e.status },
+    { header: 'Brut', value: (e) => e.gross },
+    { header: 'Charges', value: (e) => e.taxes },
+    { header: 'Net', value: (e) => e.net },
+  ]
+
   return (
     <div>
       <PageHeader
         title={t('nav.payroll')}
-        description="Paie, synthèse et bulletins (mock)."
+        description="Paie, synthèse et bulletins"
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => {}}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
+          <ExportMenu
+            filename="paie"
+            title="Paie AI BOS"
+            sheetName="Paie"
+            columns={exportColumns}
+            rows={payrollRows}
+          />
         }
       />
 
@@ -223,9 +241,32 @@ export function HRPayrollPage() {
                     </Card>
                   </div>
 
-                  <div className="text-sm text-muted-foreground">
-                    Dans AI BOS, les bulletins sont générés via le backend HR/Payroll et stockés dans le module Documents.
-                    Ici, c’est un rendu UI + mocks.
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          exportTextPdf(
+                            `bulletin-${selected.firstName}-${selected.lastName}`,
+                            `Bulletin — ${selected.firstName} ${selected.lastName}`,
+                            [
+                              `Département: ${selected.department}`,
+                              `Poste: ${selected.position}`,
+                              `Statut: ${selected.status}`,
+                              `Brut: ${gross}`,
+                              `Charges estimées: ${taxes}`,
+                              `Net: ${net}`,
+                            ],
+                          )
+                          toast.success('Bulletin PDF téléchargé')
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : 'Export impossible')
+                        }
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Télécharger PDF
+                    </Button>
                   </div>
                 </div>
               )
