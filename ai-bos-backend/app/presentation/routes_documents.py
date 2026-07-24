@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import PurePosixPath
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -24,6 +26,12 @@ ALLOWED_EXTENSIONS = {
     ".gif": ("image", "image/gif"),
     ".webp": ("image", "image/webp"),
 }
+
+
+def _safe_filename(raw: str) -> str:
+    """Strip path components to avoid traversal via UploadFile.filename."""
+    name = PurePosixPath(raw.replace("\\", "/")).name.strip()
+    return name or "upload.bin"
 
 
 def _detect_type(filename: str, content_type: str | None) -> tuple[str, str]:
@@ -58,7 +66,7 @@ def build_documents_router() -> APIRouter:
         claims: dict = Depends(require_permission("document.write")),
     ) -> dict:
         org_id = claims_org_id(claims)
-        filename = file.filename or "upload.bin"
+        filename = _safe_filename(file.filename or "upload.bin")
         doc_type, mime_type = _detect_type(filename, file.content_type)
         data = await file.read()
         if len(data) > MAX_UPLOAD_BYTES:

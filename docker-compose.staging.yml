@@ -29,6 +29,9 @@ services:
       dockerfile: Dockerfile
     environment:
       ENVIRONMENT: staging
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PORT: "8000"
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-aibos}:${POSTGRES_PASSWORD:-aibos_staging}@db:5432/${POSTGRES_DB:-aibos}
       JWT_SECRET: ${JWT_SECRET:-staging-change-me-use-32-plus-bytes-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
@@ -37,6 +40,7 @@ services:
       STORAGE_LOCAL_PATH: /data/storage
       BACKUP_DIR: /data/backups
       CHATBOT_API_TOKEN: ${CHATBOT_API_TOKEN:-}
+      EMAIL_MODE: ${EMAIL_MODE:-log}
     volumes:
       - aibos_storage:/data/storage
       - aibos_backups:/data/backups

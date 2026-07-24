@@ -5,8 +5,11 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.core.config import settings
 from app.core.database import SessionLocal
@@ -59,9 +62,12 @@ async def lifespan(_app: FastAPI):
     run_migrations()
     configure_logging(force=True)
     logger.info("migrations_ready")
-    with SessionLocal() as session:
-        bootstrap_demo_data(session)
-    logger.info("demo_data_ready")
+    if settings.seed_demo_data:
+        with SessionLocal() as session:
+            bootstrap_demo_data(session)
+        logger.info("demo_data_ready")
+    else:
+        logger.info("demo_data_skipped", extra={"seed_demo_data": False})
 
     def _index_rag() -> None:
         try:
@@ -73,20 +79,34 @@ async def lifespan(_app: FastAPI):
 
     # Defer RAG so API is available immediately (large Document/*.md can block for minutes).
     threading.Thread(target=_index_rag, daemon=True, name="rag-index").start()
-    logger.info("database_ready")
+    logger.info("database_ready environment=%s", settings.environment)
     yield
 
 
-app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+_docs_url = None if settings.is_production else "/docs"
+_redoc_url = None if settings.is_production else "/redoc"
+_openapi_url = None if settings.is_production else "/openapi.json"
 
+app = FastAPI(
+    title=settings.app_name,
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
+    openapi_url=_openapi_url,
+)
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID", "X-Org-Id", "Accept"],
 )
 
+# Refresh tokens live in-process — keep a single uvicorn worker (see start.py).
+# Multi-instance / horizontal scale needs Redis or DB-backed sessions.
 session_store = InMemoryRefreshSessionStore()
 email_service = EmailService(
     mode=settings.email_mode,
@@ -130,6 +150,62 @@ app.include_router(build_notifications_router())
 app.include_router(build_api_keys_router())
 app.include_router(build_events_router())
 
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    correlation_id = getattr(request.state, "correlation_id", None) or request.headers.get("X-Correlation-ID")
+    headers = {"X-Correlation-ID": correlation_id} if correlation_id else {}
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": True,
+            "detail": exc.detail,
+            "correlation_id": correlation_id,
+        },
+        headers=headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    correlation_id = getattr(request.state, "correlation_id", None) or request.headers.get("X-Correlation-ID")
+    headers = {"X-Correlation-ID": correlation_id} if correlation_id else {}
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": True,
+            "detail": "Validation error",
+            "errors": exc.errors(),
+            "correlation_id": correlation_id,
+        },
+        headers=headers,
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    correlation_id = getattr(request.state, "correlation_id", None) or str(uuid.uuid4())
+    logger.exception(
+        "unhandled_exception path=%s method=%s correlation_id=%s",
+        request.url.path,
+        request.method,
+        correlation_id,
+    )
+    inc("http_errors_5xx")
+    detail = "Internal server error"
+    if not settings.is_production:
+        detail = f"{type(exc).__name__}: {exc}"
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": True,
+            "detail": detail,
+            "correlation_id": correlation_id,
+        },
+        headers={"X-Correlation-ID": correlation_id},
+    )
+
+
 @app.middleware("http")
 async def request_context_middleware(request, call_next):
     correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
@@ -154,6 +230,11 @@ async def request_context_middleware(request, call_next):
     )
 
     response.headers["X-Correlation-ID"] = correlation_id
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if settings.is_production:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 

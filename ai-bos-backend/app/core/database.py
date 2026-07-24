@@ -14,18 +14,22 @@ class Base(DeclarativeBase):
     pass
 
 
-def _sqlite_connect_args(url: str) -> dict:
-    if url.startswith("sqlite"):
-        return {"check_same_thread": False}
-    return {}
+def _engine_kwargs() -> dict:
+    kwargs: dict = {
+        "echo": settings.database_echo,
+        "pool_pre_ping": not settings.is_sqlite,
+    }
+    if settings.is_sqlite:
+        kwargs["connect_args"] = {"check_same_thread": False}
+    else:
+        # Neon / Render / managed Postgres: keep pool modest for serverless-ish limits.
+        kwargs["pool_size"] = settings.database_pool_size
+        kwargs["max_overflow"] = settings.database_max_overflow
+        kwargs["pool_recycle"] = 1800
+    return kwargs
 
 
-engine = create_engine(
-    settings.database_url,
-    echo=settings.database_echo,
-    connect_args=_sqlite_connect_args(settings.database_url),
-    pool_pre_ping=not settings.is_sqlite,
-)
+engine = create_engine(settings.database_url, **_engine_kwargs())
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 

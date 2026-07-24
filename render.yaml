@@ -1,0 +1,55 @@
+# AI BOS — Render Blueprint
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After deploy, set sync:false secrets in the Render dashboard:
+# DATABASE_URL (Neon), CORS_ORIGINS, APP_PUBLIC_URL, API_PUBLIC_URL, OPENAI_*, SMTP_*
+services:
+  - type: web
+    name: ai-bos-api
+    runtime: python
+    rootDir: ai-bos-backend
+    plan: starter
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start.py
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SEED_DEMO_DATA
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: APP_PUBLIC_URL
+        sync: false
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: EMAIL_MODE
+        value: smtp
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: CHATBOT_API_TOKEN
+        generateValue: true
+      - key: DATABASE_POOL_SIZE
+        value: "5"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "10"

@@ -28,11 +28,16 @@ def configure_logging(*, force: bool = False) -> None:
     if _CONFIGURED and not force:
         return
 
+    from app.core.config import settings
+
+    level_name = (settings.log_level or "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
 
     root = logging.getLogger()
-    root.setLevel(logging.INFO)
+    root.setLevel(level)
 
     if force:
         root.handlers.clear()
@@ -42,6 +47,7 @@ def configure_logging(*, force: bool = False) -> None:
     # Alembic's fileConfig disables loggers created before migrations run.
     for name in ("aibos", "aibos.auth", "aibos.email", "aibos.platform", "uvicorn", "uvicorn.error", "uvicorn.access"):
         logging.getLogger(name).disabled = False
+        logging.getLogger(name).setLevel(level)
 
     _CONFIGURED = True
 
