@@ -342,14 +342,14 @@ export function CRMContactsPage() {
             {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} sur {filtered.length}
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" disabled={page === 0} onClick={() => setPage(page - 1)}>
-              <ChevronLeft className="h-4 w-4" />
+            <Button variant="outline" size="icon" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Page précédente">
+              <ChevronLeft className="h-4 w-4" aria-hidden />
             </Button>
             <span className="text-sm text-muted-foreground">
               Page {page + 1} / {totalPages}
             </span>
-            <Button variant="outline" size="icon" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
-              <ChevronRight className="h-4 w-4" />
+            <Button variant="outline" size="icon" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} aria-label="Page suivante">
+              <ChevronRight className="h-4 w-4" aria-hidden />
             </Button>
           </div>
         </div>

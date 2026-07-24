@@ -1,7 +1,4 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -14,8 +11,16 @@
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://ai-business-os-cw2l.onrender.com https://accounts.google.com https://login.microsoftonline.com https://oauth2.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/((?!robots\\.txt|sitemap\\.xml|favicon\\.svg|assets/).*)", "destination": "/index.html" }
   ]
 }

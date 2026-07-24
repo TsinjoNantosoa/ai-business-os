@@ -369,11 +369,11 @@ export function CopilotPage() {
                   className="max-h-24 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 />
               </div>
-              <Button variant="outline" size="icon" onClick={() => setIsRecording(!isRecording)} className={cn(isRecording && 'bg-red-50 border-red-200')}>
-                <Mic className={cn('h-4 w-4', isRecording && 'text-red-500 animate-pulse')} />
+              <Button variant="outline" size="icon" onClick={() => setIsRecording(!isRecording)} className={cn(isRecording && 'bg-red-50 border-red-200')} aria-label={isRecording ? 'Arrêter l\'enregistrement' : 'Dicter un message'}>
+                <Mic className={cn('h-4 w-4', isRecording && 'text-red-500 animate-pulse')} aria-hidden />
               </Button>
-              <Button size="icon" onClick={() => handleSend()} disabled={!input.trim() || isStreaming}>
-                <Send className="h-4 w-4" />
+              <Button size="icon" onClick={() => handleSend()} disabled={!input.trim() || isStreaming} aria-label="Envoyer le message">
+                <Send className="h-4 w-4" aria-hidden />
               </Button>
             </div>
           </div>

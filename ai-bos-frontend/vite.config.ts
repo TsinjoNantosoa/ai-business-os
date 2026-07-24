@@ -20,6 +20,20 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   build: {
+    cssCodeSplit: true,
+    sourcemap: false,
+    modulePreload: {
+      resolveDependencies: (_filename, deps) =>
+        deps.filter((d) => {
+          const base = d.split('/').pop() || d;
+          return (
+            !base.startsWith('vendor-') &&
+            !base.startsWith('lucide-') &&
+            !base.startsWith('framer-motion') &&
+            !base.startsWith('recharts')
+          );
+        }),
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {

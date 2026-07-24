@@ -110,6 +110,7 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
+          aria-label={t('common.search')}
           className="group flex h-10 min-w-0 flex-1 max-w-md items-center gap-2 rounded-lg border border-border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-all hover:border-primary/30 hover:bg-muted sm:h-9 sm:px-3"
         >
           <Search className="h-4 w-4 shrink-0" />
@@ -162,14 +163,14 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
             aria-label={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
             title={isDark ? 'Mode clair' : 'Mode sombre'}
           >
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDark ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
           </Button>
 
           {/* Language */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Globe className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="relative" aria-label="Changer de langue">
+                <Globe className="h-4 w-4" aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -191,8 +192,8 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+                <Bell className="h-4 w-4" aria-hidden />
                 {unreadCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-bold text-white">
                     {unreadCount}
@@ -244,7 +245,11 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted">
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted"
+                aria-label="Menu compte utilisateur"
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary-100 text-xs font-medium text-primary-700">
                     {user ? initials(`${user.firstName} ${user.lastName}`) : '?'}
