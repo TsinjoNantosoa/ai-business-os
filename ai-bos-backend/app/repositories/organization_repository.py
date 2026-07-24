@@ -16,6 +16,28 @@ class OrganizationRepository:
     def get_by_id(self, org_id: str) -> Organization | None:
         return self._session.get(Organization, org_id)
 
+    def create(
+        self,
+        *,
+        org_id: str,
+        name: str,
+        plan: str = "starter",
+        currency: str = "EUR",
+        timezone: str = "Europe/Paris",
+        locale: str = "fr",
+    ) -> Organization:
+        org = Organization(
+            id=org_id,
+            name=name.strip(),
+            plan=plan,
+            currency=currency,
+            timezone=timezone,
+            locale=locale,
+        )
+        self._session.add(org)
+        self._session.flush()
+        return org
+
     def count(self) -> int:
         return len(self.list_all())
 

@@ -23,6 +23,14 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=4, max_length=128)
 
 
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=128)
+    firstName: str = Field(min_length=1, max_length=128)
+    lastName: str = Field(min_length=1, max_length=128)
+    organizationName: str = Field(min_length=1, max_length=255)
+
+
 class RefreshRequest(BaseModel):
     refreshToken: str = Field(min_length=20)
 
@@ -39,6 +47,18 @@ def build_auth_router(auth_service: AuthService) -> APIRouter:
     @router.post("/login", response_model=AuthResponse)
     def login(payload: LoginRequest):
         token, refresh_token = auth_service.login(payload.email, payload.password)
+        user = auth_service.me_from_access_token(token)
+        return AuthResponse(user=user, token=token, refreshToken=refresh_token)
+
+    @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+    def register(payload: RegisterRequest):
+        token, refresh_token = auth_service.register(
+            email=str(payload.email),
+            password=payload.password,
+            first_name=payload.firstName,
+            last_name=payload.lastName,
+            organization_name=payload.organizationName,
+        )
         user = auth_service.me_from_access_token(token)
         return AuthResponse(user=user, token=token, refreshToken=refresh_token)
 

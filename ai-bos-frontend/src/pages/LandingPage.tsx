@@ -81,14 +81,20 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, delay: 0.24 }}
-            className="mt-9"
+            className="mt-9 flex flex-wrap items-center gap-3"
           >
             <Link
-              to="/login"
+              to="/register"
               className="group inline-flex items-center gap-2 rounded-full bg-[#c8f542] px-7 py-3.5 text-sm font-semibold text-[#06120f] shadow-[0_0_40px_-8px_rgba(200,245,66,0.55)] transition hover:bg-[#d4f76a]"
             >
-              Entrer dans l&apos;espace de travail
+              Créer un compte
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3.5 text-sm font-medium text-[#e8efe9] transition hover:border-white/40 hover:bg-white/5"
+            >
+              Se connecter
             </Link>
           </motion.div>
         </div>

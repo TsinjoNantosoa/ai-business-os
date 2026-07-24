@@ -61,6 +61,98 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Compte désactivé")
         return self._issue_tokens(user)
 
+    def register(
+        self,
+        *,
+        email: str,
+        password: str,
+        first_name: str,
+        last_name: str,
+        organization_name: str,
+    ) -> tuple[str, str]:
+        """Create a new organization + owner account, then issue tokens."""
+        from datetime import timedelta
+
+        from app.models.user import User as UserOrm
+        from app.repositories.billing_repository import BillingRepository
+        from app.repositories.organization_repository import OrganizationRepository
+        from app.services.role_permissions import OWNER_PERMISSIONS
+
+        email_norm = email.lower().strip()
+        org_name = organization_name.strip()
+        first = first_name.strip()
+        last = last_name.strip()
+        if not org_name or not first or not last:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Champs obligatoires manquants")
+        if len(password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le mot de passe doit contenir au moins 6 caractères",
+            )
+
+        with SessionLocal() as session:
+            if UserRepository(session).get_by_email(email_norm):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Un compte avec cet email existe déjà",
+                )
+
+            org_id = f"org-{secrets.token_hex(8)}"
+            user_id = f"u-{secrets.token_hex(8)}"
+            OrganizationRepository(session).create(org_id=org_id, name=org_name)
+
+            user = UserOrm(
+                id=user_id,
+                org_id=org_id,
+                email=email_norm,
+                first_name=first,
+                last_name=last,
+                role="owner",
+                permissions=list(OWNER_PERMISSIONS),
+                password_hash=hash_password(password),
+                active=True,
+            )
+            session.add(user)
+
+            billing = BillingRepository(session)
+            plan = billing.get_plan_by_code("starter") or billing.get_plan_by_id("plan-starter")
+            if plan is None and billing.plans_count() == 0:
+                from app.models.billing import BillingPlan
+
+                plan = BillingPlan(
+                    id="plan-starter",
+                    code="starter",
+                    name="Starter",
+                    price_monthly=0,
+                    currency="EUR",
+                    seats_limit=5,
+                    ai_tokens_limit=100_000,
+                    ai_rpm=20,
+                    storage_gb_limit=10,
+                    stripe_price_id=None,
+                )
+                session.add(plan)
+                session.flush()
+            if plan is not None:
+                now = datetime.now(timezone.utc)
+                billing.create_subscription(
+                    subscription_id=f"sub-{secrets.token_hex(8)}",
+                    org_id=org_id,
+                    plan_id=plan.id,
+                    status="active",
+                    period_start=now,
+                    period_end=now + timedelta(days=30),
+                    seats_used=1,
+                    ai_tokens_used=0,
+                    storage_gb_used=0,
+                )
+
+            session.commit()
+            session.refresh(user)
+            user_snapshot = user
+
+        return self._issue_tokens(user_snapshot)
+
     def request_password_reset(self, email: str) -> None:
         """Create and email a one-use verification code without revealing account existence."""
         with SessionLocal() as session:

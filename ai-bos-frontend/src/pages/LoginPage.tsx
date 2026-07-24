@@ -210,6 +210,12 @@ export function LoginPage() {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.signIn')}
                 </Button>
+                <p className="text-center text-sm text-muted-foreground">
+                  {t('auth.noAccount')}{' '}
+                  <Link to="/register" className="font-medium text-primary hover:underline">
+                    {t('auth.createAccount')}
+                  </Link>
+                </p>
                 <div className="grid w-full grid-cols-2 gap-2">
                   <Button
                     type="button"

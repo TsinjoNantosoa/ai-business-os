@@ -20,6 +20,31 @@ export async function login(email: string, password: string): Promise<T.AuthResp
   });
 }
 
+export async function register(input: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  organizationName: string;
+}): Promise<T.AuthResponse> {
+  if (USE_MOCKS) {
+    const user: T.User = {
+      id: 'u-mock-new',
+      email: input.email,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      role: 'owner',
+      permissions: [],
+      orgId: 'org-mock-new',
+    };
+    return { user, token: 'mock-token-new', refreshToken: 'mock-refresh-new' };
+  }
+  return apiFetch<T.AuthResponse>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function forgotPassword(email: string): Promise<{ status: string; message: string }> {
   if (USE_MOCKS) {
     return {
