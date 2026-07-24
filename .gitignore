@@ -1,0 +1,63 @@
+# Root — AI BOS monorepo
+
+# Secrets & env
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite3
+
+# Frontend build
+dist/
+dist-ssr/
+*.local
+.vite/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Runtime data
+storage/
+.pytest_storage/
+backups/
+*.log
+logs/
+
+# IDE / OS
+.idea/
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Docker / local volumes
+data/
+
+# Misc
+*.pem
+*.key
+.turbo/
