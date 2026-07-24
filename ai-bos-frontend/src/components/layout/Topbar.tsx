@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Bell, Menu, Check, Globe, LogOut, Settings, User,
   ChevronDown, Building2, AlertCircle, CheckCircle2, Info, AlertTriangle,
+  Moon, Sun,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
+import { useTheme } from '@/lib/theme/store';
 import { getNotifications, markAllNotificationsRead, markNotificationRead, subscribeNotifications } from '@/lib/api/services';
 import type { AppNotification } from '@/lib/api/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -23,6 +25,8 @@ import type { Locale } from '@/lib/i18n/dictionaries';
 export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void }) {
   const { user, organizations, orgId, setOrg, logout, token } = useAuth();
   const { t, locale, setLocale } = useI18n();
+  const isDark = useTheme((s) => s.resolved) === 'dark';
+  const toggleTheme = useTheme((s) => s.toggle);
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -149,6 +153,17 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+
+          {/* Theme */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
+            title={isDark ? 'Mode clair' : 'Mode sombre'}
+          >
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
 
           {/* Language */}
           <DropdownMenu>

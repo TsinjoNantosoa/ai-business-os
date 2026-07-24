@@ -16,13 +16,23 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useI18n } from '@/lib/i18n/store';
+import { useTheme } from '@/lib/theme/store';
 import { getFinanceOverview, getLeads, getActivities, getTickets, getEmployees } from '@/lib/api/services';
 import { formatCurrency, formatNumber, formatRelativeTime, cn } from '@/lib/utils';
 
 export function DashboardPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
-
+  const isDark = useTheme((s) => s.resolved) === 'dark';
+  const gridStroke = isDark ? '#334155' : '#e2e8f0';
+  const tickFill = isDark ? '#94a3b8' : '#64748b';
+  const tooltipStyle = {
+    borderRadius: '0.75rem',
+    border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+    background: isDark ? '#0f172a' : '#fff',
+    color: isDark ? '#f8fafc' : '#0f172a',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  };
   const { data: finance } = useQuery({ queryKey: ['finance-overview'], queryFn: getFinanceOverview });
   const { data: leads } = useQuery({ queryKey: ['leads'], queryFn: getLeads });
   const { data: activities } = useQuery({ queryKey: ['activities'], queryFn: getActivities });
@@ -105,11 +115,11 @@ export function DashboardPage() {
                     <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: tickFill }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: tickFill }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                 <Tooltip
-                  contentStyle={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                  contentStyle={tooltipStyle}
                   formatter={(v) => formatCurrency(Number(v))}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={2.5} fill="url(#revGrad)" />
@@ -126,12 +136,12 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={funnelData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} width={80} />
+              <BarChart data={funnelData} layout="vertical" margin={{ left: 8, right: 12 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12, fill: tickFill }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: tickFill }} axisLine={false} tickLine={false} width={72} />
                 <Tooltip
-                  contentStyle={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}
+                  contentStyle={tooltipStyle}
                   formatter={(v) => [`${v} deals`, 'Pipeline']}
                 />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]}>
@@ -148,14 +158,14 @@ export function DashboardPage() {
       {/* AI Insight + Quick Actions */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* AI Insight */}
-        <Card className="lg:col-span-2 border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-3">
+        <Card className="border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30 dark:from-primary-950/40 dark:to-violet-950/20 lg:col-span-2">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex min-w-0 items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl gradient-ai">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold">{t('dashboard.aiInsight')}</p>
                   <Badge variant="default" className="text-2xs">IA</Badge>
                 </div>
@@ -163,12 +173,22 @@ export function DashboardPage() {
                   3 clients n'ont pas payé leurs factures depuis plus de 30 jours, totalisant{' '}
                   <span className="font-semibold">45 200 €</span>. Je recommande de relancer ces clients en priorité.
                 </p>
-                <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="default" onClick={() => navigate('/app/finance/invoices')}>
+                <div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="w-full sm:w-auto"
+                    onClick={() => navigate('/app/finance/invoices')}
+                  >
                     Voir les factures
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => navigate('/app/copilot')}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full bg-card/80 sm:w-auto"
+                    onClick={() => navigate('/app/copilot')}
+                  >
                     Analyser avec l'IA
                   </Button>
                 </div>

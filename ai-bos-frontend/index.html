@@ -6,7 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI BOS — The Intelligent Operating System for Business</title>
     <meta name="description" content="AI BOS — The intelligent operating system for businesses. One unified platform for CRM, Finance, HR, Projects, Analytics, and AI." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('aibos-theme');
+          var mode = raw ? JSON.parse(raw).state?.mode : 'system';
+          var dark = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>    <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   </head>
