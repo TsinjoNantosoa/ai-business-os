@@ -116,10 +116,15 @@ class Settings(BaseModel):
         environment = os.getenv("ENVIRONMENT", "development")
         is_prod = environment.lower() == "production"
         cors_raw = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
-        origins = [o.strip() for o in cors_raw.split(",") if o.strip()]
+        origins = [o.strip().rstrip("/") for o in cors_raw.split(",") if o.strip()]
         # Never allow wildcard with credentials in production.
         if is_prod:
             origins = [o for o in origins if o != "*"]
+
+        # Also allow the public frontend URL when set (Vercel).
+        app_public = (os.getenv("APP_PUBLIC_URL") or "").strip().rstrip("/")
+        if app_public and app_public not in origins and app_public != "*":
+            origins.append(app_public)
 
         raw_db = os.getenv("DATABASE_URL", "sqlite:///./aibos.db")
         database_url = normalize_database_url(raw_db, require_ssl=is_prod and "sqlite" not in raw_db)

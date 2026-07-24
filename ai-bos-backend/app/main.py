@@ -97,13 +97,18 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+# Origins come from CORS_ORIGINS / APP_PUBLIC_URL — never "*".
+# Methods/headers "*" is required so browser preflight (OPTIONS) succeeds.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID", "X-Org-Id", "Accept"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Correlation-ID"],
 )
+
+logger.info("cors_origins=%s", settings.cors_origins)
 
 # Refresh tokens live in-process — keep a single uvicorn worker (see start.py).
 # Multi-instance / horizontal scale needs Redis or DB-backed sessions.
@@ -238,6 +243,16 @@ async def request_context_middleware(request, call_next):
     return response
 
 
+@app.get("/")
+def root() -> dict[str, object]:
+    return {
+        "service": settings.app_name,
+        "status": "ok",
+        "health": "/health",
+        "docs": None if settings.is_production else "/docs",
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -255,5 +270,6 @@ def health_details() -> dict[str, object]:
         "status": "ok" if db_status == "ok" else "degraded",
         "environment": settings.environment,
         "database": db_status,
+        "cors_origins": settings.cors_origins,
         "metrics": snapshot(),
     }
