@@ -147,6 +147,11 @@ class AuthService:
                     storage_gb_used=0,
                 )
 
+            from app.services.org_demo_data import ensure_org_demo_agents, ensure_org_demo_datasets
+
+            ensure_org_demo_datasets(session, org_id)
+            ensure_org_demo_agents(session, org_id)
+
             session.commit()
             session.refresh(user)
             user_snapshot = user

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.presentation.deps import claims_org_id, require_feature, require_permission
-from app.repositories.catalog_repository import CatalogRepository
+from app.services.org_demo_data import get_dataset_for_org
 
 
 def build_analytics_ml_router() -> APIRouter:
@@ -16,7 +16,7 @@ def build_analytics_ml_router() -> APIRouter:
         db: Session = Depends(get_db),
         claims: dict = Depends(require_permission("analytics.read")),
     ) -> dict:
-        payload = CatalogRepository(db).get_dataset(claims_org_id(claims), "analytics_kpis")
+        payload = get_dataset_for_org(db, claims_org_id(claims), "analytics_kpis")
         if not payload:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analytics introuvable")
         return payload
@@ -32,7 +32,7 @@ def build_analytics_ml_router() -> APIRouter:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="horizon doit être 7d, 30d ou 90d",
             )
-        payload = CatalogRepository(db).get_dataset(claims_org_id(claims), f"forecast_{horizon}")
+        payload = get_dataset_for_org(db, claims_org_id(claims), f"forecast_{horizon}")
         if not payload:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prévision introuvable")
         return payload

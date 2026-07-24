@@ -31,6 +31,7 @@ from app.services.ai_observability import AiObservabilityRepository, trace_to_di
 from app.services.audit_service import record_audit
 from app.services.llm_service import LLMService
 from app.services.rag_service import format_rag_context, hits_to_sources, retrieve
+from app.services.org_demo_data import DEMO_ORG_ID, ensure_org_demo_agents
 from app.services.tool_registry import ToolContext, execute_tool, get_tool, list_tools
 
 AGENT_PERSONAS: dict[str, str] = {
@@ -44,8 +45,21 @@ AGENT_PERSONAS: dict[str, str] = {
 
 
 def _find_agent(db: Session, org_id: str, agent_id: str | None) -> dict | None:
-    row = CatalogRepository(db).get_agent(org_id, agent_id)
-    return agent_to_dict(row) if row else None
+    repo = CatalogRepository(db)
+    row = repo.get_agent(org_id, agent_id)
+    if row:
+        return agent_to_dict(row)
+    # Seeded agents live on org-1; registered orgs may have none yet.
+    if org_id != DEMO_ORG_ID:
+        ensure_org_demo_agents(db, org_id)
+        db.commit()
+        row = repo.get_agent(org_id, agent_id)
+        if row:
+            return agent_to_dict(row)
+        row = repo.get_agent(DEMO_ORG_ID, agent_id)
+        if row:
+            return agent_to_dict(row)
+    return None
 
 
 def _agent_to_dict(agent: dict) -> dict:
@@ -150,7 +164,12 @@ def build_ai_router() -> APIRouter:
         db: Session = Depends(get_db),
         claims: dict = Depends(require_permission("ai.agent.use")),
     ) -> list[dict]:
-        rows = CatalogRepository(db).list_by_org(AiAgent, claims_org_id(claims))
+        org_id = claims_org_id(claims)
+        ensure_org_demo_agents(db, org_id)
+        db.commit()
+        rows = CatalogRepository(db).list_by_org(AiAgent, org_id)
+        if not rows and org_id != DEMO_ORG_ID:
+            rows = CatalogRepository(db).list_by_org(AiAgent, DEMO_ORG_ID)
         return [_agent_to_dict(agent_to_dict(a)) for a in rows]
 
     @router.get("/usage/summary")

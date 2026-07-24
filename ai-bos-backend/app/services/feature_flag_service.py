@@ -14,7 +14,7 @@ PLAN_FEATURE_FLAGS: dict[str, dict[str, bool]] = {
         "module.finance": False,
         "ai.copilot": True,
         "ai.custom_agents": False,
-        "ml.forecasts": False,
+        "ml.forecasts": True,
         "workflow.builder": False,
         "realtime.sync": False,
         "analytics.advanced": False,

@@ -14,6 +14,7 @@ from app.repositories.catalog_repository import (
     employee_to_dict,
 )
 from app.services.audit_service import record_audit
+from app.services.org_demo_data import get_dataset_for_org
 
 EMPLOYEE_STATUSES = {"active", "on_leave", "terminated", "inactive"}
 AVATAR_COLORS = ("bg-primary-100", "bg-emerald-100", "bg-amber-100", "bg-pink-100", "bg-sky-100")
@@ -31,7 +32,7 @@ def build_dashboard_data_router() -> APIRouter:
         db: Session = Depends(get_db),
         claims: dict = Depends(require_auth),
     ) -> dict:
-        payload = CatalogRepository(db).get_dataset(claims_org_id(claims), "finance_overview")
+        payload = get_dataset_for_org(db, claims_org_id(claims), "finance_overview")
         if not payload:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vue finance introuvable")
         return payload
