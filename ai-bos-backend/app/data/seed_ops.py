@@ -14,6 +14,14 @@ PROJECT_DEFS = [
     ("proj-6", "Customer Success", "Playbooks support et NPS.", "active", 44, "#ec4899", 70000, 31000, 22, 10),
     ("proj-7", "Data Platform", "Pipeline analytics / BI / forecasts.", "active", 66, "#06b6d4", 210000, 140000, 36, 24),
     ("proj-8", "Mobile App", "Application mobile AI BOS.", "on_hold", 12, "#ef4444", 150000, 18000, 28, 3),
+    # Align with frontend MOCK_PROJECTS (15 total)
+    ("proj-9", "Refonte plateforme e-commerce", "Projet stratégique UX et performance opérationnelle.", "active", 45, "#4f46e5", 225000, 90000, 36, 12),
+    ("proj-10", "Migration infrastructure cloud", "Migration cloud et modernisation.", "active", 55, "#0d9488", 250000, 150000, 40, 28),
+    ("proj-11", "Application mobile v2", "Deuxième version de l'app mobile.", "active", 60, "#f59e0b", 275000, 165000, 44, 30),
+    ("proj-12", "Programme de transformation digitale", "Transformation digitale transverse.", "planning", 20, "#ec4899", 300000, 60000, 48, 8),
+    ("proj-13", "Implementation ERP", "Déploiement ERP métier.", "active", 70, "#3b82f6", 325000, 227000, 52, 36),
+    ("proj-14", "Site vitrine corporate", "Nouveau site corporate.", "completed", 100, "#84cc16", 350000, 350000, 56, 56),
+    ("proj-15", "Audit sécurité", "Audit sécurité et remédiation.", "completed", 100, "#4f46e5", 375000, 375000, 60, 60),
 ]
 
 DEMO_PROJECTS = [

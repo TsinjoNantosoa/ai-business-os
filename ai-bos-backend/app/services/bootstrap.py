@@ -247,23 +247,35 @@ def _bootstrap_catalog(session: Session) -> None:
                 )
             )
 
-    if repo.count_all(AiAgent) == 0:
-        for agent in seed.AI_AGENTS:
-            session.add(
-                AiAgent(
-                    id=agent["id"],
-                    org_id=org_id,
-                    slug=agent["slug"],
-                    name=agent["name"],
-                    description=agent["description"],
-                    status=agent["status"],
-                    category=agent["category"],
-                    icon=agent["icon"],
-                    tools_count=agent["toolsCount"],
-                    last_used=str(agent["lastUsed"])[:32] if agent.get("lastUsed") else None,
-                    conversations=agent["conversations"],
-                )
+    # Upsert all mock agents (covers DBs already seeded with a shorter / older list).
+    for agent in seed.AI_AGENTS:
+        existing = session.get(AiAgent, agent["id"])
+        if existing:
+            existing.slug = agent["slug"]
+            existing.name = agent["name"]
+            existing.description = agent["description"]
+            existing.status = agent["status"]
+            existing.category = agent["category"]
+            existing.icon = agent["icon"]
+            existing.tools_count = agent["toolsCount"]
+            existing.last_used = str(agent["lastUsed"])[:32] if agent.get("lastUsed") else None
+            existing.conversations = agent["conversations"]
+            continue
+        session.add(
+            AiAgent(
+                id=agent["id"],
+                org_id=org_id,
+                slug=agent["slug"],
+                name=agent["name"],
+                description=agent["description"],
+                status=agent["status"],
+                category=agent["category"],
+                icon=agent["icon"],
+                tools_count=agent["toolsCount"],
+                last_used=str(agent["lastUsed"])[:32] if agent.get("lastUsed") else None,
+                conversations=agent["conversations"],
             )
+        )
 
     if repo.get_dataset(org_id, "finance_overview") is None:
         repo.upsert_dataset(org_id, "finance_overview", DEMO_FINANCE_OVERVIEW)
@@ -278,22 +290,11 @@ def _bootstrap_catalog(session: Session) -> None:
 
 
 def _bootstrap_organizations_and_users(session: Session) -> None:
-    org_repo = OrganizationRepository(session)
     user_repo = UserRepository(session)
 
-    if org_repo.count() == 0:
-        for org_data in seed.ORGANIZATIONS:
-            session.add(
-                Organization(
-                    id=org_data["id"],
-                    name=org_data["name"],
-                    plan=org_data["plan"],
-                    currency=org_data["currency"],
-                    timezone=org_data["timezone"],
-                    locale=org_data["locale"],
-                    address=org_data.get("address"),
-                )
-            )
+    # Always ensure demo orgs exist (idempotent) so module seeds can target org-1/org-2
+    # even if a real customer already registered another organization.
+    _ensure_demo_organizations(session)
 
     if user_repo.count() == 0:
         demo_users = [
@@ -374,6 +375,26 @@ def _bootstrap_organizations_and_users(session: Session) -> None:
     _sync_demo_user_permissions(session)
 
 
+def _ensure_demo_organizations(session: Session) -> None:
+    """Create org-1 / org-2 if missing (needed for full demo module data)."""
+    org_repo = OrganizationRepository(session)
+    for org_data in seed.ORGANIZATIONS:
+        if org_repo.get_by_id(org_data["id"]):
+            continue
+        session.add(
+            Organization(
+                id=org_data["id"],
+                name=org_data["name"],
+                plan=org_data["plan"],
+                currency=org_data["currency"],
+                timezone=org_data["timezone"],
+                locale=org_data["locale"],
+                address=org_data.get("address"),
+            )
+        )
+    session.flush()
+
+
 def _ensure_personal_ceo_account(session: Session) -> None:
     """Deprecated — personal accounts must never be hardcoded in the codebase.
 
@@ -406,6 +427,22 @@ def _ensure_login_demo_users(session: Session) -> None:
     """Ensure LoginPage demo accounts exist even on an already-seeded DB."""
     user_repo = UserRepository(session)
     extras = [
+        {
+            "id": "u-owner-1",
+            "email": "ceo@demo.aibos.io",
+            "first_name": "Jean",
+            "last_name": "Bernard",
+            "role": "owner",
+            "permissions": list(OWNER_PERMISSIONS),
+        },
+        {
+            "id": "u-staff-1",
+            "email": "staff@demo.aibos.io",
+            "first_name": "Lucas",
+            "last_name": "Thomas",
+            "role": "staff",
+            "permissions": permissions_for_role("staff"),
+        },
         {
             "id": "u-sales-1",
             "email": "sales@demo.aibos.io",
@@ -694,7 +731,11 @@ def _bootstrap_tasks(session: Session) -> None:
 
 
 def _bootstrap_ops(session: Session) -> None:
-    """Seed Lot B demo data (orders, campaigns, projects, events, meetings) into org-1."""
+    """Seed Lot B demo data (orders, campaigns, projects, events, meetings) into org-1.
+
+    Each entity type is filled independently so expanding DEMO_PROJECTS still works
+    on databases that already have sales orders.
+    """
     from datetime import datetime, timezone as _tz
 
     from app.data.seed_ops import (
@@ -705,56 +746,63 @@ def _bootstrap_ops(session: Session) -> None:
         DEMO_SALES_ORDERS,
     )
     from app.models.ops import CalendarEvent, Campaign, Meeting, Project, SalesOrder
-    from app.repositories.ops_repository import SalesOrderRepository
-
-    if SalesOrderRepository(session).count_all() > 0:
-        return
+    from app.repositories.ops_repository import (
+        CalendarEventRepository,
+        CampaignRepository,
+        MeetingRepository,
+        SalesOrderRepository,
+    )
 
     now = datetime.now(_tz.utc)
     org_id = "org-1"
 
-    for order in DEMO_SALES_ORDERS:
-        session.add(
-            SalesOrder(
-                id=order["id"],
-                org_id=org_id,
-                order_number=order["orderNumber"],
-                customer_id=order["customerId"],
-                customer_name=order["customerName"],
-                status=order["status"],
-                amount=order["amount"],
-                currency=order["currency"],
-                date=order["date"],
-                sales_rep_id=order["salesRepId"],
-                sales_rep_name=order["salesRepName"],
-                line_items=order["lineItems"],
-                created_at=now,
-                updated_at=now,
+    if SalesOrderRepository(session).count_all() == 0:
+        for order in DEMO_SALES_ORDERS:
+            session.add(
+                SalesOrder(
+                    id=order["id"],
+                    org_id=org_id,
+                    order_number=order["orderNumber"],
+                    customer_id=order["customerId"],
+                    customer_name=order["customerName"],
+                    status=order["status"],
+                    amount=order["amount"],
+                    currency=order["currency"],
+                    date=order["date"],
+                    sales_rep_id=order["salesRepId"],
+                    sales_rep_name=order["salesRepName"],
+                    line_items=order["lineItems"],
+                    created_at=now,
+                    updated_at=now,
+                )
             )
-        )
 
-    for campaign in DEMO_CAMPAIGNS:
-        session.add(
-            Campaign(
-                id=campaign["id"],
-                org_id=org_id,
-                name=campaign["name"],
-                type=campaign["type"],
-                status=campaign["status"],
-                reach=campaign["reach"],
-                open_rate=campaign["openRate"],
-                click_rate=campaign["clickRate"],
-                conversions=campaign["conversions"],
-                budget=campaign["budget"],
-                spent=campaign["spent"],
-                start_date=str(campaign["startDate"])[:10],
-                end_date=str(campaign["endDate"])[:10] if campaign.get("endDate") else None,
-                created_at=now,
-                updated_at=now,
+    if CampaignRepository(session).count_all() == 0:
+        for campaign in DEMO_CAMPAIGNS:
+            session.add(
+                Campaign(
+                    id=campaign["id"],
+                    org_id=org_id,
+                    name=campaign["name"],
+                    type=campaign["type"],
+                    status=campaign["status"],
+                    reach=campaign["reach"],
+                    open_rate=campaign["openRate"],
+                    click_rate=campaign["clickRate"],
+                    conversions=campaign["conversions"],
+                    budget=campaign["budget"],
+                    spent=campaign["spent"],
+                    start_date=str(campaign["startDate"])[:10],
+                    end_date=str(campaign["endDate"])[:10] if campaign.get("endDate") else None,
+                    created_at=now,
+                    updated_at=now,
+                )
             )
-        )
 
+    # Upsert projects so expanding DEMO_PROJECTS fills missing rows.
     for project in DEMO_PROJECTS:
+        if session.get(Project, project["id"]):
+            continue
         session.add(
             Project(
                 id=project["id"],
@@ -776,42 +824,44 @@ def _bootstrap_ops(session: Session) -> None:
             )
         )
 
-    for event in DEMO_CALENDAR_EVENTS:
-        session.add(
-            CalendarEvent(
-                id=event["id"],
-                org_id=org_id,
-                title=event["title"],
-                type=event["type"],
-                start_date=event["startDate"],
-                end_date=event.get("endDate"),
-                color=event["color"],
-                location=event.get("location"),
-                attendees=event.get("attendees") or [],
-                description=event.get("description"),
-                created_at=now,
-                updated_at=now,
+    if CalendarEventRepository(session).count_all() == 0:
+        for event in DEMO_CALENDAR_EVENTS:
+            session.add(
+                CalendarEvent(
+                    id=event["id"],
+                    org_id=org_id,
+                    title=event["title"],
+                    type=event["type"],
+                    start_date=event["startDate"],
+                    end_date=event.get("endDate"),
+                    color=event["color"],
+                    location=event.get("location"),
+                    attendees=event.get("attendees") or [],
+                    description=event.get("description"),
+                    created_at=now,
+                    updated_at=now,
+                )
             )
-        )
 
-    for meeting in DEMO_MEETINGS:
-        session.add(
-            Meeting(
-                id=meeting["id"],
-                org_id=org_id,
-                title=meeting["title"],
-                date=str(meeting["date"])[:10],
-                duration=meeting["duration"],
-                status=meeting["status"],
-                location=meeting.get("location"),
-                attendees=meeting.get("attendees") or [],
-                agenda=meeting.get("agenda") or [],
-                summary=meeting.get("summary"),
-                action_items=meeting.get("actionItems") or [],
-                created_at=now,
-                updated_at=now,
+    if MeetingRepository(session).count_all() == 0:
+        for meeting in DEMO_MEETINGS:
+            session.add(
+                Meeting(
+                    id=meeting["id"],
+                    org_id=org_id,
+                    title=meeting["title"],
+                    date=str(meeting["date"])[:10],
+                    duration=meeting["duration"],
+                    attendees=meeting.get("attendees") or [],
+                    agenda=meeting.get("agenda") or [],
+                    summary=meeting.get("summary"),
+                    action_items=meeting.get("actionItems") or [],
+                    status=meeting["status"],
+                    location=meeting.get("location"),
+                    created_at=now,
+                    updated_at=now,
+                )
             )
-        )
 
 
 def _bootstrap_tickets(session: Session) -> None:

@@ -65,9 +65,9 @@ async def lifespan(_app: FastAPI):
     if settings.seed_demo_data:
         with SessionLocal() as session:
             bootstrap_demo_data(session)
-        logger.info("demo_data_ready")
+        logger.info("demo_data_ready SEED_DEMO_DATA=true")
     else:
-        logger.info("demo_data_skipped", extra={"seed_demo_data": False})
+        logger.info("demo_data_skipped set SEED_DEMO_DATA=true to fill demo modules")
 
     def _index_rag() -> None:
         try:
