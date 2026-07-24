@@ -591,7 +591,12 @@
   }
 
   .aibos-chat-root .bos-fab-wrap {
-    bottom: 16px;
-    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    right: max(16px, env(safe-area-inset-right));
+  }
+
+  .aibos-chat-root .bos-fab {
+    width: 56px;
+    height: 56px;
   }
 }

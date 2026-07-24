@@ -138,7 +138,7 @@ export function ContractsPage() {
                 <DialogDescription>{selected.counterparty}</DialogDescription>
                 <div className="pt-1"><StatusBadge status={selected.status} /></div>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-muted-foreground">Type</p>
                   <p className="font-medium capitalize">{selected.type}</p>

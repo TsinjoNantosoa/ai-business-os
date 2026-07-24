@@ -91,73 +91,149 @@ export function CalendarPage() {
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const today = new Date();
 
+  const monthEvents = useMemo(() => {
+    if (!events) return [];
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    return [...events]
+      .filter((e) => {
+        const d = new Date(e.startDate);
+        return d.getFullYear() === y && d.getMonth() === m;
+      })
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  }, [events, currentDate]);
+
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         title={t('nav.calendar')}
         description="Planifiez vos événements et réunions"
         actions={
           <>
-            <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
+            <div className="flex w-full items-center overflow-x-auto rounded-lg border border-border bg-card p-0.5 sm:w-auto">
               {(['month', 'week', 'day'] as const).map((v) => (
-                <Button key={v} variant={view === v ? 'default' : 'ghost'} size="sm" onClick={() => setView(v)}>
+                <Button key={v} variant={view === v ? 'default' : 'ghost'} size="sm" onClick={() => setView(v)} className="shrink-0">
                   {v === 'month' ? 'Mois' : v === 'week' ? 'Semaine' : 'Jour'}
                 </Button>
               ))}
             </div>
-            {canWrite && <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />Nouvel événement</Button>}
+            {canWrite && (
+              <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4" />
+                <span className="sm:inline">Nouvel événement</span>
+              </Button>
+            )}
           </>
         }
       />
 
       <Card>
-        <CardContent className="p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
+        <CardContent className="p-3 sm:p-4">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-base font-semibold sm:text-lg">
+              {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>Aujourd'hui</Button>
-              <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
-              <Button variant="outline" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+                Aujourd'hui
+              </Button>
+              <Button variant="outline" size="icon" onClick={prevMonth} aria-label="Mois précédent">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={nextMonth} aria-label="Mois suivant">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
-            {WEEKDAYS.map((d) => (
-              <div key={d} className="pb-2 text-center text-xs font-medium text-muted-foreground">{d}</div>
-            ))}
-            {days.map((date, i) => {
-              if (!date) return <div key={i} className="min-h-[80px] rounded-lg" />;
-              const dayEvents = getEventsForDay(date);
-              const isToday = date.toDateString() === today.toDateString();
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    'min-h-[80px] rounded-lg border p-1.5 transition-colors hover:bg-muted/30',
-                    isToday ? 'border-primary bg-primary-50/30' : 'border-border'
-                  )}
-                >
-                  <span className={cn('text-xs font-medium', isToday ? 'text-primary' : 'text-muted-foreground')}>
-                    {date.getDate()}
-                  </span>
-                  <div className="mt-1 space-y-0.5">
-                    {dayEvents.slice(0, 3).map((e) => (
-                      <div
-                        key={e.id}
-                        className="flex items-center gap-1 rounded px-1 py-0.5 text-2xs font-medium truncate"
-                        style={{ backgroundColor: `${e.color}15`, color: e.color }}
-                      >
-                        <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: e.color }} />
-                        {e.title}
-                      </div>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <p className="text-2xs text-muted-foreground pl-1">+{dayEvents.length - 3} autres</p>
-                    )}
+          {/* Mobile agenda */}
+          <div className="space-y-2 md:hidden">
+            {monthEvents.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Aucun événement ce mois-ci</p>
+            ) : (
+              monthEvents.map((e) => {
+                const start = new Date(e.startDate);
+                return (
+                  <div
+                    key={e.id}
+                    className="flex gap-3 rounded-xl border border-border bg-card p-3"
+                  >
+                    <div
+                      className="w-1 shrink-0 rounded-full"
+                      style={{ backgroundColor: e.color }}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{e.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {start.toLocaleDateString('fr-FR', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                        })}{' '}
+                        ·{' '}
+                        {start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        {e.location ? ` · ${e.location}` : ''}
+                      </p>
+                    </div>
                   </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop / tablet month grid */}
+          <div className="hidden overflow-x-auto md:block">
+            <div className="grid min-w-[40rem] grid-cols-7 gap-1">
+              {WEEKDAYS.map((d) => (
+                <div key={d} className="pb-2 text-center text-xs font-medium text-muted-foreground">
+                  {d}
                 </div>
-              );
-            })}
+              ))}
+              {days.map((date, i) => {
+                if (!date) return <div key={i} className="min-h-[64px] rounded-lg lg:min-h-[80px]" />;
+                const dayEvents = getEventsForDay(date);
+                const isToday = date.toDateString() === today.toDateString();
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      'min-h-[64px] rounded-lg border p-1 transition-colors hover:bg-muted/30 lg:min-h-[80px] lg:p-1.5',
+                      isToday ? 'border-primary bg-primary-50/30' : 'border-border',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'text-xs font-medium',
+                        isToday ? 'text-primary' : 'text-muted-foreground',
+                      )}
+                    >
+                      {date.getDate()}
+                    </span>
+                    <div className="mt-1 space-y-0.5">
+                      {dayEvents.slice(0, 3).map((e) => (
+                        <div
+                          key={e.id}
+                          className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-2xs font-medium"
+                          style={{ backgroundColor: `${e.color}15`, color: e.color }}
+                        >
+                          <div
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: e.color }}
+                          />
+                          {e.title}
+                        </div>
+                      ))}
+                      {dayEvents.length > 3 && (
+                        <p className="pl-1 text-2xs text-muted-foreground">
+                          +{dayEvents.length - 3} autres
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -171,44 +247,80 @@ export function CalendarPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="event-title">Titre</Label>
-              <Input id="event-title" placeholder="Ex : Réunion équipe produit" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+              <Input
+                id="event-title"
+                placeholder="Ex : Réunion équipe produit"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                autoFocus
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select value={type} onValueChange={setType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {EVENT_TYPES.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="event-date">Date</Label>
-                <Input id="event-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input
+                  id="event-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="event-start">Début</Label>
-                <Input id="event-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                <Input
+                  id="event-start"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="event-end">Fin</Label>
-                <Input id="event-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                <Input
+                  id="event-end"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="event-location">Lieu (optionnel)</Label>
-              <Input id="event-location" placeholder="Zoom, salle A…" value={location} onChange={(e) => setLocation(e.target.value)} />
+              <Input
+                id="event-location"
+                placeholder="Zoom, salle A…"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Annuler
+            </Button>
             <Button onClick={handleCreate} disabled={!title.trim() || createMutation.isPending}>
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer l'événement"}
+              {createMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Créer l'événement"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

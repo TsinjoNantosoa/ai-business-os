@@ -159,11 +159,11 @@ export function SalesOrdersPage() {
           {wizardStep === 1 && (
             <div className="space-y-2">
               {lines.map((line, i) => (
-                <div key={i} className="grid grid-cols-12 gap-2">
-                  <Input className="col-span-6" placeholder="Description" value={line.description} onChange={(e) => setLine(i, { description: e.target.value })} />
-                  <Input className="col-span-2" placeholder="Qté" type="number" min="1" value={line.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} />
-                  <Input className="col-span-3" placeholder="Prix €" type="number" min="0" value={line.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} />
-                  <Button variant="ghost" size="icon-sm" className="col-span-1" disabled={lines.length === 1} onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}>
+                <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-12">
+                  <Input className="sm:col-span-6" placeholder="Description" value={line.description} onChange={(e) => setLine(i, { description: e.target.value })} />
+                  <Input className="sm:col-span-2" placeholder="Qté" type="number" min="1" value={line.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} />
+                  <Input className="sm:col-span-3" placeholder="Prix €" type="number" min="0" value={line.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} />
+                  <Button variant="ghost" size="icon-sm" className="sm:col-span-1" disabled={lines.length === 1} onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

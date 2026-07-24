@@ -90,7 +90,7 @@ export function ForecastsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded-lg border border-border p-3">
                   <p className="text-xs text-muted-foreground">Modèle</p>
                   <p className="text-sm font-semibold">{forecast.model.name}</p>

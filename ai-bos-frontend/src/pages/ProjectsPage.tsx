@@ -150,7 +150,7 @@ export function ProjectsPage() {
               <Label htmlFor="project-description">Description</Label>
               <Textarea id="project-description" rows={3} placeholder="Objectif du projet…" value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="project-budget">Budget (€)</Label>
                 <Input id="project-budget" type="number" min="0" placeholder="50000" value={budget} onChange={(e) => setBudget(e.target.value)} />

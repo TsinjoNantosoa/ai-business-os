@@ -506,7 +506,7 @@ function ContactFormFields({
   showStatus?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-4 py-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
       <div className="space-y-2">
         <Label htmlFor="firstName">Prénom</Label>
         <Input id="firstName" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />

@@ -133,7 +133,7 @@ export function SettingsProfilePage() {
                 </AvatarFallback>
               </Avatar>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Prénom</Label>
                 <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -168,7 +168,7 @@ export function SettingsProfilePage() {
                 onChange={(e) => setCurrentPassword(e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nouveau mot de passe</Label>
                 <Input

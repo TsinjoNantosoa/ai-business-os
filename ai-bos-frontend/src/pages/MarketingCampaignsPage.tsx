@@ -168,7 +168,7 @@ export function MarketingCampaignsPage() {
                 <div className="pt-1"><StatusBadge status={detail.status} /></div>
               </DialogHeader>
               <div className="space-y-4 py-1">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div className="rounded-lg bg-muted/40 p-3">
                     <p className="text-xs text-muted-foreground">Portée</p>
                     <p className="font-semibold">{formatNumber(detail.reach)}</p>
@@ -198,7 +198,7 @@ export function MarketingCampaignsPage() {
                     {formatCurrency(detail.spent)} / {formatCurrency(detail.budget)}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground">Début</p>
                     <p className="font-medium">{formatDate(detail.startDate)}</p>
@@ -228,7 +228,7 @@ export function MarketingCampaignsPage() {
               <Label htmlFor="campaign-name">Nom</Label>
               <Input id="campaign-name" placeholder="Ex : Newsletter rentrée 2026" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select value={type} onValueChange={setType}>
@@ -245,7 +245,7 @@ export function MarketingCampaignsPage() {
                 <Input id="campaign-budget" type="number" min="0" placeholder="5000" value={budget} onChange={(e) => setBudget(e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="campaign-start">Début</Label>
                 <Input id="campaign-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />

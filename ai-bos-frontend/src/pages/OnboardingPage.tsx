@@ -144,7 +144,7 @@ export function OnboardingPage() {
                       <Label>Nom de l'entreprise</Label>
                       <Input placeholder="Acme Corp" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Devise</Label>
                         <Input placeholder="EUR" value={currency} onChange={(e) => setCurrency(e.target.value)} />

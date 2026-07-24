@@ -90,25 +90,32 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md lg:px-6">
+      <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-2 border-b border-border bg-card/80 px-3 backdrop-blur-md sm:h-16 sm:gap-3 sm:px-4 lg:px-6">
         {/* Mobile menu */}
-        <Button variant="ghost" size="icon" onClick={onMobileMenuClick} className="lg:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onMobileMenuClick}
+          className="shrink-0 lg:hidden"
+          aria-label="Ouvrir le menu"
+        >
           <Menu className="h-5 w-5" />
         </Button>
 
         {/* Search */}
         <button
+          type="button"
           onClick={() => setSearchOpen(true)}
-          className="group flex h-9 flex-1 max-w-md items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 text-sm text-muted-foreground transition-all hover:border-primary/30 hover:bg-muted"
+          className="group flex h-10 min-w-0 flex-1 max-w-md items-center gap-2 rounded-lg border border-border bg-muted/50 px-2.5 text-sm text-muted-foreground transition-all hover:border-primary/30 hover:bg-muted sm:h-9 sm:px-3"
         >
-          <Search className="h-4 w-4" />
-          <span className="hidden sm:inline">{t('common.search')}...</span>
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="hidden truncate sm:inline">{t('common.search')}...</span>
           <kbd className="ml-auto hidden items-center gap-0.5 rounded border border-border bg-card px-1.5 py-0.5 text-2xs font-medium sm:flex">
             ⌘K
           </kbd>
         </button>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
           {/* API health */}
           <div className="hidden items-center gap-1.5 rounded-lg border border-border px-2 py-1 sm:flex">
             <span className={cn('h-2 w-2 rounded-full', apiHealthy ? 'bg-emerald-500 animate-pulse-soft' : 'bg-red-500')} />
@@ -121,7 +128,7 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="hidden max-w-[120px] truncate md:inline">{currentOrg.name}</span>
+                  <span className="hidden max-w-[100px] truncate md:inline lg:max-w-[160px]">{currentOrg.name}</span>
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -178,11 +185,14 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 p-0">
-              <div className="flex items-center justify-between border-b border-border p-3">
+            <DropdownMenuContent
+              align="end"
+              className="w-[min(20rem,calc(100vw-1.25rem))] max-w-[calc(100vw-1.25rem)] p-0"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border p-3">
                 <span className="text-sm font-semibold">Notifications</span>
-                <div className="flex items-center gap-2">
-                  {unreadCount > 0 && <Badge variant="default">{unreadCount} non lues</Badge>}
+                <div className="flex shrink-0 items-center gap-2">
+                  {unreadCount > 0 && <Badge variant="default">{unreadCount}</Badge>}
                   {unreadCount > 0 && (
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => void handleMarkAllRead()}>
                       Tout lu

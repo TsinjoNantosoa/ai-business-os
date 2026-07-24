@@ -27,7 +27,7 @@ export function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#06120f]" />
       </div>
 
-      <header className="relative z-10 flex items-center justify-between px-6 py-5 sm:px-10">
+      <header className="relative z-10 flex items-center justify-between gap-3 px-4 py-4 sm:px-10 sm:py-5">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#c8f542] text-[#06120f]">
             <svg viewBox="0 0 32 32" className="h-5 w-5" aria-hidden>
@@ -47,7 +47,7 @@ export function LandingPage() {
         </Link>
       </header>
 
-      <main className="relative z-10 mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-12 px-6 pb-16 pt-6 sm:px-10 lg:grid-cols-2 lg:gap-10 lg:pb-20">
+      <main className="relative z-10 mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-10 px-4 pb-14 pt-4 sm:gap-12 sm:px-10 sm:pb-16 sm:pt-6 lg:grid-cols-2 lg:gap-10 lg:pb-20">
         <div>
           <motion.p
             initial={{ opacity: 0, y: 12 }}

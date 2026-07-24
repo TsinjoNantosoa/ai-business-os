@@ -149,11 +149,11 @@ export function RecruitmentPage() {
               </Button>
             </div>
           )}
-          <div className="flex gap-4 overflow-x-auto scrollbar-thin pb-4">
+          <div className="-mx-3 flex gap-3 overflow-x-auto overscroll-x-contain px-3 pb-4 scrollbar-thin sm:mx-0 sm:gap-4 sm:px-0">
             {STAGES.map((stage) => {
               const stageCandidates = pipelineCandidates.filter((c) => c.stage === stage.id);
               return (
-                <div key={stage.id} className="w-72 shrink-0">
+                <div key={stage.id} className="w-[min(18rem,85vw)] shrink-0 sm:w-72">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={cn('h-2.5 w-2.5 rounded-full', stage.bg)} />

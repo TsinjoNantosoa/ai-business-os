@@ -2,13 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Sparkles, Send, Mic, Volume2, Plus, MessageSquare,
-  TrendingUp, Wallet, Calendar, Zap, Bot, BookOpen,
+  TrendingUp, Wallet, Calendar, Zap, Bot, BookOpen, History,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import { streamCopilotResponse, type CopilotApprovalEvent, type CopilotSource, type CopilotToolEvent } from '@/lib/api/services';
@@ -60,6 +61,7 @@ export function CopilotPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS[0]);
   const [isRecording, setIsRecording] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,26 +136,42 @@ export function CopilotPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <PageHeader title={t('ai.copilot')} description="Conversation complète avec votre assistant IA" />
+    <div className="flex h-[calc(100dvh-7.5rem)] min-h-[24rem] min-w-0 flex-col sm:h-[calc(100vh-8rem)]">
+      <PageHeader
+        title={t('ai.copilot')}
+        description="Conversation complète avec votre assistant IA"
+        actions={
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button variant="outline" className="flex-1 lg:hidden" onClick={() => setHistoryOpen(true)}>
+              <History className="h-4 w-4" />
+              Historique
+            </Button>
+            <Button className="flex-1 lg:hidden" onClick={newChat}>
+              <Plus className="h-4 w-4" />
+              {t('ai.newChat')}
+            </Button>
+          </div>
+        }
+      />
 
-      <div className="flex flex-1 gap-4 min-h-0">
-        {/* History sidebar */}
-        <Card className="w-64 shrink-0 hidden lg:flex flex-col">
-          <CardContent className="p-3 flex flex-col h-full">
+      <div className="flex min-h-0 flex-1 gap-4">
+        {/* History sidebar — desktop */}
+        <Card className="hidden w-64 shrink-0 flex-col lg:flex">
+          <CardContent className="flex h-full flex-col p-3">
             <Button onClick={newChat} className="mb-3 w-full">
               <Plus className="h-4 w-4" />
               {t('ai.newChat')}
             </Button>
-            <div className="flex-1 overflow-y-auto scrollbar-thin space-y-1">
-              <p className="px-2 py-1 text-2xs font-medium uppercase text-muted-foreground">Aujourd'hui</p>
+            <div className="flex-1 space-y-1 overflow-y-auto scrollbar-thin">
+              <p className="px-2 py-1 text-2xs font-medium uppercase text-muted-foreground">Aujourd&apos;hui</p>
               {conversations.map((conv) => (
                 <button
                   key={conv.id}
+                  type="button"
                   onClick={() => setActiveConvId(conv.id)}
                   className={cn(
                     'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors',
-                    activeConvId === conv.id ? 'bg-primary-10 text-primary' : 'hover:bg-muted'
+                    activeConvId === conv.id ? 'bg-primary-10 text-primary' : 'hover:bg-muted',
                   )}
                 >
                   <MessageSquare className="h-4 w-4 shrink-0" />
@@ -164,25 +182,67 @@ export function CopilotPage() {
           </CardContent>
         </Card>
 
+        {/* History sheet — mobile */}
+        <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+          <SheetContent side="left" className="flex w-[min(100vw,20rem)] flex-col p-0 sm:max-w-sm">
+            <SheetHeader>
+              <SheetTitle>Conversations</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
+              <Button
+                onClick={() => {
+                  newChat();
+                  setHistoryOpen(false);
+                }}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4" />
+                {t('ai.newChat')}
+              </Button>
+              {conversations.map((conv) => (
+                <button
+                  key={conv.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveConvId(conv.id);
+                    setHistoryOpen(false);
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm transition-colors',
+                    activeConvId === conv.id ? 'bg-primary-10 text-primary' : 'hover:bg-muted',
+                  )}
+                >
+                  <MessageSquare className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{conv.title}</span>
+                </button>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+
         {/* Chat area */}
-        <Card className="flex-1 flex flex-col min-h-0">
+        <Card className="flex min-h-0 min-w-0 flex-1 flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border p-3">
-            <div className="flex items-center gap-2">
-              <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-white', selectedAgent.color)}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white', selectedAgent.color)}>
                 <selectedAgent.icon className="h-4 w-4" />
               </div>
-              <div>
-                <p className="text-sm font-semibold">{selectedAgent.name}</p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{selectedAgent.name}</p>
                 <p className="text-2xs text-muted-foreground">En ligne</p>
               </div>
             </div>
             <select
               value={selectedAgent.id}
               onChange={(e) => setSelectedAgent(AGENTS.find((a) => a.id === e.target.value) || AGENTS[0])}
-              className="rounded-lg border border-border bg-card px-2 py-1 text-xs outline-none"
+              className="max-w-full rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none"
             >
-              {AGENTS.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {AGENTS.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -232,7 +292,7 @@ export function CopilotPage() {
                   </Avatar>
                 )}
                 <div className={cn(
-                  'max-w-[70%] rounded-2xl px-4 py-2.5 text-sm',
+                  'max-w-[85%] rounded-2xl px-3 py-2.5 text-sm sm:max-w-[70%] sm:px-4',
                   msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                 )}>
                   <MarkdownContent

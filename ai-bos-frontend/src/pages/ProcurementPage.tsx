@@ -154,7 +154,7 @@ export function ProcurementPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="hidden lg:block">
+        <Card className="lg:block">
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Action</p>
             <Button
@@ -427,7 +427,7 @@ export function ProcurementPage() {
                 }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="po-amount">Montant</Label>
                 <Input

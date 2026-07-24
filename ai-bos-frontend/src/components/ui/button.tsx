@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 touch-manipulation [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -17,11 +17,11 @@ const buttonVariants = cva(
         subtle: 'bg-muted text-foreground hover:bg-muted/70 active:scale-[0.98]',
       },
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-11 rounded-lg px-8 text-base',
-        icon: 'h-9 w-9',
-        'icon-sm': 'h-8 w-8',
+        default: 'h-10 min-h-10 px-4 py-2 sm:h-9 sm:min-h-9',
+        sm: 'h-9 min-h-9 rounded-md px-3 text-xs sm:h-8 sm:min-h-8',
+        lg: 'h-11 min-h-11 rounded-lg px-6 text-base sm:px-8',
+        icon: 'h-10 w-10 min-h-10 sm:h-9 sm:w-9 sm:min-h-9',
+        'icon-sm': 'h-9 w-9 min-h-9 sm:h-8 sm:w-8 sm:min-h-8',
       },
     },
     defaultVariants: {

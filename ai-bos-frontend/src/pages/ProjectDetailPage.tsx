@@ -79,7 +79,7 @@ export function ProjectDetailPage() {
                 <div className="h-full rounded-full bg-amber-500" style={{ width: `${budgetPct}%` }} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-4 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 Début {formatDate(project.startDate)}

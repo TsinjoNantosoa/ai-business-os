@@ -56,7 +56,7 @@ export function HROrgChartPage() {
         <button
           type="button"
           onClick={() => setSelected(emp)}
-          className="w-[280px] max-w-full rounded-xl border border-border bg-card p-4 text-left shadow-soft hover:shadow-elevated transition-all"
+          className="w-[min(16rem,90vw)] max-w-full rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:shadow-elevated sm:w-[280px] sm:p-4"
           style={{
             outline: isSelected ? '2px solid rgba(79,70,229,0.5)' : 'none',
           }}
@@ -129,8 +129,8 @@ export function HROrgChartPage() {
           </CardHeader>
           <CardContent className="p-4">
             {top ? (
-              <div className="flex justify-center overflow-x-auto scrollbar-thin">
-                <div className="min-w-[420px]">{renderNode(top)}</div>
+              <div className="flex justify-center overflow-x-auto overscroll-x-contain scrollbar-thin">
+                <div className="min-w-0 w-full max-w-full px-1 sm:min-w-[min(100%,28rem)]">{renderNode(top)}</div>
               </div>
             ) : (
               <div className="py-10 text-center text-sm text-muted-foreground">

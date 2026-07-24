@@ -286,7 +286,7 @@ export function SupportTicketsPage() {
               <Label>Sujet</Label>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Client</Label>
                 <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
@@ -296,7 +296,7 @@ export function SupportTicketsPage() {
                 <Input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Priorité</Label>
                 <Select value={priority} onValueChange={setPriority}>

@@ -291,8 +291,8 @@ export function InvoicesPage() {
             <DialogTitle>Nouvelle facture</DialogTitle>
             <DialogDescription>Créez une nouvelle facture pour un client</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="col-span-2 space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>Client</Label>
               <Select value={clientId} onValueChange={setClientId}>
                 <SelectTrigger>
@@ -319,13 +319,13 @@ export function InvoicesPage() {
               <Label htmlFor="taxRate">Taux de TVA (%)</Label>
               <Input id="taxRate" type="number" min={0} value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
             </div>
-            <div className="col-span-2 space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>Lignes de facturation</Label>
               <div className="space-y-2">
                 {lines.map((line, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2">
+                  <div key={idx} className="grid grid-cols-1 gap-2 sm:grid-cols-12">
                     <Input
-                      className="col-span-5"
+                      className="sm:col-span-5"
                       placeholder="Description"
                       value={line.description}
                       onChange={(e) => {
@@ -335,7 +335,7 @@ export function InvoicesPage() {
                       }}
                     />
                     <Input
-                      className="col-span-2"
+                      className="sm:col-span-2"
                       type="number"
                       min={1}
                       placeholder="Qté"
@@ -347,7 +347,7 @@ export function InvoicesPage() {
                       }}
                     />
                     <Input
-                      className="col-span-3"
+                      className="sm:col-span-3"
                       type="number"
                       min={0}
                       placeholder="Prix unit."
@@ -358,7 +358,7 @@ export function InvoicesPage() {
                         setLines(next);
                       }}
                     />
-                    <div className="col-span-2 flex gap-1">
+                    <div className="flex gap-1 sm:col-span-2">
                       {idx === lines.length - 1 ? (
                         <Button type="button" variant="outline" size="icon" onClick={() => setLines([...lines, emptyLine()])}>
                           <Plus className="h-4 w-4" />

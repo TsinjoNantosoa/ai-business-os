@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto scrollbar-thin">
+    <div className="relative -mx-1 w-full max-w-full overflow-x-auto overscroll-x-contain scrollbar-thin sm:mx-0">
       <table ref={ref} className={cn('w-full caption-bottom text-sm', className)} {...props} />
     </div>
   )
@@ -47,7 +47,7 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        'h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wider text-slate-600 [&:has([role=checkbox])]:pr-0',
+        'sticky top-0 z-[1] h-10 whitespace-nowrap bg-card px-3 text-left align-middle text-xs font-semibold uppercase tracking-wider text-slate-600 sm:px-4 [&:has([role=checkbox])]:pr-0',
         className
       )}
       {...props}
@@ -58,7 +58,11 @@ TableHead.displayName = 'TableHead';
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn('px-4 py-3.5 align-middle [&:has([role=checkbox])]:pr-0', className)} {...props} />
+    <td
+      ref={ref}
+      className={cn('px-3 py-3 align-middle sm:px-4 sm:py-3.5 [&:has([role=checkbox])]:pr-0', className)}
+      {...props}
+    />
   )
 );
 TableCell.displayName = 'TableCell';

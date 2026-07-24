@@ -179,7 +179,7 @@ export function FinanceReportsPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">{selected.description}</p>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div className="rounded-lg border border-border p-3">
                     <p className="text-xs text-muted-foreground">Catégorie</p>
                     <p className="font-medium">{selected.category}</p>

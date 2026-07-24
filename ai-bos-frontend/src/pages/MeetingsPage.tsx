@@ -203,7 +203,7 @@ export function MeetingsPage() {
               <Label htmlFor="meeting-title">Titre</Label>
               <Input id="meeting-title" placeholder="Ex : Sync produit hebdo" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="meeting-date">Date</Label>
                 <Input id="meeting-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />

@@ -126,8 +126,8 @@ export function CRMPipelinePage() {
         actions={
           <>
             <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-              <SelectTrigger className="w-40">
-                <Filter className="h-4 w-4 mr-1" />
+              <SelectTrigger className="w-full sm:w-40">
+                <Filter className="mr-1 h-4 w-4" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -182,13 +182,13 @@ export function CRMPipelinePage() {
         </CardContent>
       </Card>
 
-      <div className="flex gap-4 overflow-x-auto scrollbar-thin pb-4">
+      <div className="-mx-3 flex gap-3 overflow-x-auto overscroll-x-contain px-3 pb-4 scrollbar-thin sm:mx-0 sm:gap-4 sm:px-0">
         {STAGES.map((stage) => {
           const stageLeads = getLeadsByStage(stage.id);
           return (
             <div
               key={stage.id}
-              className="w-72 shrink-0"
+              className="w-[min(18rem,85vw)] shrink-0 sm:w-72"
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(stage.id)}
             >
@@ -290,7 +290,7 @@ export function CRMPipelinePage() {
             <DialogTitle>Nouveau lead</DialogTitle>
             <DialogDescription>Ajoutez une opportunité au pipeline</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
             <div className="col-span-2 space-y-2">
               <Label htmlFor="lead-title">Titre</Label>
               <Input

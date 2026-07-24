@@ -90,7 +90,7 @@ export function SettingsOrgPage() {
                     onChange={(e) => setAddress(e.target.value)}
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Devise</Label>
                     <Select value={currency} onValueChange={setCurrency}>

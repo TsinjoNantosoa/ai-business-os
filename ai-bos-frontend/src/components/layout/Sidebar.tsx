@@ -40,6 +40,9 @@ export function Sidebar({
     return true;
   };
 
+  // On mobile drawer, always show labels even if desktop sidebar is collapsed.
+  const iconMode = collapsed && !mobileOpen;
+
   return (
     <>
       {/* Mobile overlay */}
@@ -47,42 +50,46 @@ export function Sidebar({
         <div
           className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden"
           onClick={onMobileClose}
+          aria-hidden
         />
       )}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300',
-          collapsed ? 'w-[72px]' : 'w-[260px]',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar text-sidebar-foreground shadow-floating transition-all duration-300 ease-out lg:shadow-none',
+          'w-[min(100vw,280px)] lg:w-[260px]',
+          iconMode && 'lg:w-[72px]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-          <Logo collapsed={collapsed} />
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-3 sm:h-16 sm:px-4">
+          <Logo collapsed={iconMode} />
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={onToggle}
             className="hidden lg:flex text-slate-400 hover:text-white hover:bg-sidebar-accent"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-2">
+        <nav className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin py-3 px-2">
           {NAV_GROUPS.map((group) => {
             const visibleItems = group.items.filter(canSeeItem);
             if (visibleItems.length === 0) return null;
-            const isExpanded = expandedGroups.has(group.label) || collapsed;
+            const isExpanded = expandedGroups.has(group.label) || iconMode;
 
             return (
               <div key={group.label} className="mb-1">
-                {!collapsed && (
+                {!iconMode && (
                   <button
+                    type="button"
                     onClick={() => toggleGroup(group.label)}
-                    className="flex w-full items-center justify-between px-3 py-1.5 text-2xs font-medium uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
+                    className="flex min-h-9 w-full items-center justify-between px-3 py-1.5 text-2xs font-medium uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
                   >
                     <span>{t(group.label)}</span>
                     <ChevronDown
@@ -96,7 +103,7 @@ export function Sidebar({
                       const isActive = location.pathname === item.path;
                       const Icon = item.icon;
 
-                      if (collapsed) {
+                      if (iconMode) {
                         return (
                           <Tooltip key={item.path}>
                             <TooltipTrigger asChild>
@@ -126,7 +133,7 @@ export function Sidebar({
                           to={item.path}
                           onClick={onMobileClose}
                           className={cn(
-                            'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                            'group flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all lg:min-h-0 lg:py-2',
                             isActive
                               ? 'bg-primary text-white shadow-soft'
                               : 'text-slate-400 hover:bg-sidebar-accent hover:text-white'
@@ -150,7 +157,7 @@ export function Sidebar({
         </nav>
 
         {/* Footer */}
-        {!collapsed && (
+        {!iconMode && (
           <div className="border-t border-sidebar-border p-3">
             <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent p-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-ai">

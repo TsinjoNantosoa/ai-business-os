@@ -182,7 +182,7 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-base">{t('dashboard.quickActions')}</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (

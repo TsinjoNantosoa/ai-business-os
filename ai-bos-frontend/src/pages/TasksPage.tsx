@@ -116,13 +116,13 @@ export function TasksPage() {
       />
 
       {view === 'kanban' ? (
-        <div className="flex gap-4 overflow-x-auto scrollbar-thin pb-4">
+        <div className="-mx-3 flex gap-3 overflow-x-auto overscroll-x-contain px-3 pb-4 scrollbar-thin sm:mx-0 sm:gap-4 sm:px-0">
           {COLUMNS.map((col) => {
             const colTasks = getTasksByStatus(col.id);
             return (
               <div
                 key={col.id}
-                className="w-72 shrink-0"
+                className="w-[min(18rem,85vw)] shrink-0 sm:w-72"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => handleDrop(col.id)}
               >
@@ -250,7 +250,7 @@ export function TasksPage() {
               <Label htmlFor="task-desc">Description</Label>
               <Textarea id="task-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Priorité</Label>
                 <Select value={priority} onValueChange={setPriority}>

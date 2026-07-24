@@ -36,11 +36,48 @@
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Mobile → tablet → desktop type scale */
+    font-size: 15px;
+    overflow-x: hidden;
+  }
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 16px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 16px;
+    }
   }
 
   body {
     @apply bg-background text-foreground;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    overflow-x: hidden;
+    min-width: 0;
+  }
+
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Page title hierarchy (used via .page-title / .page-subtitle) */
+  .page-title {
+    @apply text-[1.75rem] font-bold tracking-tight sm:text-[2rem] lg:text-[2.25rem];
+  }
+
+  .page-subtitle {
+    @apply text-[1.125rem] font-semibold tracking-tight sm:text-[1.375rem] lg:text-[1.5rem];
+  }
+
+  .page-body {
+    @apply text-[0.9375rem] sm:text-base;
   }
 
   html[dir='rtl'] .ltr-flip {
@@ -82,5 +119,22 @@
   .glass {
     backdrop-filter: blur(12px);
     background: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Responsive helpers */
+  .table-scroll {
+    @apply w-full overflow-x-auto -mx-1 px-1 scrollbar-thin;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4;
+  }
+
+  .kpi-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4;
+  }
+
+  .card-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 xl:gap-4;
   }
 }
