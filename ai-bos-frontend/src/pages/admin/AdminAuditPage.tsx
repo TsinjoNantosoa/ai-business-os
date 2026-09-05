@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, ShieldAlert } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { ExportMenu } from '@/components/shared/ExportMenu';
 import { Card, CardContent } from '@/components/ui/card';

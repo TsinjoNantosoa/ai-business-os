@@ -1,5 +1,5 @@
 import type { PurchaseOrder, Supplier } from '@/lib/api/types'
-import { uuid, daysAgo, daysFromNow, COMPANIES, randomInt } from './helpers'
+import { daysAgo, daysFromNow, COMPANIES, randomInt } from './helpers'
 
 const SUPPLIER_STATUSES: Supplier['status'][] = ['active', 'active', 'active', 'paused', 'blacklisted']
 
@@ -17,8 +17,6 @@ export const MOCK_SUPPLIERS: Supplier[] = Array.from({ length: 14 }, (_, i) => {
 })
 
 const PO_STATUSES: PurchaseOrder['status'][] = ['draft', 'submitted', 'approved', 'received', 'cancelled']
-
-const SUPPLIER_ID_BY_INDEX = (i: number) => `supp-${(i % MOCK_SUPPLIERS.length) + 1}`
 
 export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = Array.from({ length: 22 }, (_, i) => {
   const supplierIndex = i % MOCK_SUPPLIERS.length

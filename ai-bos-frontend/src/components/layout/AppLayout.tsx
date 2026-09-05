@@ -19,10 +19,10 @@ export function AppLayout() {
           onMobileClose={() => setMobileOpen(false)}
         />
         <div
-          className={`min-w-0 transition-all duration-300 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'}`}
+          className={`min-w-0 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'}`}
         >
           <Topbar onMobileMenuClick={() => setMobileOpen(true)} />
-          <main className="mx-auto w-full max-w-[1400px] px-3 py-4 pb-24 sm:px-4 sm:py-5 lg:p-6 lg:pb-6">
+          <main id="main-content" className="mx-auto w-full max-w-[1520px] px-4 py-5 pb-24 sm:px-5 lg:p-6 lg:pb-8 xl:px-8">
             <Outlet />
           </main>
         </div>

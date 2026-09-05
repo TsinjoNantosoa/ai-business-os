@@ -5,7 +5,8 @@ test.describe('AI BOS smoke', () => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: /Bienvenue|Welcome back/i })).toBeVisible();
 
-    await page.getByRole('button', { name: /ceo@demo\.aibos\.io/i }).click();
+    await page.getByRole('button', { name: /Explorer la démo/i }).click();
+    await page.getByRole('button', { name: /CEO/i }).click();
 
     await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 15_000 });
     await expect(page.getByRole('heading', { name: /Tableau de bord|Dashboard/i })).toBeVisible();

@@ -76,14 +76,6 @@ export function FinancePaymentsPage() {
     return list.filter((i) => i.clientName.toLowerCase().includes(q) || i.invoiceNumber.toLowerCase().includes(q))
   }, [invoices, invoiceStatus, search])
 
-  const cashFlowData = useMemo(() => {
-    return (finance?.monthlyRevenue || []).map((d) => ({
-      month: d.month,
-      income: d.revenue,
-      expenses: d.expenses,
-    }))
-  }, [finance])
-
   // We keep the page light: payments + AR aging, while the big cash-flow chart remains on /finance.
   const exportRows = useMemo(
     () => [...filteredTransactions.income, ...filteredTransactions.expense],
@@ -168,7 +160,7 @@ export function FinancePaymentsPage() {
 
             <div className="flex items-center gap-3">
               <div className="w-full sm:w-52">
-                <Select value={invoiceStatus} onValueChange={(v) => setInvoiceStatus(v as any)}>
+                <Select value={invoiceStatus} onValueChange={(v) => setInvoiceStatus(v as 'all' | Invoice['status'])}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Statut facture" />
                   </SelectTrigger>

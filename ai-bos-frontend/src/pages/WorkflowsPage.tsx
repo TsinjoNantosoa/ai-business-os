@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Play, Zap, Mail, Webhook, Database, Bot, CheckSquare,
-  GitBranch, Clock, Activity, Settings, Pencil,
+  GitBranch, Activity, Settings, Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/PageHeader';

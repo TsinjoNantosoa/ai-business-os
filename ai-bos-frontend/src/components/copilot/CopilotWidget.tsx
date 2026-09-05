@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, Bot, User as UserIcon, TrendingUp, Wallet, Zap,
-  BookOpen, Shield, RotateCcw, ChevronDown,
+  BookOpen, Shield, RotateCcw, ChevronDown, Users, Receipt, CheckSquare, FolderKanban,
+  CheckCircle2, XCircle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
@@ -38,10 +39,10 @@ const AGENTS = [
 ];
 
 const QUICK_REPLIES = [
-  { icon: '👥', label: 'Contacts CRM', prompt: 'montre-moi les contacts CRM' },
-  { icon: '💶', label: 'Factures en retard', prompt: 'quelles factures sont en retard ?' },
-  { icon: '✅', label: 'Créer une tâche', prompt: 'crée une tâche Relancer client VIP' },
-  { icon: '📁', label: 'Liste des projets', prompt: 'liste les projets' },
+  { icon: Users, label: 'Contacts CRM', prompt: 'montre-moi les contacts CRM' },
+  { icon: Receipt, label: 'Factures en retard', prompt: 'quelles factures sont en retard ?' },
+  { icon: CheckSquare, label: 'Créer une tâche', prompt: 'crée une tâche Relancer client VIP' },
+  { icon: FolderKanban, label: 'Liste des projets', prompt: 'liste les projets' },
 ];
 
 const MAX_CHARS = 200;
@@ -105,8 +106,9 @@ function ToolChips({ events }: { events: CopilotToolEvent[] }) {
         >
           <Zap className="h-3 w-3 shrink-0" />
           <span className="truncate">
-            {tool.type === 'tool_call' ? `outil · ${tool.name}` : tool.ok ? `✓ ${tool.name}` : `✗ ${tool.name}`}
+            {tool.type === 'tool_call' ? `outil · ${tool.name}` : tool.name}
           </span>
+          {tool.type === 'tool_result' && (tool.ok ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />)}
         </span>
       ))}
     </div>
@@ -220,7 +222,7 @@ export function CopilotWidget() {
     }
   };
 
-  if (!user) return null;
+  if (!user || location.pathname === '/app/copilot') return null;
 
   return (
     <div className="aibos-chat-root">
@@ -252,23 +254,6 @@ export function CopilotWidget() {
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
           >
             <header className="bos-header">
-              <svg className="bos-header-curve" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden>
-                <defs>
-                  <linearGradient id="bosCurveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#132251" />
-                    <stop offset="100%" stopColor="#0f1b42" />
-                  </linearGradient>
-                </defs>
-                <path d="M 0 18 Q 100 0, 200 18 T 400 18 L 400 0 L 0 0 Z" fill="url(#bosCurveGrad)" />
-                <path
-                  d="M 0 18 Q 100 6, 200 18 T 400 18"
-                  stroke="#ffffff"
-                  strokeWidth="1"
-                  fill="none"
-                  opacity="0.15"
-                />
-              </svg>
-
               <div className="bos-header-left">
                 <div className="bos-avatar-square">
                   <Sparkles className="h-5 w-5 text-amber-300" />
@@ -362,17 +347,19 @@ export function CopilotWidget() {
                       <div className="bos-quick-choice">
                         <div className="bos-quick-title">Faites votre choix :</div>
                         <div className="bos-quick-list">
-                          {QUICK_REPLIES.map((item) => (
+                          {QUICK_REPLIES.map((item) => {
+                            const Icon = item.icon;
+                            return (
                             <button
                               key={item.label}
                               type="button"
                               className="bos-quick-pill"
                               onClick={() => void handleSend(item.prompt)}
                             >
-                              <span className="bos-quick-icon">{item.icon}</span>
+                              <span className="bos-quick-icon"><Icon className="h-4 w-4" /></span>
                               <span className="bos-quick-label">{item.label}</span>
                             </button>
-                          ))}
+                          );})}
                         </div>
                       </div>
                     )}

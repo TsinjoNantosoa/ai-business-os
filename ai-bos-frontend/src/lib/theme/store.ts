@@ -31,8 +31,8 @@ function paint(mode: ThemeMode): 'light' | 'dark' {
 export const useTheme = create<ThemeState>()(
   persist(
     (set, get) => ({
-      mode: 'system',
-      resolved: 'light',
+      mode: 'dark',
+      resolved: 'dark',
       setMode: (mode) => {
         set({ mode, resolved: paint(mode) });
       },
@@ -46,7 +46,7 @@ export const useTheme = create<ThemeState>()(
       partialize: (state) => ({ mode: state.mode }),
       onRehydrateStorage: () => (state) => {
         if (!state) {
-          paint('system');
+          paint('dark');
           return;
         }
         state.resolved = paint(state.mode);
@@ -60,10 +60,10 @@ export function initTheme(): void {
   try {
     const raw = localStorage.getItem('aibos-theme');
     const parsed = raw ? (JSON.parse(raw) as { state?: { mode?: ThemeMode } }) : null;
-    const mode = parsed?.state?.mode ?? 'system';
+    const mode = parsed?.state?.mode ?? 'dark';
     useTheme.setState({ mode, resolved: paint(mode) });
   } catch {
-    useTheme.setState({ mode: 'system', resolved: paint('system') });
+    useTheme.setState({ mode: 'dark', resolved: paint('dark') });
   }
 
   if (typeof window === 'undefined') return;

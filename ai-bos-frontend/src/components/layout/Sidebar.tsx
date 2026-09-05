@@ -23,7 +23,10 @@ export function Sidebar({
   const { hasPermission, hasAnyPermission } = useAuth();
   const { t } = useI18n();
   const location = useLocation();
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(NAV_GROUPS.map((g) => g.label)));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const active = NAV_GROUPS.find((group) => group.items.some((item) => location.pathname.startsWith(item.path)));
+    return new Set(['nav.overview', ...(active ? [active.label] : [])]);
+  });
 
   const toggleGroup = (label: string) => {
     setExpandedGroups((prev) => {
@@ -47,16 +50,17 @@ export function Sidebar({
     <>
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm lg:hidden"
           onClick={onMobileClose}
-          aria-hidden
+          aria-label="Fermer la navigation"
         />
       )}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar text-sidebar-foreground shadow-floating transition-all duration-300 ease-out lg:shadow-none',
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-floating transition-all duration-200 ease-out lg:shadow-none',
           'w-[min(100vw,280px)] lg:w-[260px]',
           iconMode && 'lg:w-[72px]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -70,7 +74,7 @@ export function Sidebar({
             size="icon-sm"
             onClick={onToggle}
             className="hidden lg:flex text-slate-400 hover:text-white hover:bg-sidebar-accent"
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Développer la barre latérale' : 'Réduire la barre latérale'}
           >
             {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </Button>
@@ -89,7 +93,8 @@ export function Sidebar({
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.label)}
-                    className="flex min-h-9 w-full items-center justify-between px-3 py-1.5 text-2xs font-medium uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
+                    className="flex min-h-9 w-full items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-muted hover:text-sidebar-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                    aria-expanded={isExpanded}
                   >
                     <span>{t(group.label)}</span>
                     <ChevronDown
@@ -113,8 +118,8 @@ export function Sidebar({
                                 className={cn(
                                   'flex h-10 w-10 items-center justify-center rounded-lg transition-all',
                                   isActive
-                                    ? 'bg-primary text-white shadow-soft'
-                                    : 'text-slate-400 hover:bg-sidebar-accent hover:text-white'
+                                    ? 'bg-primary/15 text-primary-300 shadow-soft ring-1 ring-inset ring-primary/20'
+                                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-white'
                                 )}
                               >
                                 <Icon className="h-[18px] w-[18px]" />
@@ -135,8 +140,8 @@ export function Sidebar({
                           className={cn(
                             'group flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all lg:min-h-0 lg:py-2',
                             isActive
-                              ? 'bg-primary text-white shadow-soft'
-                              : 'text-slate-400 hover:bg-sidebar-accent hover:text-white'
+                              ? 'bg-primary/15 text-primary-200 shadow-soft ring-1 ring-inset ring-primary/20'
+                              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-white'
                           )}
                         >
                           <Icon className="h-[18px] w-[18px] shrink-0" />
@@ -160,7 +165,7 @@ export function Sidebar({
         {!iconMode && (
           <div className="border-t border-sidebar-border p-3">
             <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent p-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-ai">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary-300 ring-1 ring-inset ring-primary/25">
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">

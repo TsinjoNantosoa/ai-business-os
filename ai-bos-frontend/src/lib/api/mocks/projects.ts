@@ -1,5 +1,5 @@
 import type { Project, Task, Employee, JobOpening, Candidate } from '@/lib/api/types';
-import { uuid, daysAgo, daysFromNow, AVATAR_COLORS, FIRST_NAMES, LAST_NAMES, randomColor } from './helpers';
+import { daysAgo, daysFromNow, AVATAR_COLORS, FIRST_NAMES, LAST_NAMES, randomColor } from './helpers';
 
 const PROJECT_COLORS = ['#4f46e5', '#0d9488', '#f59e0b', '#ec4899', '#3b82f6', '#84cc16'];
 

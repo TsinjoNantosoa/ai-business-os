@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, AlertCircle, Loader2, Eye, EyeOff, Workflow, ShieldCheck, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
 import {
@@ -13,16 +13,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardFooter } from '@/components/ui/card';
 import { Logo } from '@/components/layout/Logo';
-
-const DEMO_ACCOUNTS = [
-  { email: 'ceo@demo.aibos.io', role: 'CEO / Owner', color: 'bg-primary-100 text-primary-700' },
-  { email: 'sales@demo.aibos.io', role: 'Sales Director', color: 'bg-emerald-100 text-emerald-700' },
-  { email: 'finance@demo.aibos.io', role: 'CFO', color: 'bg-amber-100 text-amber-700' },
-  { email: 'hr@demo.aibos.io', role: 'HR Manager', color: 'bg-pink-100 text-pink-700' },
-  { email: 'staff@demo.aibos.io', role: 'Staff', color: 'bg-slate-100 text-slate-700' },
-];
+import { DemoPersonaSelector } from '@/components/auth/DemoPersonaSelector';
 
 export function LoginPage() {
   const { login, applyAuthResponse, isLoading, error } = useAuth();
@@ -32,6 +25,8 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [demoMode, setDemoMode] = useState(searchParams.get('demo') === 'true');
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [oauthModes, setOauthModes] = useState<Record<string, string>>({});
 
@@ -104,12 +99,12 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       {/* Left panel — branding */}
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-sidebar p-12 lg:flex">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-primary-600 blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-violet-600 blur-3xl" />
+      <div className="relative hidden w-[48%] flex-col justify-between overflow-hidden border-r border-sidebar-border bg-sidebar p-12 lg:flex">
+        <div className="absolute inset-0 opacity-25">
+          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-primary blur-[110px]" />
+          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-blue-600/40 blur-[120px]" />
         </div>
         <div className="relative z-10">
           <Logo />
@@ -120,19 +115,20 @@ export function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl font-bold leading-tight text-white">
-              The Intelligent<br />Operating System<br />for Business
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[.14em] text-primary-300">AI Business Operating System</p>
+            <h1 className="max-w-xl text-4xl font-bold leading-[1.1] tracking-[-.035em] text-white xl:text-5xl">
+              Le système d&apos;exploitation intelligent de votre entreprise.
             </h1>
-            <p className="mt-4 max-w-md text-base text-slate-400">
-              Unify your CRM, Finance, HR, Projects, and Analytics in one AI-powered platform.
-              Make smarter decisions, faster.
+            <p className="mt-5 max-w-lg text-base leading-7 text-slate-400">
+              Unifiez vos données, automatisez vos opérations et prenez de meilleures décisions grâce à vos agents IA.
             </p>
           </motion.div>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
             {[
               { icon: Sparkles, label: 'AI Copilot' },
-              { icon: ArrowRight, label: '50+ Modules' },
-              { icon: ArrowRight, label: 'Real-time Analytics' },
+              { icon: Workflow, label: 'Orchestration' },
+              { icon: ShieldCheck, label: 'Approbations' },
+              { icon: BarChart3, label: 'Insights temps réel' },
             ].map((f, i) => (
               <motion.div
                 key={f.label}
@@ -148,12 +144,12 @@ export function LoginPage() {
           </div>
         </div>
         <div className="relative z-10 text-2xs text-slate-500">
-          © 2024 AI BOS. All rights reserved.
+          AI BOS · Données protégées · Contrôle humain
         </div>
       </div>
 
       {/* Right panel — login form */}
-      <div className="flex w-full items-center justify-center p-6 lg:w-1/2">
+      <div className="flex w-full items-center justify-center px-5 py-10 sm:p-8 lg:w-[52%]">
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden">
             <Logo />
@@ -167,7 +163,7 @@ export function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">{t('auth.loginSubtitle')}</p>
           </motion.div>
 
-          <Card className="mt-6">
+          <Card className="mt-6 border-border/80 shadow-elevated">
             <form onSubmit={handleSubmit}>
               <CardHeader className="space-y-4">
                 <div className="space-y-2">
@@ -189,18 +185,29 @@ export function LoginPage() {
                       {t('auth.forgotPassword')}
                     </Link>
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoComplete="current-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 {error && (
-                  <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                  <div role="alert" aria-live="polite" className="flex items-center gap-2 rounded-md border border-red-500/25 bg-red-500/[.08] px-3 py-2 text-sm text-red-600 dark:text-red-400">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     {t('auth.invalidCredentials')}
                   </div>
@@ -250,30 +257,20 @@ export function LoginPage() {
                 <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-background px-3 text-xs text-muted-foreground">{t('auth.demoAccounts')}</span>
+                <button
+                  type="button"
+                  onClick={() => setDemoMode((value) => !value)}
+                  className="relative bg-background px-3 text-xs font-medium text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {demoMode ? 'Masquer la démo' : 'Explorer la démo'}
+                </button>
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.email}
-                  onClick={() => handleDemoLogin(acc.email)}
-                  disabled={isLoading}
-                  className="flex items-center gap-2.5 rounded-lg border border-border bg-card p-2.5 text-left transition-all hover:border-primary/30 hover:shadow-soft disabled:opacity-50"
-                >
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${acc.color}`}>
-                    {acc.role[0]}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium">{acc.role}</p>
-                    <p className="truncate text-2xs text-muted-foreground">{acc.email}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 text-center text-2xs text-muted-foreground">
-              Mot de passe pour tous les comptes: <span className="font-mono font-medium">demo1234</span>
-            </p>
+            {demoMode && (
+              <div className="mt-4">
+                <DemoPersonaSelector onSelect={(demoEmail) => void handleDemoLogin(demoEmail)} loading={isLoading} />
+              </div>
+            )}
           </div>
         </div>
       </div>

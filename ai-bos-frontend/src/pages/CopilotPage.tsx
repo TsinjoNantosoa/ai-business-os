@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Sparkles, Send, Mic, Volume2, Plus, MessageSquare,
-  TrendingUp, Wallet, Calendar, Zap, Bot, BookOpen, History,
+  TrendingUp, Wallet, Calendar, Zap, Bot, BookOpen, History, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -51,7 +51,7 @@ const SUGGESTED_PROMPTS = [
 export function CopilotPage() {
   const { user } = useAuth();
   const { t } = useI18n();
-  const [conversations, setConversations] = useState<Conversation[]>([
+  const [conversations] = useState<Conversation[]>([
     { id: '1', title: 'Analyse Q3 2024', messages: [], createdAt: new Date().toISOString() },
     { id: '2', title: 'Stratégie commerciale', messages: [], createdAt: new Date().toISOString() },
   ]);
@@ -320,9 +320,8 @@ export function CopilotPage() {
                           }
                         >
                           <Zap className="h-3 w-3 shrink-0" />
-                          <span className="truncate">
-                            {tool.type === 'tool_call' ? `outil · ${tool.name}` : tool.ok ? `✓ ${tool.name}` : `✗ ${tool.name}`}
-                          </span>
+                          <span className="truncate">{tool.type === 'tool_call' ? `outil · ${tool.name}` : tool.name}</span>
+                          {tool.type === 'tool_result' && (tool.ok ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />)}
                         </Badge>
                       ))}
                     </div>

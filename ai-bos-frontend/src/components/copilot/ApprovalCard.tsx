@@ -39,18 +39,18 @@ export function ApprovalCard({ event, onResolved, className }: Props) {
   return (
     <div
       className={cn(
-        'mt-2 rounded-xl border border-amber-300/80 bg-amber-50/80 p-3 text-xs text-amber-950',
+        'mt-2 rounded-lg border border-amber-500/35 bg-amber-500/[.08] p-3 text-xs text-foreground',
         className,
       )}
     >
       <div className="flex items-start gap-2">
-        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
         <div className="min-w-0 flex-1 space-y-1.5">
           <p className="font-medium">
             Approbation requise · <span className="font-mono">{event.name}</span>
           </p>
-          <p className="text-amber-900/80">{event.message || 'Validez cette action sensible avant exécution.'}</p>
-          <pre className="max-h-24 overflow-auto rounded-md bg-white/70 p-2 font-mono text-2xs text-muted-foreground">
+          <p className="text-muted-foreground">{event.message || 'Validez cette action sensible avant exécution.'}</p>
+          <pre className="max-h-24 overflow-auto rounded-md border border-border bg-background/60 p-2 font-mono text-2xs text-muted-foreground">
             {argsPreview}
           </pre>
 

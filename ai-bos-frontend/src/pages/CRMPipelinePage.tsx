@@ -188,11 +188,11 @@ export function CRMPipelinePage() {
           return (
             <div
               key={stage.id}
-              className="w-[min(18rem,85vw)] shrink-0 sm:w-72"
+              className="w-[min(18.75rem,88vw)] shrink-0 sm:w-[300px]"
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(stage.id)}
             >
-              <div className="mb-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm">
+              <div className="mb-3 rounded-lg border border-border bg-card px-3 py-2.5 shadow-card">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <div className={cn('h-2.5 w-2.5 shrink-0 rounded-full', stage.bg)} />
@@ -206,7 +206,7 @@ export function CRMPipelinePage() {
               </div>
 
               <div
-                className="min-h-[200px] space-y-2 rounded-xl border border-dashed border-border bg-muted/20 p-2 transition-colors"
+                className="min-h-[240px] space-y-2 rounded-lg border border-dashed border-border/80 bg-muted/15 p-2 transition-colors"
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.currentTarget.classList.add('bg-primary/5');
@@ -234,7 +234,7 @@ export function CRMPipelinePage() {
                       onDragStart={() => canWrite && setDraggedLead(lead.id)}
                       onDragEnd={() => setDraggedLead(null)}
                       className={cn(
-                        'group rounded-lg border border-border bg-card p-3 shadow-soft transition-all hover:shadow-elevated',
+                        'group rounded-md border border-border/80 bg-card p-3.5 shadow-soft transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-elevated',
                         canWrite ? 'cursor-grab active:cursor-grabbing' : 'cursor-default',
                         draggedLead === lead.id && 'opacity-50',
                       )}
@@ -249,9 +249,6 @@ export function CRMPipelinePage() {
 
                       <div className="mt-2 flex items-center justify-between">
                         <span className="text-sm font-bold text-primary">{formatCurrency(lead.value)}</span>
-                        <Badge variant="muted" className="text-2xs">
-                          {lead.probability}%
-                        </Badge>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">

@@ -1,5 +1,5 @@
 import type { Invoice, FinanceOverview, Transaction, Order } from '@/lib/api/types';
-import { uuid, daysAgo, daysFromNow, COMPANIES } from './helpers';
+import { uuid, daysAgo, COMPANIES } from './helpers';
 
 const INVOICE_STATUSES: Invoice['status'][] = ['draft', 'sent', 'paid', 'paid', 'paid', 'overdue', 'cancelled'];
 

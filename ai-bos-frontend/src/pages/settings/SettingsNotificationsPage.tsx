@@ -4,17 +4,18 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { useI18n } from '@/lib/i18n/store';
+import { AlertTriangle, BarChart3, Calendar, CheckSquare, CreditCard, FileText, MessageSquare, Target } from 'lucide-react';
 
 const CHANNELS = ['Email', 'SMS', 'Push', 'Slack'] as const;
 const CATEGORIES = [
-  { name: 'Factures et paiements', icon: '💳' },
-  { name: 'Nouveaux leads', icon: '🎯' },
-  { name: 'Tâches assignées', icon: '✅' },
-  { name: 'Réunions', icon: '📅' },
-  { name: 'Alertes système', icon: '⚠️' },
-  { name: 'Rapports hebdo', icon: '📊' },
-  { name: 'Mentions', icon: '💬' },
-  { name: 'Contrats', icon: '📄' },
+  { name: 'Factures et paiements', icon: CreditCard },
+  { name: 'Nouveaux leads', icon: Target },
+  { name: 'Tâches assignées', icon: CheckSquare },
+  { name: 'Réunions', icon: Calendar },
+  { name: 'Alertes système', icon: AlertTriangle },
+  { name: 'Rapports hebdo', icon: BarChart3 },
+  { name: 'Mentions', icon: MessageSquare },
+  { name: 'Contrats', icon: FileText },
 ];
 
 export function SettingsNotificationsPage() {
@@ -40,13 +41,12 @@ export function SettingsNotificationsPage() {
 
       {/* Mobile: stacked cards */}
       <div className="space-y-3 md:hidden">
-        {CATEGORIES.map((cat) => (
-          <Card key={cat.name}>
+        {CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          return <Card key={cat.name}>
             <CardContent className="space-y-3 p-4">
               <div className="flex items-center gap-2">
-                <span className="text-lg" aria-hidden>
-                  {cat.icon}
-                </span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon className="h-4 w-4" /></span>
                 <p className="text-sm font-medium">{cat.name}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -63,8 +63,8 @@ export function SettingsNotificationsPage() {
                 })}
               </div>
             </CardContent>
-          </Card>
-        ))}
+          </Card>;
+        })}
       </div>
 
       {/* Tablet+: matrix table */}
@@ -83,13 +83,12 @@ export function SettingsNotificationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {CATEGORIES.map((cat) => (
-                  <tr key={cat.name} className="border-b border-border">
+                {CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  return <tr key={cat.name} className="border-b border-border">
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg" aria-hidden>
-                          {cat.icon}
-                        </span>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden><Icon className="h-4 w-4" /></span>
                         <span className="text-sm font-medium">{cat.name}</span>
                       </div>
                     </td>
@@ -101,8 +100,8 @@ export function SettingsNotificationsPage() {
                         </td>
                       );
                     })}
-                  </tr>
-                ))}
+                  </tr>;
+                })}
               </tbody>
             </table>
           </div>

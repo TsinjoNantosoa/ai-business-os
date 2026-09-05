@@ -15,12 +15,12 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        'mb-4 flex min-w-0 flex-col gap-3 sm:mb-6 sm:gap-4 sm:flex-row sm:items-start sm:justify-between lg:items-center',
+        'mb-5 flex min-w-0 flex-col gap-4 border-b border-border/60 pb-5 sm:mb-6 sm:flex-row sm:items-start sm:justify-between lg:items-center',
         className
       )}
     >
       <div className="min-w-0 flex-1">
-        <h1 className="page-title break-words text-[1.5rem] sm:text-2xl lg:text-[1.75rem]">{title}</h1>
+        <h1 className="page-title break-words">{title}</h1>
         {description && (
           <p className="mt-1 text-sm text-muted-foreground sm:text-[0.9375rem]">{description}</p>
         )}

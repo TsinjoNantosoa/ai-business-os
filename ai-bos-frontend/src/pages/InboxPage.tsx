@@ -58,15 +58,15 @@ export function InboxPage() {
             {filtered.map((n) => {
               const Icon = ICONS[n.type] || Bell;
               return (
-                <div key={n.id} className={cn('flex items-start gap-3 p-4 transition-colors hover:bg-muted/30', !n.read && 'bg-primary-50/20')}>
-                  <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', COLORS[n.type])} />
+                <div key={n.id} className={cn('relative flex items-start gap-3 p-4 transition-colors hover:bg-muted/30 focus-within:bg-muted/30', !n.read && 'bg-primary/[.035] before:absolute before:inset-y-3 before:left-0 before:w-0.5 before:rounded-full before:bg-primary')}>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted"><Icon className={cn('h-4 w-4', COLORS[n.type])} /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{n.title}</p>
                       {!n.read && <span className="h-2 w-2 rounded-full bg-primary" />}
                     </div>
                     <p className="mt-0.5 text-sm text-muted-foreground">{n.message}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{formatRelativeTime(n.createdAt)}</p>
+                    <time className="mt-1 block text-xs text-muted-foreground">{formatRelativeTime(n.createdAt)}</time>
                   </div>
                   {n.link && (
                     <Button

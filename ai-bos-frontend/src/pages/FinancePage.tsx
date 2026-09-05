@@ -26,7 +26,7 @@ export function FinancePage() {
   }));
 
   const agingData = finance?.agingReceivables || [];
-  const AGING_COLORS = ['#10b981', '#f59e0b', '#f97316', '#ef4444'];
+  const AGING_COLORS = ['#19c891', '#f5b942', '#f97316', '#ef5350'];
 
   return (
     <div>
@@ -53,15 +53,15 @@ export function FinancePage() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={cashFlowData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.65} vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                 <Tooltip
                   contentStyle={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}
                   formatter={(v) => formatCurrency(Number(v))}
                 />
-                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Revenus" />
-                <Bar dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} name="Dépenses" />
+                <Bar dataKey="income" fill="#19c891" radius={[4, 4, 0, 0]} name="Revenus" />
+                <Bar dataKey="expense" fill="#ef5350" radius={[4, 4, 0, 0]} name="Dépenses" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -99,10 +99,10 @@ export function FinancePage() {
       </div>
 
       {/* AI Alert */}
-      <Card className="mt-6 border-amber-200 bg-amber-50/30">
+      <Card className="mt-6 border-amber-500/25 bg-amber-500/[.045]">
         <CardContent className="flex items-start gap-3 p-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-500/10">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">

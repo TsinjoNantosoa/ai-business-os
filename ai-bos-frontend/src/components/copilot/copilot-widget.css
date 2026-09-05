@@ -2,13 +2,14 @@
    Scoped under .aibos-chat-root to avoid leaking into the app shell. */
 
 .aibos-chat-root {
-  --bos-navy-left: #132251;
-  --bos-navy: #0f1b42;
-  --bos-surface: #f8faff;
-  --bos-border: #e8effe;
-  --bos-text: #1e293b;
-  --bos-muted: #64748b;
-  font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+  --bos-navy-left: #6857ff;
+  --bos-navy: #5946e8;
+  --bos-surface: #0b1220;
+  --bos-elevated: #151e32;
+  --bos-border: #263249;
+  --bos-text: #f7f8fc;
+  --bos-muted: #a7b3cc;
+  font-family: Inter, system-ui, sans-serif;
   box-sizing: border-box;
 }
 
@@ -33,29 +34,28 @@
 .aibos-chat-root .bos-fab {
   pointer-events: auto;
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border: none;
-  border-radius: 50%;
-  background: var(--bos-navy);
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--bos-navy-left), var(--bos-navy));
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(15, 82, 186, 0.4);
-  animation: bos-float 6s ease-in-out infinite;
+  box-shadow: 0 14px 34px -14px rgba(104, 87, 255, 0.85);
 }
 
 .aibos-chat-root .bos-fab:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(15, 82, 186, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px -14px rgba(104, 87, 255, 0.9);
 }
 
 .aibos-chat-root .bos-fab-pulse {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: 16px;
   border: 2px solid var(--bos-navy);
   background: rgba(12, 81, 198, 0.1);
   animation: bos-pulse-ring 2.5s infinite;
@@ -124,10 +124,9 @@
   flex-direction: column;
   overflow: hidden;
   border-radius: 20px;
-  background: #fff;
-  box-shadow:
-    0 8px 32px rgba(26, 115, 232, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--bos-border);
+  background: var(--bos-surface);
+  box-shadow: 0 28px 72px -24px rgba(0, 0, 0, 0.9);
 }
 
 /* Header */
@@ -139,7 +138,8 @@
   justify-content: space-between;
   padding: 16px 18px 14px;
   color: #fff;
-  background: linear-gradient(90deg, var(--bos-navy-left) 0%, var(--bos-navy) 100%);
+  background: #0f1628;
+  border-bottom: 1px solid var(--bos-border);
   overflow: visible;
 }
 
@@ -600,3 +600,59 @@
     height: 56px;
   }
 }
+
+/* Premium dark surface overrides. Kept scoped so the Copilot cannot leak styles. */
+.aibos-chat-root .bos-messages {
+  padding-top: 18px;
+  background: linear-gradient(180deg, #0b1220, #080d1a);
+  scrollbar-color: #263249 transparent;
+}
+.aibos-chat-root .bos-bot-avatar {
+  border-radius: 9px;
+  background: #6857ff1f;
+  color: #9d91ff;
+  box-shadow: none;
+}
+.aibos-chat-root .bos-bubble { border-radius: 14px; box-shadow: none; }
+.aibos-chat-root .bos-bubble.bot {
+  border: 1px solid var(--bos-border);
+  border-bottom-left-radius: 5px;
+  background: var(--bos-elevated);
+  color: var(--bos-text);
+}
+.aibos-chat-root .bos-bubble.user {
+  border-bottom-right-radius: 5px;
+  background: #6857ff;
+  box-shadow: 0 10px 25px -18px rgba(104, 87, 255, .9);
+}
+.aibos-chat-root .bos-chip,
+.aibos-chat-root .bos-typing {
+  border-color: var(--bos-border);
+  background: #0f1628;
+  color: var(--bos-muted);
+}
+.aibos-chat-root .bos-chip.ok { border-color: #19c89155; background: #19c89114; color: #55ddb2; }
+.aibos-chat-root .bos-chip.err { border-color: #ef535055; background: #ef535014; color: #ff8a87; }
+.aibos-chat-root .bos-quick-pill {
+  border-color: var(--bos-border);
+  border-radius: 10px;
+  background: #0f1628;
+  color: var(--bos-text);
+  box-shadow: none;
+}
+.aibos-chat-root .bos-quick-pill:hover { transform: none; border-color: #6857ff77; background: #151e32; box-shadow: none; }
+.aibos-chat-root .bos-quick-icon { border-radius: 8px; background: #6857ff1f; color: #9d91ff; }
+.aibos-chat-root .bos-composer { border-color: var(--bos-border); background: #0f1628; }
+.aibos-chat-root .bos-composer-input {
+  border-color: var(--bos-border);
+  border-radius: 12px;
+  background: #080d1a;
+  color: var(--bos-text);
+}
+.aibos-chat-root .bos-composer-input:focus { border-color: #6857ff99; box-shadow: 0 0 0 3px rgba(104,87,255,.16); }
+.aibos-chat-root .bos-send-btn { border-radius: 9px; background: #6857ff; box-shadow: none; }
+.aibos-chat-root .bos-disclaimer { border-color: var(--bos-border); background: #0f1628; }
+.aibos-chat-root .bos-agent-select option { color: #f7f8fc; background: #151e32; }
+.aibos-chat-root button:focus-visible,
+.aibos-chat-root select:focus-visible,
+.aibos-chat-root textarea:focus-visible { outline: 2px solid #8e80ff; outline-offset: 2px; }

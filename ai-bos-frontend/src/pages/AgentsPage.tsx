@@ -19,25 +19,11 @@ import {
   getAiUsageSummary,
 } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
-import { cn, formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime } from '@/lib/utils';
 
 const AGENT_ICONS: Record<string, React.ElementType> = {
   Crown, TrendingUp, Wallet, Megaphone, Scale, Users, BarChart3,
   KanbanSquare, LifeBuoy, Video, ShieldCheck,
-};
-
-const AGENT_COLORS: Record<string, string> = {
-  Executive: 'from-indigo-500 to-violet-500',
-  Sales: 'from-emerald-500 to-teal-500',
-  Finance: 'from-amber-500 to-orange-500',
-  Marketing: 'from-pink-500 to-rose-500',
-  Legal: 'from-slate-600 to-slate-800',
-  HR: 'from-blue-500 to-cyan-500',
-  Analytics: 'from-violet-500 to-purple-500',
-  Projects: 'from-teal-500 to-cyan-500',
-  Support: 'from-red-500 to-orange-500',
-  Meetings: 'from-purple-500 to-pink-500',
-  Compliance: 'from-green-500 to-emerald-500',
 };
 
 export function AgentsPage() {
@@ -106,13 +92,12 @@ export function AgentsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {(agents || []).map((agent) => {
               const Icon = AGENT_ICONS[agent.icon] || Bot;
-              const gradient = AGENT_COLORS[agent.category] || 'from-primary to-violet-500';
               const agentUsage = usage?.byAgent?.find((a) => a.agentId === agent.id);
               return (
-                <Card key={agent.id} className="group cursor-pointer transition-all hover:shadow-elevated">
+                <Card key={agent.id} className="group cursor-pointer border-primary/15 transition-[border-color,box-shadow] hover:border-primary/35 hover:shadow-ai">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between">
-                      <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br text-white', gradient)}>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
                         <Icon className="h-6 w-6" />
                       </div>
                       <StatusBadge status={agent.status} />

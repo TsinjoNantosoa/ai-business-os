@@ -7,14 +7,14 @@ import {
 import {
   Wallet, TrendingUp, Users, LifeBuoy, DollarSign, UserCircle,
   Sparkles, FileText, KanbanSquare, CheckSquare,
-  ArrowRight, Phone, Mail, Calendar, FileCheck, Clock,
+  Phone, Mail, Calendar, FileCheck, Clock,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { AIInsightCard } from '@/components/ai/AIInsightCard';
 import { useI18n } from '@/lib/i18n/store';
 import { useTheme } from '@/lib/theme/store';
 import { getFinanceOverview, getLeads, getActivities, getTickets, getEmployees } from '@/lib/api/services';
@@ -82,13 +82,13 @@ export function DashboardPage() {
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard label={t('dashboard.revenueMtd')} value={formatCurrency(284500)} change={12.5} icon={DollarSign} trend="up" />
-        <KpiCard label={t('dashboard.pipelineValue')} value={formatCurrency(pipelineValue)} change={8.3} icon={TrendingUp} trend="up" />
-        <KpiCard label={t('dashboard.activeCustomers')} value={formatNumber(342)} change={5.2} icon={Users} trend="up" />
-        <KpiCard label={t('dashboard.openTickets')} value={formatNumber(openTickets)} change={-15} icon={LifeBuoy} trend="down" />
-        <KpiCard label={t('dashboard.cashPosition')} value={formatCurrency(finance?.cashBalance || 0)} change={3.1} icon={Wallet} trend="up" />
-        <KpiCard label={t('dashboard.teamHeadcount')} value={formatNumber(activeEmployees)} change={2} icon={UserCircle} trend="up" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-12">
+        <KpiCard className="xl:col-span-4" emphasis label={t('dashboard.revenueMtd')} value={formatCurrency(284500)} change={12.5} icon={DollarSign} trend="up" />
+        <KpiCard className="xl:col-span-4" emphasis label={t('dashboard.pipelineValue')} value={formatCurrency(pipelineValue)} change={8.3} icon={TrendingUp} trend="up" />
+        <KpiCard className="xl:col-span-4" emphasis label={t('dashboard.cashPosition')} value={formatCurrency(finance?.cashBalance || 0)} change={3.1} icon={Wallet} trend="up" />
+        <KpiCard className="xl:col-span-4" label={t('dashboard.activeCustomers')} value={formatNumber(342)} change={5.2} icon={Users} trend="up" />
+        <KpiCard className="xl:col-span-4" label={t('dashboard.openTickets')} value={formatNumber(openTickets)} change={-15} icon={LifeBuoy} trend="down" />
+        <KpiCard className="xl:col-span-4" label={t('dashboard.teamHeadcount')} value={formatNumber(activeEmployees)} change={2} icon={UserCircle} trend="up" />
       </div>
 
       {/* Charts row */}
@@ -145,8 +145,8 @@ export function DashboardPage() {
                   formatter={(v) => [`${v} deals`, 'Pipeline']}
                 />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {funnelData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
+                  {funnelData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.fill} />
                   ))}
                 </Bar>
               </BarChart>
@@ -157,45 +157,19 @@ export function DashboardPage() {
 
       {/* AI Insight + Quick Actions */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* AI Insight */}
-        <Card className="border-primary/20 bg-gradient-to-br from-primary-50/50 to-violet-50/30 dark:from-primary-950/40 dark:to-violet-950/20 lg:col-span-2">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl gradient-ai">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold">{t('dashboard.aiInsight')}</p>
-                  <Badge variant="default" className="text-2xs">IA</Badge>
-                </div>
-                <p className="mt-1.5 text-sm text-foreground">
-                  3 clients n'ont pas payé leurs factures depuis plus de 30 jours, totalisant{' '}
-                  <span className="font-semibold">45 200 €</span>. Je recommande de relancer ces clients en priorité.
-                </p>
-                <div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button
-                    size="sm"
-                    variant="default"
-                    className="w-full sm:w-auto"
-                    onClick={() => navigate('/app/finance/invoices')}
-                  >
-                    Voir les factures
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full bg-card/80 sm:w-auto"
-                    onClick={() => navigate('/app/copilot')}
-                  >
-                    Analyser avec l'IA
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AIInsightCard
+          className="lg:col-span-2"
+          title="Risque de trésorerie détecté"
+          description="Trois factures sont en retard depuis plus de 30 jours. Le Copilot recommande de prioriser leur suivi."
+          metrics={[
+            { label: 'Factures critiques', value: '3', tone: 'warning' },
+            { label: 'Montant concerné', value: '45 200 €' },
+            { label: 'Retard', value: '+30 jours', tone: 'danger' },
+          ]}
+          recommendation="Examiner les comptes concernés et préparer une relance adaptée avant toute action."
+          primaryAction={{ label: 'Voir les factures', onClick: () => navigate('/app/finance/invoices') }}
+          secondaryAction={{ label: 'Analyser avec l’IA', onClick: () => navigate('/app/copilot') }}
+        />
 
         {/* Quick Actions */}
         <Card>
@@ -232,7 +206,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              {(activities || []).slice(0, 8).map((act, i) => {
+              {(activities || []).slice(0, 8).map((act) => {
                 const Icon = activityIcons[act.type] || FileCheck;
                 return (
                   <div key={act.id} className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50">
@@ -270,8 +244,8 @@ export function DashboardPage() {
                 { title: 'Réviser contrat TechSolutions', due: 'Demain', priority: 'urgent', assignee: 'Pierre Dubois' },
                 { title: 'Formation équipe CRM', due: 'Dans 3 jours', priority: 'medium', assignee: 'Marie Lefevre' },
                 { title: 'Audit sécurité mensuel', due: 'Dans 5 jours', priority: 'low', assignee: 'Lucas Thomas' },
-              ].map((task, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
+              ].map((task) => (
+                <div key={task.title} className="flex items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
                   <div className={cn(
                     'h-2 w-2 shrink-0 rounded-full',
                     task.priority === 'urgent' && 'bg-red-500',

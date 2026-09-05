@@ -77,14 +77,6 @@ export function ProcurementPage() {
     { header: 'Owner', value: (po) => po.ownerName },
   ]
 
-  const supplierColumns: ExportColumn<Supplier>[] = [
-    { header: 'Nom', value: (s) => s.name },
-    { header: 'Statut', value: (s) => s.status },
-    { header: 'Note', value: (s) => s.rating },
-    { header: 'Pays', value: (s) => s.country || '' },
-    { header: 'Email', value: (s) => s.email || '' },
-  ]
-
   const resetCreate = () => {
     setSupplierId('')
     setSupplierName('')
@@ -184,7 +176,7 @@ export function ProcurementPage() {
                   <Input className="pl-9" placeholder="Rechercher PO / fournisseur / owner..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <div className="w-full sm:w-56">
-                  <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+                  <Select value={status} onValueChange={(v) => setStatus(v as 'all' | PurchaseOrder['status'])}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Statut" />
                     </SelectTrigger>

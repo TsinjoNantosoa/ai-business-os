@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { Sparkles, TrendingUp, Brain, Clock, Target } from 'lucide-react';
+import { Sparkles, TrendingUp, Brain, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getForecast } from '@/lib/api/services';
 import { useI18n } from '@/lib/i18n/store';
-import { formatCurrency, formatRelativeTime, cn } from '@/lib/utils';
+import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 
 const HORIZONS = [
   { id: '7d' as const, label: '7 jours' },
