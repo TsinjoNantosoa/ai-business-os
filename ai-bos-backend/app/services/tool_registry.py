@@ -26,6 +26,11 @@ from app.repositories.invoice_repository import InvoiceRepository
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.ops_repository import ProjectRepository
 from app.repositories.task_repository import TaskRepository
+from app.services.business_intelligence import (
+    cashflow_intelligence,
+    executive_daily_brief,
+    sales_risk_intelligence,
+)
 
 
 @dataclass
@@ -53,6 +58,9 @@ class ToolDefinition:
     handler: Callable[[ToolContext, dict[str, Any]], ToolResult]
     mutating: bool = False
     requires_approval: bool = False
+    risk_level: str = "LOW"
+    read_only: bool = True
+    tenant_scoped: bool = True
 
 
 def _clamp_limit(value: Any, default: int = 10, max_limit: int = 25) -> int:
@@ -67,6 +75,21 @@ def _has_permission(ctx: ToolContext, required: list[str]) -> bool:
     if "*" in ctx.permissions:
         return True
     return all(perm in ctx.permissions for perm in required)
+
+
+def _tool_executive_brief(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    del args
+    return ToolResult(ok=True, data=executive_daily_brief(ctx.db, ctx.org_id))
+
+
+def _tool_cashflow_intelligence(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    del args
+    return ToolResult(ok=True, data=cashflow_intelligence(ctx.db, ctx.org_id))
+
+
+def _tool_sales_risk(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    del args
+    return ToolResult(ok=True, data=sales_risk_intelligence(ctx.db, ctx.org_id))
 
 
 def _tool_search_contacts(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
@@ -175,6 +198,27 @@ def _tool_list_projects(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
 # OpenAI requires tool names matching ^[a-zA-Z0-9_-]+$ (no dots).
 _TOOLS: list[ToolDefinition] = [
     ToolDefinition(
+        name="executive_daily_brief",
+        description="Agrège les priorités, risques et opportunités Finance, CRM, Projets, Tâches et Support.",
+        parameters={"type": "object", "properties": {}},
+        permissions=["dashboard.read"],
+        handler=_tool_executive_brief,
+    ),
+    ToolDefinition(
+        name="cashflow_intelligence",
+        description="Explique les facteurs de trésorerie à partir des transactions, factures et du pipeline.",
+        parameters={"type": "object", "properties": {}},
+        permissions=["finance.invoice.read"],
+        handler=_tool_cashflow_intelligence,
+    ),
+    ToolDefinition(
+        name="sales_deal_risk",
+        description="Score les deals à risque avec des raisons heuristiques explicites.",
+        parameters={"type": "object", "properties": {}},
+        permissions=["crm.lead.read"],
+        handler=_tool_sales_risk,
+    ),
+    ToolDefinition(
         name="crm_search_contacts",
         description="Recherche des contacts CRM de l'organisation (nom, email, société).",
         parameters={
@@ -205,6 +249,8 @@ _TOOLS: list[ToolDefinition] = [
         handler=_tool_create_lead,
         mutating=True,
         requires_approval=True,
+        risk_level="MEDIUM",
+        read_only=False,
     ),
     ToolDefinition(
         name="finance_list_invoices",
@@ -236,6 +282,8 @@ _TOOLS: list[ToolDefinition] = [
         handler=_tool_create_task,
         mutating=True,
         requires_approval=True,
+        risk_level="MEDIUM",
+        read_only=False,
     ),
     ToolDefinition(
         name="projects_list",
@@ -306,6 +354,13 @@ def plan_mock_tool_calls(user_message: str) -> list[PlannedToolCall]:
     """
     text = user_message.lower()
     planned: list[PlannedToolCall] = []
+
+    if re.search(r"surveiller aujourd|priorit[eÃé]s? (du jour|aujourd)|daily brief", text):
+        planned.append(PlannedToolCall(name="executive_daily_brief", arguments={}))
+    if re.search(r"tr[eÃé]sorerie.*(baisser|baisse|risque)|cash.?flow", text):
+        planned.append(PlannedToolCall(name="cashflow_intelligence", arguments={}))
+    if re.search(r"deals?.*(risque|fermer|cl[oÃô]turer)|risque.*deals?", text):
+        planned.append(PlannedToolCall(name="sales_deal_risk", arguments={}))
 
     if re.search(r"cr[eé]e[rz]?\s+(un\s+)?lead|nouveau lead|create lead", text):
         company = "Client Demo"

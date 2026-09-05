@@ -16,6 +16,7 @@ from app.core.database import SessionLocal
 from app.core.logging_config import configure_logging, log_event
 from app.core.metrics import inc, snapshot
 from app.core.migrations import run_migrations
+from app.core.tenant import clear_current_org_id
 from app.presentation.routes_auth import build_auth_router
 from app.presentation.routes_platform import build_platform_router
 from app.presentation.routes_rbac import build_rbac_router
@@ -48,7 +49,7 @@ from app.services.auth_service import AuthService
 from app.services.bootstrap import bootstrap_demo_data
 from app.services.email_service import EmailService
 from app.services.rag_ingest import ensure_rag_index
-from app.services.session_store import InMemoryRefreshSessionStore
+from app.services.session_store import DatabaseRefreshSessionStore
 
 configure_logging()
 
@@ -110,9 +111,8 @@ app.add_middleware(
 
 logger.info("cors_origins=%s", settings.cors_origins)
 
-# Refresh tokens live in-process — keep a single uvicorn worker (see start.py).
-# Multi-instance / horizontal scale needs Redis or DB-backed sessions.
-session_store = InMemoryRefreshSessionStore()
+# Refresh sessions are persisted so rotation and revocation survive restarts.
+session_store = DatabaseRefreshSessionStore()
 email_service = EmailService(
     mode=settings.email_mode,
     smtp_host=settings.smtp_host,
@@ -213,10 +213,14 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 @app.middleware("http")
 async def request_context_middleware(request, call_next):
+    clear_current_org_id()
     correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
     request.state.correlation_id = correlation_id
     started = time.perf_counter()
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    finally:
+        clear_current_org_id()
     elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
 
     inc("http_requests")

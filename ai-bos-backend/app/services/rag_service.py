@@ -19,6 +19,9 @@ class RagHit:
     score: float
     excerpt: str
     topics: list[str]
+    source_type: str
+    chunk_index: int
+    section: str | None
 
 
 def _lexical_score(query_tokens: set[str], content: str, topics: list[str], title: str) -> float:
@@ -81,6 +84,9 @@ def retrieve(
             score=round(score, 4),
             excerpt=excerpt,
             topics=list(topics),
+            source_type=doc.source_type if doc else "unknown",
+            chunk_index=chunk.chunk_index,
+            section=(repo.loads(chunk.metadata_json, {}) or {}).get("heading"),
         )
         scored.append((score, hit))
 
@@ -109,6 +115,9 @@ def hits_to_sources(hits: list[RagHit]) -> list[dict]:
             "relevanceScore": hit.score,
             "excerpt": hit.excerpt,
             "sourceUri": hit.source_uri,
+            "sourceType": hit.source_type,
+            "chunkIndex": hit.chunk_index,
+            "section": hit.section,
         }
         for hit in hits
     ]

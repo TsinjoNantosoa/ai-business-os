@@ -60,7 +60,7 @@ def test_oauth_mock_login_flow() -> None:
     assert me.json()["email"] == "ceo@demo.aibos.io"
 
 
-def test_oauth_mock_creates_new_user() -> None:
+def test_oauth_unknown_user_requires_onboarding() -> None:
     start = client.get("/api/v1/auth/oauth/microsoft/authorize")
     state = start.json()["state"]
     email = "oauth.new.user@example.com"
@@ -68,9 +68,32 @@ def test_oauth_mock_creates_new_user() -> None:
         "/api/v1/auth/oauth/microsoft/mock-login",
         json={"state": state, "email": email},
     )
-    assert res.status_code == 200
-    assert res.json()["user"]["email"] == email
-    assert res.json()["user"]["role"] == "staff"
+    assert res.status_code == 403
+    assert res.json()["detail"] == "OAUTH_ONBOARDING_REQUIRED"
+
+
+def _invite(email: str) -> None:
+    response = client.post(
+        "/api/v1/platform/invitations",
+        headers=auth_headers(),
+        json={"email": email, "role": "staff"},
+    )
+    assert response.status_code == 201, response.text
+
+
+def test_oauth_invitation_joins_invited_tenant() -> None:
+    import secrets
+
+    email = f"oauth.invited.{secrets.token_hex(4)}@example.com"
+    _invite(email)
+    start = client.get("/api/v1/auth/oauth/microsoft/authorize").json()
+    result = client.post(
+        "/api/v1/auth/oauth/microsoft/mock-login",
+        json={"state": start["state"], "email": email},
+    )
+    assert result.status_code == 200, result.text
+    assert result.json()["user"]["orgId"] == "org-1"
+    assert result.json()["user"]["role"] == "staff"
 
 
 def test_oauth_invalid_state() -> None:
@@ -131,6 +154,7 @@ def test_gdpr_erase_staff() -> None:
     import secrets
 
     email = f"erase.{secrets.token_hex(4)}@example.com"
+    _invite(email)
     start = client.get("/api/v1/auth/oauth/google/authorize").json()
     created = client.post(
         "/api/v1/auth/oauth/google/mock-login",

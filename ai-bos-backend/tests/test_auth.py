@@ -32,19 +32,40 @@ def test_refresh_success() -> None:
     assert body["refreshToken"] != refresh_token
 
 
-def test_refresh_survives_in_memory_store_wipe() -> None:
-    """Backend restart clears InMemoryRefreshSessionStore; valid refresh JWT must still work."""
+def test_refresh_survives_session_store_recreation() -> None:
+    """Persistent refresh sessions remain valid when the service object restarts."""
     from app.main import auth_service
+    from app.services.session_store import DatabaseRefreshSessionStore
 
     login = client.post(
         "/api/v1/auth/login",
         json={"email": "ceo@demo.aibos.io", "password": "demo1234"},
     )
     refresh_token = login.json()["refreshToken"]
-    auth_service._sessions._sessions.clear()
+    auth_service._sessions = DatabaseRefreshSessionStore()
     response = client.post("/api/v1/auth/refresh", json={"refreshToken": refresh_token})
     assert response.status_code == 200
     assert response.json()["token"]
+
+
+def test_refresh_rotation_reuse_and_logout() -> None:
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "ceo@demo.aibos.io", "password": "demo1234"},
+    )
+    first = login.json()["refreshToken"]
+    rotated = client.post("/api/v1/auth/refresh", json={"refreshToken": first})
+    assert rotated.status_code == 200
+    second = rotated.json()["refreshToken"]
+    assert client.post("/api/v1/auth/refresh", json={"refreshToken": first}).status_code == 401
+    assert client.post("/api/v1/auth/refresh", json={"refreshToken": second}).status_code == 401
+
+    fresh = client.post(
+        "/api/v1/auth/login",
+        json={"email": "ceo@demo.aibos.io", "password": "demo1234"},
+    ).json()
+    assert client.post("/api/v1/auth/logout", json={"refreshToken": fresh["refreshToken"]}).status_code == 204
+    assert client.post("/api/v1/auth/refresh", json={"refreshToken": fresh["refreshToken"]}).status_code == 401
 
 
 def test_me_requires_bearer() -> None:

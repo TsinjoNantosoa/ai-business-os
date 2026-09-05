@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+from collections.abc import Generator
 from typing import Any
 
 from fastapi import Depends, Header, HTTPException, status
@@ -22,10 +23,17 @@ def _claims_from_api_key(raw_key: str) -> dict[str, Any] | None:
     if not raw_key.startswith(API_KEY_PREFIX):
         return None
     with SessionLocal() as session:
+        key_hash = hash_api_key(raw_key)
+        if not settings.is_sqlite:
+            session.execute(
+                text("SELECT set_config('app.auth_api_key_hash', :value, true)"),
+                {"value": key_hash},
+            )
         repo = ApiKeyRepository(session)
-        row = repo.get_by_hash(hash_api_key(raw_key))
+        row = repo.get_by_hash(key_hash)
         if not row:
             return None
+        apply_tenant_rls(session, row.org_id)
         repo.touch_last_used(row)
         return {
             "sub": f"apk:{row.id}",
@@ -90,7 +98,7 @@ def require_permission(permission: str):
 def require_feature(feature_key: str):
     def _dep(
         claims: dict[str, Any] = Depends(require_auth),
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_tenant_db),
     ) -> dict[str, Any]:
         org_id = claims_org_id(claims)
         if not is_feature_enabled(db, org_id, feature_key):
@@ -116,6 +124,22 @@ def apply_tenant_rls(db: Session, org_id: str) -> None:
     if settings.is_sqlite or not org_id:
         return
     db.execute(text("SELECT set_config('app.current_org_id', :org, true)"), {"org": org_id})
+
+
+def get_tenant_db(
+    claims: dict[str, Any] = Depends(require_auth),
+) -> Generator[Session, None, None]:
+    """Open a request-scoped DB session with the tenant RLS context applied.
+
+    The authentication dependency is intentionally declared here so PostgreSQL
+    receives the tenant GUC before any route-level query can execute.
+    """
+    db = SessionLocal()
+    try:
+        apply_tenant_rls(db, claims_org_id(claims))
+        yield db
+    finally:
+        db.close()
 
 
 def verify_chatbot_token(

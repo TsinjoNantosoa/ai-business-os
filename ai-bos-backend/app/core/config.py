@@ -79,13 +79,17 @@ class Settings(BaseModel):
     access_token_exp_minutes: int = 60
     refresh_token_exp_days: int = 7
     max_refresh_sessions_per_user: int = 5
+    workflow_http_allowlist: list[str] = Field(default_factory=list)
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"])
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
+    allow_unsigned_stripe_webhooks: bool = False
     app_public_url: str = "http://localhost:5173"
     openai_api_key: str | None = None
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
+    embedding_provider: str = "local_hash"
+    openai_embedding_model: str = "text-embedding-3-small"
     anthropic_api_key: str | None = None
     chatbot_api_token: str | None = None
     chatbot_query_rate_limit: int = 20
@@ -154,13 +158,21 @@ class Settings(BaseModel):
             access_token_exp_minutes=int(os.getenv("ACCESS_TOKEN_EXP_MINUTES", "60")),
             refresh_token_exp_days=int(os.getenv("REFRESH_TOKEN_EXP_DAYS", "7")),
             max_refresh_sessions_per_user=int(os.getenv("MAX_REFRESH_SESSIONS", "5")),
+            workflow_http_allowlist=[
+                host.strip().lower()
+                for host in os.getenv("WORKFLOW_HTTP_ALLOWLIST", "").split(",")
+                if host.strip()
+            ],
             cors_origins=origins or ["http://localhost:5173"],
             stripe_secret_key=os.getenv("STRIPE_SECRET_KEY") or None,
             stripe_webhook_secret=os.getenv("STRIPE_WEBHOOK_SECRET") or None,
+            allow_unsigned_stripe_webhooks=_env_bool("ALLOW_UNSIGNED_STRIPE_WEBHOOKS", False),
             app_public_url=os.getenv("APP_PUBLIC_URL", "http://localhost:5173"),
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
             openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            embedding_provider=os.getenv("EMBEDDING_PROVIDER", "local_hash").strip().lower(),
+            openai_embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
             chatbot_api_token=os.getenv("CHATBOT_API_TOKEN") or None,
             chatbot_query_rate_limit=_parse_rate_limit_per_minute(
@@ -207,3 +219,9 @@ if settings.is_production and settings.jwt_secret.startswith("change-me"):
 
 if settings.is_production and ("*" in settings.cors_origins):
     raise RuntimeError("CORS_ORIGINS must not include '*' in production.")
+
+if settings.is_production and settings.allow_unsigned_stripe_webhooks:
+    raise RuntimeError("ALLOW_UNSIGNED_STRIPE_WEBHOOKS must be false in production.")
+
+if settings.is_production and settings.stripe_secret_key and not settings.stripe_webhook_secret:
+    raise RuntimeError("STRIPE_WEBHOOK_SECRET is required when Stripe is enabled in production.")

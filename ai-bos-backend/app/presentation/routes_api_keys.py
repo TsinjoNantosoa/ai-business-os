@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.presentation.deps import claims_org_id, claims_user_id, require_permission
 from app.presentation.serializers import api_key_to_dict
-from app.repositories.api_key_repository import DEFAULT_SCOPES, ApiKeyRepository
+from app.repositories.api_key_repository import API_KEY_SCOPE_ALLOWLIST, DEFAULT_SCOPES, ApiKeyRepository
 from app.services.audit_service import record_audit
 
 
@@ -37,6 +37,12 @@ def build_api_keys_router() -> APIRouter:
         org_id = claims_org_id(claims)
         created_by_name = f"{claims.get('first_name', '')} {claims.get('last_name', '')}".strip() or "Admin"
         scopes = [s.strip() for s in body.scopes if s.strip()] or list(DEFAULT_SCOPES)
+        invalid_scopes = sorted(set(scopes) - API_KEY_SCOPE_ALLOWLIST)
+        if invalid_scopes:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Scopes API interdits ou inconnus: {', '.join(invalid_scopes)}",
+            )
         row, raw = ApiKeyRepository(db).create(
             org_id=org_id,
             name=body.name,

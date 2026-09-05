@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.presentation.deps import claims_org_id, require_permission
 from app.presentation.schemas import WorkflowCreateBody, WorkflowUpdateBody
-from app.presentation.serializers import workflow_execution_to_dict, workflow_to_dict
+from app.presentation.serializers import (
+    workflow_execution_to_dict,
+    workflow_step_execution_to_dict,
+    workflow_to_dict,
+)
 from app.repositories.workflow_repository import WorkflowRepository
 from app.services.audit_service import record_audit
 from app.services.workflow_engine import WorkflowEngine
@@ -45,10 +49,15 @@ def build_workflows_router() -> APIRouter:
         org_id = claims_org_id(claims)
         workflows = {wf.id: wf.name for wf in repo.list_by_org(org_id)}
         executions = repo.list_executions(org_id)
-        return [
-            workflow_execution_to_dict(execution, workflows.get(execution.workflow_id))
-            for execution in executions
-        ]
+        payload = []
+        for execution in executions:
+            item = workflow_execution_to_dict(execution, workflows.get(execution.workflow_id))
+            item["steps"] = [
+                workflow_step_execution_to_dict(step)
+                for step in repo.list_steps(org_id, execution.id)
+            ]
+            payload.append(item)
+        return payload
 
     @router.get("/{workflow_id}")
     def get_workflow(

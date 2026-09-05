@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import secrets
 import logging
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -20,7 +20,11 @@ from app.models.user import User as UserModel
 from app.repositories.password_reset_repository import PasswordResetRepository, hash_reset_token
 from app.repositories.user_repository import UserRepository
 from app.services.email_service import EmailService
-from app.services.session_store import InMemoryRefreshSessionStore, RefreshSession
+from app.services.session_store import (
+    DatabaseRefreshSessionStore,
+    RefreshSession,
+    hash_refresh_token,
+)
 
 
 logger = logging.getLogger("aibos.auth")
@@ -29,7 +33,7 @@ logger = logging.getLogger("aibos.auth")
 class AuthService:
     def __init__(
         self,
-        session_store: InMemoryRefreshSessionStore,
+        session_store: DatabaseRefreshSessionStore,
         email_service: EmailService,
     ) -> None:
         self._sessions = session_store
@@ -47,11 +51,20 @@ class AuthService:
 
     def _get_user_by_email(self, email: str) -> UserModel | None:
         with SessionLocal() as session:
+            self._set_auth_lookup(session, "app.auth_email", email.lower().strip())
             return UserRepository(session).get_by_email(email)
 
     def _get_user_by_id(self, user_id: str) -> UserModel | None:
         with SessionLocal() as session:
+            self._set_auth_lookup(session, "app.auth_user_id", user_id)
             return UserRepository(session).get_by_id(user_id)
+
+    @staticmethod
+    def _set_auth_lookup(session, name: str, value: str) -> None:
+        if not settings.is_sqlite:
+            from sqlalchemy import text
+
+            session.execute(text("SELECT set_config(:name, :value, true)"), {"name": name, "value": value})
 
     def login(self, email: str, password: str) -> tuple[str, str]:
         user = self._get_user_by_email(email)
@@ -91,6 +104,7 @@ class AuthService:
             )
 
         with SessionLocal() as session:
+            self._set_auth_lookup(session, "app.auth_email", email_norm)
             if UserRepository(session).get_by_email(email_norm):
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -100,6 +114,7 @@ class AuthService:
             org_id = f"org-{secrets.token_hex(8)}"
             user_id = f"u-{secrets.token_hex(8)}"
             OrganizationRepository(session).create(org_id=org_id, name=org_name)
+            self._set_auth_lookup(session, "app.current_org_id", org_id)
 
             user = UserOrm(
                 id=user_id,
@@ -221,7 +236,7 @@ class AuthService:
             session.commit()
             user_id = user.id
 
-        self._sessions.revoke_all_for_user(user_id)
+        self._sessions.revoke_all_for_user(user_id, user.org_id)
 
     def login_oauth_profile(
         self,
@@ -233,6 +248,7 @@ class AuthService:
         last_name: str,
     ) -> tuple[str, str]:
         from app.core.security import hash_password
+        from app.repositories.invitation_repository import InvitationRepository
         from app.repositories.oauth_identity_repository import OAuthIdentityRepository
         from app.services.role_permissions import permissions_for_role
 
@@ -241,6 +257,8 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Profil OAuth incomplet")
 
         with SessionLocal() as session:
+            self._set_auth_lookup(session, "app.auth_email", email)
+            self._set_auth_lookup(session, "app.auth_oauth_subject", f"{provider}:{subject}")
             oauth_repo = OAuthIdentityRepository(session)
             user_repo = UserRepository(session)
             identity = oauth_repo.get_by_provider_subject(provider, subject)
@@ -251,18 +269,32 @@ class AuthService:
                 user = user_repo.get_by_email(email)
             if not user:
                 # New OAuth users join demo org-1 as staff (invitation flow preferred in prod).
+                invitation = InvitationRepository(session).get_pending_by_email_any_org(email)
+                now = datetime.now(timezone.utc)
+                invitation_expiry = invitation.expires_at if invitation else None
+                if invitation_expiry and invitation_expiry.tzinfo is None:
+                    invitation_expiry = invitation_expiry.replace(tzinfo=timezone.utc)
+                if not invitation or invitation_expiry is None or invitation_expiry <= now:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="OAUTH_ONBOARDING_REQUIRED",
+                    )
+                self._set_auth_lookup(session, "app.current_org_id", invitation.org_id)
                 user = user_repo.create(
-                    org_id="org-1",
+                    org_id=invitation.org_id,
                     email=email,
                     first_name=first_name or "OAuth",
                     last_name=last_name or provider.title(),
-                    role="staff",
-                    permissions=permissions_for_role("staff"),
+                    role=invitation.role,
+                    permissions=permissions_for_role(invitation.role),
                     password_hash=hash_password(secrets.token_urlsafe(24)),
                 )
+                invitation.status = "accepted"
+                invitation.accepted_at = now
             if not user.active:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Compte désactivé")
 
+            self._set_auth_lookup(session, "app.current_org_id", user.org_id)
             oauth_repo.upsert(
                 user_id=user.id,
                 org_id=user.org_id,
@@ -277,20 +309,34 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur introuvable")
         return self._issue_tokens(user)
 
-    def _issue_tokens(self, user: UserModel) -> tuple[str, str]:
-        if self._sessions.count_active_for_user(user.id) >= settings.max_refresh_sessions_per_user:
-            self._sessions.revoke_all_for_user(user.id)
+    def _issue_tokens(
+        self,
+        user: UserModel,
+        *,
+        family_id: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> tuple[str, str]:
+        if self._sessions.count_active_for_user(user.id, user.org_id) >= settings.max_refresh_sessions_per_user:
+            self._sessions.revoke_all_for_user(user.id, user.org_id)
 
         session_id = secrets.token_hex(16)
+        family_id = family_id or secrets.token_hex(16)
+        refresh = create_refresh_token(user.id, session_id)
         self._sessions.save(
             RefreshSession(
                 session_id=session_id,
+                org_id=user.org_id,
                 user_id=user.id,
+                family_id=family_id,
+                token_hash=hash_refresh_token(refresh),
                 created_at=datetime.now(tz=timezone.utc),
+                expires_at=datetime.now(tz=timezone.utc) + timedelta(days=settings.refresh_token_exp_days),
+                ip_address=ip_address,
+                user_agent=(user_agent or "")[:512] or None,
             )
         )
         access = create_access_token(user.id, self._claims_for_user(user))
-        refresh = create_refresh_token(user.id, session_id)
         return access, refresh
 
     def refresh(self, refresh_token: str) -> tuple[str, str]:
@@ -309,34 +355,40 @@ class AuthService:
         # After a backend restart the in-memory store is empty while the refresh JWT
         # can still be cryptographically valid — recreate the session so the SPA
         # does not force a full re-login every time uvicorn reloads.
-        if session is None and session_id and user_id:
-            session = RefreshSession(
-                session_id=session_id,
-                user_id=user_id,
-                created_at=datetime.now(tz=timezone.utc),
-            )
-            self._sessions.save(session)
-
-        if not session or session.revoked or session.user_id != user_id:
+        if not session or session.user_id != user_id or session.token_hash != hash_refresh_token(refresh_token):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session invalide")
+        if session.revoked:
+            self._sessions.revoke_family(session.family_id, session.org_id)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="RÃ©utilisation de refresh token dÃ©tectÃ©e")
+        expires_at = session.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= datetime.now(timezone.utc):
+            self._sessions.revoke(session_id)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expirÃ©e")
 
         user = self._get_user_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur introuvable")
 
-        self._sessions.revoke(session_id)
-        new_session_id = secrets.token_hex(16)
-        self._sessions.save(
-            RefreshSession(
-                session_id=new_session_id,
-                user_id=user.id,
-                created_at=datetime.now(tz=timezone.utc),
-            )
-        )
-
-        access = create_access_token(user.id, self._claims_for_user(user))
-        refresh = create_refresh_token(user.id, new_session_id)
+        access, refresh = self._issue_tokens(user, family_id=session.family_id)
+        new_session_id = str(decode_token(refresh).get("sid") or "")
+        self._sessions.revoke(session_id, replaced_by_id=new_session_id)
         return access, refresh
+
+    def logout(self, refresh_token: str) -> None:
+        try:
+            payload = decode_token(refresh_token)
+        except Exception:
+            return
+        if payload.get("token_type") == "refresh" and payload.get("sid"):
+            self._sessions.revoke(str(payload["sid"]))
+
+    def logout_all(self, claims: dict[str, Any]) -> None:
+        self._sessions.revoke_all_for_user(
+            str(claims.get("sub") or ""),
+            str(claims.get("org_id") or ""),
+        )
 
     def me_from_access_token(self, access_token: str) -> dict[str, Any]:
         try:

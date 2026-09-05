@@ -36,6 +36,15 @@ class InvitationRepository:
         )
         return self._session.scalars(stmt).first()
 
+    def get_pending_by_email_any_org(self, email: str) -> Invitation | None:
+        stmt = (
+            select(Invitation)
+            .where(Invitation.email == email.lower().strip())
+            .where(Invitation.status == "pending")
+            .order_by(Invitation.created_at.desc())
+        )
+        return self._session.scalars(stmt).first()
+
     def count_all(self) -> int:
         return len(list(self._session.scalars(select(Invitation)).all()))
 

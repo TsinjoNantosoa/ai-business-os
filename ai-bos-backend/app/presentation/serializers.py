@@ -256,6 +256,24 @@ def workflow_execution_to_dict(execution: WorkflowExecution, workflow_name: str 
     }
 
 
+def workflow_step_execution_to_dict(step) -> dict:
+    return {
+        "id": step.id,
+        "executionId": step.execution_id,
+        "stepKey": step.step_key,
+        "action": step.action,
+        "status": step.status,
+        "input": step.input_data,
+        "output": step.output_data,
+        "error": step.error_message,
+        "attempts": step.attempts,
+        "idempotencyKey": step.idempotency_key,
+        "startedAt": step.started_at.isoformat(),
+        "finishedAt": step.finished_at.isoformat() if step.finished_at else None,
+        "durationMs": step.duration_ms,
+    }
+
+
 def organization_to_dict(org: Organization) -> dict:
     return {
         "id": org.id,

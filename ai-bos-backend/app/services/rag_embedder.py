@@ -4,7 +4,10 @@ from __future__ import annotations
 import hashlib
 import math
 import re
+import logging
 from collections import Counter
+
+from app.core.config import settings
 
 
 EMBED_DIM = 256
@@ -54,7 +57,7 @@ def chunk_markdown(text: str, *, max_chars: int = 900, overlap: int = 120) -> li
     return chunks
 
 
-def embed_text(text: str, dim: int = EMBED_DIM) -> list[float]:
+def _embed_local_hash(text: str, dim: int = EMBED_DIM) -> list[float]:
     """Deterministic hashing-trick TF embedding (cosine-friendly, offline)."""
     tokens = tokenize(text)
     if not tokens:
@@ -70,6 +73,32 @@ def embed_text(text: str, dim: int = EMBED_DIM) -> list[float]:
     # L2 normalize
     norm = math.sqrt(sum(v * v for v in vec)) or 1.0
     return [v / norm for v in vec]
+
+
+def embedding_provider_name() -> str:
+    if settings.embedding_provider == "openai" and settings.openai_api_key:
+        return "openai"
+    return "local_hash"
+
+
+def embed_text(text: str, dim: int = EMBED_DIM) -> list[float]:
+    """Embed through the configured provider, with deterministic local fallback."""
+    if embedding_provider_name() == "openai":
+        try:
+            import httpx
+
+            response = httpx.post(
+                f"{settings.openai_base_url}/embeddings",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                json={"model": settings.openai_embedding_model, "input": text[:30_000]},
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            vector = response.json()["data"][0]["embedding"]
+            return [float(value) for value in vector]
+        except Exception as exc:
+            logging.getLogger("aibos.rag").warning("embedding_provider_fallback provider=openai error=%s", type(exc).__name__)
+    return _embed_local_hash(text, dim)
 
 
 def cosine(a: list[float], b: list[float]) -> float:

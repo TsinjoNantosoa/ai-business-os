@@ -28,12 +28,14 @@ from app.models.oauth_identity import OAuthIdentity
 from app.models.ops import CalendarEvent, Campaign, Meeting, Project, SalesOrder
 from app.models.organization import Organization
 from app.models.password_reset_token import PasswordResetToken
+from app.models.refresh_session import RefreshSession
+from app.models.stripe_webhook_event import StripeWebhookEvent
 from app.models.events import DomainEvent, WebhookEndpoint
 from app.models.ai_observability import AiLlmCall, AiTrace
 from app.models.task import Task
 from app.models.ticket import Ticket, TicketMessage
 from app.models.user import User
-from app.models.workflow import Workflow, WorkflowExecution
+from app.models.workflow import Workflow, WorkflowExecution, WorkflowStepExecution
 
 __all__ = [
     "Activity",
@@ -71,8 +73,10 @@ __all__ = [
     "PasswordResetToken",
     "Project",
     "PurchaseOrder",
+    "RefreshSession",
     "SalesOrder",
     "Subscription",
+    "StripeWebhookEvent",
     "Supplier",
     "Task",
     "TenantFeatureOverride",
@@ -82,4 +86,5 @@ __all__ = [
     "WebhookEndpoint",
     "Workflow",
     "WorkflowExecution",
+    "WorkflowStepExecution",
 ]

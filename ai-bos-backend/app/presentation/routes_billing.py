@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import hashlib
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.billing import Subscription
-from app.presentation.deps import claims_org_id, require_permission
+from app.models.stripe_webhook_event import StripeWebhookEvent
+from app.presentation.deps import apply_tenant_rls, claims_org_id, require_permission
 from app.presentation.schemas import CheckoutBody
 from app.presentation.serializers import billing_invoice_to_dict, plan_to_dict, subscription_to_dict
 from app.repositories.billing_repository import BillingRepository
@@ -109,9 +115,27 @@ def build_billing_router() -> APIRouter:
         repo = BillingRepository(db)
         event_type = event.get("type", "")
         data_object = event.get("data", {}).get("object", {})
+        event_id = str(event.get("id") or f"dev_{hashlib.sha256(payload).hexdigest()}")
+        if db.get(StripeWebhookEvent, event_id):
+            return {"received": "true", "duplicate": "true"}
+        delivery = StripeWebhookEvent(
+            event_id=event_id,
+            event_type=event_type,
+            payload_hash=hashlib.sha256(payload).hexdigest(),
+            status="processing",
+            received_at=datetime.now(timezone.utc),
+        )
+        db.add(delivery)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            return {"received": "true", "duplicate": "true"}
 
         if event_type == "checkout.session.completed":
             org_id = data_object.get("metadata", {}).get("org_id")
+            if org_id:
+                apply_tenant_rls(db, str(org_id))
             plan_code = data_object.get("metadata", {}).get("plan_code")
             plan = repo.get_plan_by_code(plan_code) if plan_code else None
             subscription = repo.get_subscription_for_org(org_id) if org_id else None
@@ -124,18 +148,34 @@ def build_billing_router() -> APIRouter:
 
         elif event_type == "invoice.paid":
             stripe_invoice_id = data_object.get("id")
+            if stripe_invoice_id and not settings.is_sqlite:
+                db.execute(
+                    text("SELECT set_config('app.stripe_invoice_id', :value, true)"),
+                    {"value": stripe_invoice_id},
+                )
             if stripe_invoice_id and repo.mark_invoice_paid(stripe_invoice_id):
                 db.commit()
 
         elif event_type == "customer.subscription.updated":
             stripe_sub_id = data_object.get("id")
             status_value = data_object.get("status", "active")
+            if stripe_sub_id and not settings.is_sqlite:
+                db.execute(
+                    text("SELECT set_config('app.stripe_subscription_id', :value, true)"),
+                    {"value": stripe_sub_id},
+                )
             sub = db.scalars(
                 select(Subscription).where(Subscription.stripe_subscription_id == stripe_sub_id)
             ).first()
             if sub:
                 sub.status = status_value
                 db.commit()
+
+        delivery = db.get(StripeWebhookEvent, event_id)
+        if delivery:
+            delivery.status = "processed"
+            delivery.processed_at = datetime.now(timezone.utc)
+            db.commit()
 
         return {"received": "true"}
 

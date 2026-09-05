@@ -52,7 +52,10 @@ def test_billing_plans_and_checkout() -> None:
     assert body["sessionId"]
 
 
-def test_stripe_webhook_checkout_completed() -> None:
+def test_stripe_webhook_checkout_completed(monkeypatch) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "allow_unsigned_stripe_webhooks", True)
     payload = {
         "type": "checkout.session.completed",
         "data": {
@@ -76,3 +79,16 @@ def test_stripe_webhook_checkout_completed() -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert overview.json()["subscription"]["plan"]["code"] == "pro"
+
+
+def test_unsigned_stripe_webhook_is_rejected_by_default(monkeypatch) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "allow_unsigned_stripe_webhooks", False)
+    monkeypatch.setattr(settings, "stripe_webhook_secret", None)
+    response = client.post(
+        "/api/v1/billing/webhooks/stripe",
+        content='{"id":"evt_unsigned","type":"invoice.paid","data":{"object":{}}}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 400

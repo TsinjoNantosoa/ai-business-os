@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.workflow import Workflow, WorkflowExecution
+from app.models.workflow import Workflow, WorkflowExecution, WorkflowStepExecution
 
 
 class WorkflowRepository:
@@ -32,6 +32,53 @@ class WorkflowRepository:
             .limit(limit)
         )
         return list(self._session.scalars(stmt).all())
+
+    def get_execution_for_event(self, org_id: str, workflow_id: str, event_id: str) -> WorkflowExecution | None:
+        return self._session.scalars(
+            select(WorkflowExecution).where(
+                WorkflowExecution.org_id == org_id,
+                WorkflowExecution.workflow_id == workflow_id,
+                WorkflowExecution.event_id == event_id,
+            )
+        ).first()
+
+    def list_steps(self, org_id: str, execution_id: str) -> list[WorkflowStepExecution]:
+        stmt = (
+            select(WorkflowStepExecution)
+            .where(
+                WorkflowStepExecution.org_id == org_id,
+                WorkflowStepExecution.execution_id == execution_id,
+            )
+            .order_by(WorkflowStepExecution.started_at)
+        )
+        return list(self._session.scalars(stmt).all())
+
+    def create_step(self, *, org_id: str, workflow_id: str, execution_id: str, step_key: str, action: str, input_data: dict) -> WorkflowStepExecution:
+        row = WorkflowStepExecution(
+            id=f"wfs-{secrets.token_hex(8)}",
+            org_id=org_id,
+            workflow_id=workflow_id,
+            execution_id=execution_id,
+            step_key=step_key,
+            action=action,
+            status="running",
+            input_data=input_data,
+            attempts=1,
+            idempotency_key=f"{execution_id}:{step_key}",
+            started_at=datetime.now(timezone.utc),
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def finish_step(self, row: WorkflowStepExecution, *, status: str, output_data: dict | None, error_message: str | None, attempts: int, duration_ms: int) -> WorkflowStepExecution:
+        row.status = status
+        row.output_data = output_data
+        row.error_message = error_message
+        row.attempts = attempts
+        row.duration_ms = duration_ms
+        row.finished_at = datetime.now(timezone.utc)
+        return row
 
     def create_execution(
         self,

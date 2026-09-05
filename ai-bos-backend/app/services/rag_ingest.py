@@ -7,12 +7,14 @@ import re
 import secrets
 from pathlib import Path
 
+from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
 
 from app.data import seed
 from app.models.kb import KbChunk, KbDocument
 from app.repositories.kb_repository import KbRepository
-from app.services.rag_embedder import chunk_markdown, embed_text, tokenize
+from app.services.rag_embedder import chunk_markdown, embed_text, embedding_provider_name, tokenize
+from app.core.config import settings
 
 logger = logging.getLogger("aibos.rag")
 
@@ -80,6 +82,11 @@ def _upsert_markdown_document(
     language: str = "fr",
     extra_meta: dict | None = None,
 ) -> int:
+    if not settings.is_sqlite:
+        repo.db.execute(
+            sql_text("SELECT set_config('app.current_org_id', :org, true)"),
+            {"org": org_id},
+        )
     digest = _content_hash(text)
     existing = repo.get_document_by_hash(org_id, digest)
     if existing and existing.status == "indexed":
@@ -101,6 +108,7 @@ def _upsert_markdown_document(
         status="indexed",
         language=language,
         metadata_json=repo.dumps(extra_meta or {}),
+        version=1,
         created_at=now,
         updated_at=now,
     )
@@ -121,7 +129,9 @@ def _upsert_markdown_document(
             token_count=len(tokenize(content)),
             topics_json=repo.dumps(topics),
             embedding_json=repo.dumps(embedding),
-            metadata_json=repo.dumps({"heading": heading, "title": title}),
+            embedding_provider=embedding_provider_name(),
+            embedding_model=settings.openai_embedding_model if embedding_provider_name() == "openai" else "hash-tf-256",
+            metadata_json=repo.dumps({"heading": heading, "title": title, "chunkIndex": index, "checksum": digest}),
             created_at=now,
         )
         repo.add_chunk(chunk)

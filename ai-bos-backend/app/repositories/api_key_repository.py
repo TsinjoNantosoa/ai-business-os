@@ -19,6 +19,38 @@ DEFAULT_SCOPES = [
     "document.read",
 ]
 
+# API keys are integration credentials, never tenant administrators. Sensitive
+# account, billing, approval, and audit capabilities are intentionally excluded.
+API_KEY_SCOPE_ALLOWLIST = {
+    "dashboard.read",
+    "crm.contact.read",
+    "crm.contact.write",
+    "crm.lead.read",
+    "crm.lead.write",
+    "sales.order.read",
+    "sales.order.write",
+    "marketing.campaign.read",
+    "marketing.campaign.write",
+    "finance.invoice.read",
+    "finance.invoice.write",
+    "finance.payment.read",
+    "finance.payment.write",
+    "project.read",
+    "project.write",
+    "task.read",
+    "task.write",
+    "document.read",
+    "document.write",
+    "inventory.read",
+    "inventory.write",
+    "support.ticket.read",
+    "support.ticket.write",
+    "knowledge.read",
+    "knowledge.write",
+    "workflow.read",
+    "workflow.write",
+}
+
 
 def hash_api_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()

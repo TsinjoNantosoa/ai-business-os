@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -50,3 +50,24 @@ class WorkflowExecution(Base):
     trigger_source: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="executions")
+
+
+class WorkflowStepExecution(Base):
+    __tablename__ = "workflow_step_executions"
+    __table_args__ = (UniqueConstraint("execution_id", "step_key", name="uq_workflow_step_once"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    org_id: Mapped[str] = mapped_column(String(64), ForeignKey("organizations.id"), nullable=False, index=True)
+    workflow_id: Mapped[str] = mapped_column(String(64), ForeignKey("workflows.id"), nullable=False, index=True)
+    execution_id: Mapped[str] = mapped_column(String(64), ForeignKey("workflow_executions.id"), nullable=False, index=True)
+    step_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    action: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="running")
+    input_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    output_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)

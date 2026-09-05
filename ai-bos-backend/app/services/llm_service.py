@@ -45,7 +45,32 @@ def _format_tool_context_for_user(tool_context: str) -> str | None:
                 lines_out.append(f"**{name}** : résultats disponibles.")
             continue
 
-        if name == "crm_search_contacts":
+        if name == "executive_daily_brief":
+            lines_out.append("### Priorités du jour")
+            for item in data.get("topPriorities", [])[:5]:
+                lines_out.append(f"- **{item.get('title')}** — {item.get('why')} · Source: `{item.get('source')}`")
+            lines_out.append("\n### Risques")
+            for item in data.get("risks", [])[:5]:
+                lines_out.append(f"- **{item.get('title')}** — {item.get('why')} · Source: `{item.get('source')}`")
+            lines_out.append("\n### Opportunités")
+            for item in data.get("opportunities", [])[:5]:
+                lines_out.append(f"- **{item.get('title')}** — {item.get('why')} · Source: `{item.get('source')}`")
+        elif name == "cashflow_intelligence":
+            situation = data.get("currentSituation") or {}
+            risk = data.get("risk") or {}
+            lines_out.append(f"### Situation actuelle\nFlux net observé: **{situation.get('observedNetFlow', 0)} {situation.get('currency', 'EUR')}**.")
+            lines_out.append(f"\n### Risque\n**{str(risk.get('level', 'unknown')).upper()}** — {risk.get('why', '')}")
+            lines_out.append("\n### Facteurs")
+            for item in data.get("drivers", []):
+                lines_out.append(f"- {item.get('label')}: {item.get('amount')} · Source: `{item.get('source')}`")
+            lines_out.append(f"\n_Limite: {data.get('limitations', '')}_")
+        elif name == "sales_deal_risk":
+            lines_out.append("### Deals à risque")
+            for deal in data.get("deals", [])[:8]:
+                reasons = "; ".join(deal.get("reasons") or [])
+                lines_out.append(f"- **{deal.get('title')}** ({deal.get('company')}) — risque **{deal.get('riskScore')}%** · {reasons} · Source: `{deal.get('source')}`")
+            lines_out.append(f"\n_Méthode: {data.get('method', '')}. {data.get('limitations', '')}_")
+        elif name == "crm_search_contacts":
             contacts = data.get("contacts") or []
             lines_out.append(f"Voici {len(contacts)} contact(s) CRM :\n")
             for c in contacts[:8]:

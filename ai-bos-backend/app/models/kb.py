@@ -22,6 +22,7 @@ class KbDocument(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="indexed")
     language: Mapped[str | None] = mapped_column(String(16), nullable=True)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
@@ -37,5 +38,7 @@ class KbChunk(Base):
     token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     topics_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     embedding_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    embedding_provider: Mapped[str] = mapped_column(String(64), nullable=False, default="local_hash")
+    embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))

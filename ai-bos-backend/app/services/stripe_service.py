@@ -13,15 +13,13 @@ class StripeService:
     """Stripe sandbox integration with mock fallback when keys are absent."""
 
     def __init__(self) -> None:
-        self._stripe = None
-        if settings.stripe_secret_key:
-            try:
-                import stripe
-
+        try:
+            import stripe
+            self._stripe = stripe
+            if settings.stripe_secret_key:
                 stripe.api_key = settings.stripe_secret_key
-                self._stripe = stripe
-            except ImportError:
-                pass
+        except ImportError:
+            self._stripe = None
 
     @property
     def is_live(self) -> bool:
@@ -37,7 +35,7 @@ class StripeService:
         currency: str,
         stripe_price_id: str | None,
     ) -> dict[str, str]:
-        if self._stripe and stripe_price_id:
+        if self._stripe and settings.stripe_secret_key and stripe_price_id:
             session = self._stripe.checkout.Session.create(
                 mode="subscription",
                 customer_email=customer_email,
@@ -56,20 +54,15 @@ class StripeService:
         return {"sessionId": session_id, "checkoutUrl": checkout_url}
 
     def verify_webhook(self, payload: bytes, signature_header: str | None) -> dict[str, Any]:
-        if self._stripe and settings.stripe_webhook_secret and signature_header:
+        if settings.stripe_webhook_secret:
+            if not signature_header:
+                raise ValueError("Missing Stripe-Signature")
+            if not self._stripe:
+                raise RuntimeError("stripe package is required for webhook verification")
             event = self._stripe.Webhook.construct_event(
                 payload, signature_header, settings.stripe_webhook_secret
             )
             return event
-
-        if settings.stripe_webhook_secret and signature_header:
-            expected = hmac.new(
-                settings.stripe_webhook_secret.encode(),
-                payload,
-                hashlib.sha256,
-            ).hexdigest()
-            provided = signature_header.split("=", 1)[-1] if "=" in signature_header else signature_header
-            if not hmac.compare_digest(expected, provided):
-                raise ValueError("Invalid webhook signature")
-
+        if settings.is_production or not settings.allow_unsigned_stripe_webhooks:
+            raise ValueError("Stripe webhook verification is not configured")
         return json.loads(payload.decode("utf-8"))

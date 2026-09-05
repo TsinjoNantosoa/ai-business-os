@@ -44,9 +44,9 @@ const AGENTS = [
 ];
 
 const SUGGESTED_PROMPTS = [
-  { key: 'ai.daySummary', icon: Calendar, text: 'montre-moi les contacts CRM' },
-  { key: 'ai.unpaidClients', icon: Wallet, text: 'quelles factures sont en retard ?' },
-  { key: 'ai.revenueForecast', icon: TrendingUp, text: 'crée une tâche Relancer client VIP' },
+  { key: 'ai.daySummary', icon: Calendar, text: "Que dois-je surveiller aujourd'hui ?" },
+  { key: 'ai.unpaidClients', icon: Wallet, text: 'Pourquoi ma trésorerie risque de baisser ?' },
+  { key: 'ai.revenueForecast', icon: TrendingUp, text: 'Quels deals risquent de ne pas fermer ce mois-ci ?' },
 ];
 
 export function CopilotPage() {

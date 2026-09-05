@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -44,6 +44,21 @@ def _sqlite_pragmas(dbapi_connection, connection_record) -> None:
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
+    if not settings.is_sqlite:
+        # FastAPI may construct this generator before resolving the auth
+        # dependency. The transaction starts only on the first query, by which
+        # time require_auth has populated the request ContextVar.
+        def _apply_request_tenant(_session, _transaction, connection) -> None:
+            from app.core.tenant import get_current_org_id
+
+            org_id = get_current_org_id()
+            if org_id:
+                connection.execute(
+                    text("SELECT set_config('app.current_org_id', :org, true)"),
+                    {"org": org_id},
+                )
+
+        event.listen(db, "after_begin", _apply_request_tenant)
     try:
         yield db
     finally:

@@ -4,9 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
 from app.core.security import hash_password, verify_password
-from app.presentation.deps import claims_user_id, require_auth
+from app.presentation.deps import claims_user_id, get_tenant_db, require_auth
 from app.presentation.schemas import (
     ForgotPasswordBody,
     PasswordChangeBody,
@@ -68,6 +67,14 @@ def build_auth_router(auth_service: AuthService) -> APIRouter:
         user = auth_service.me_from_access_token(token)
         return AuthResponse(user=user, token=token, refreshToken=refresh_token)
 
+    @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+    def logout(payload: RefreshRequest) -> None:
+        auth_service.logout(payload.refreshToken)
+
+    @router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+    def logout_all(claims: dict = Depends(require_auth)) -> None:
+        auth_service.logout_all(claims)
+
     @router.post("/forgot-password")
     def forgot_password(body: ForgotPasswordBody) -> dict:
         auth_service.request_password_reset(str(body.email))
@@ -93,7 +100,7 @@ def build_auth_router(auth_service: AuthService) -> APIRouter:
     @router.patch("/me")
     def update_me(
         body: ProfileUpdateBody,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_tenant_db),
         claims: dict = Depends(require_auth),
     ) -> dict:
         user = UserRepository(db).get_by_id(claims_user_id(claims))
@@ -107,7 +114,7 @@ def build_auth_router(auth_service: AuthService) -> APIRouter:
     @router.post("/change-password")
     def change_password(
         body: PasswordChangeBody,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_tenant_db),
         claims: dict = Depends(require_auth),
     ) -> dict:
         user = UserRepository(db).get_by_id(claims_user_id(claims))
