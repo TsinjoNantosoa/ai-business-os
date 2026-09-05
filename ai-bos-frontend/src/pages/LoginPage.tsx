@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardFooter } from '@/components/ui/card';
-import { Logo } from '@/components/layout/Logo';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { DemoPersonaSelector } from '@/components/auth/DemoPersonaSelector';
 
 export function LoginPage() {
@@ -107,7 +107,9 @@ export function LoginPage() {
           <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-blue-600/40 blur-[120px]" />
         </div>
         <div className="relative z-10">
-          <Logo />
+          <Link to="/" aria-label="AI BOS — Accueil">
+            <BrandLogo variant="full" size="lg" theme="dark" decorative />
+          </Link>
         </div>
         <div className="relative z-10 space-y-6">
           <motion.div
@@ -152,7 +154,9 @@ export function LoginPage() {
       <div className="flex w-full items-center justify-center px-5 py-10 sm:p-8 lg:w-[52%]">
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden">
-            <Logo />
+            <Link to="/" aria-label="AI BOS — Accueil">
+              <BrandLogo variant="wordmark" size="md" theme="auto" decorative />
+            </Link>
           </div>
           <motion.div
             initial={{ opacity: 0, y: 10 }}

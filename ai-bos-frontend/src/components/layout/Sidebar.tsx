@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { ChevronDown, PanelLeftClose, PanelLeft, Sparkles } from 'lucide-react';
 import { NAV_GROUPS } from '@/lib/navigation';
 import { useAuth } from '@/lib/auth/store';
 import { useI18n } from '@/lib/i18n/store';
-import { Logo } from './Logo';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -68,7 +68,9 @@ export function Sidebar({
       >
         {/* Header */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-3 sm:h-16 sm:px-4">
-          <Logo collapsed={iconMode} />
+          <Link to="/app/dashboard" aria-label="AI BOS — Tableau de bord" className="flex min-w-0 items-center">
+            <BrandLogo variant={iconMode ? 'icon' : 'wordmark'} size={iconMode ? 'md' : 'sm'} theme="dark" />
+          </Link>
           <Button
             variant="ghost"
             size="icon-sm"

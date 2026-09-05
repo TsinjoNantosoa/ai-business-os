@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardFooter, CardHeader } from '@/components/ui/card';
-import { Logo } from '@/components/layout/Logo';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 export function RegisterPage() {
   const { register, isLoading, error } = useAuth();
@@ -55,7 +55,9 @@ export function RegisterPage() {
           <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-blue-600/40 blur-[120px]" />
         </div>
         <div className="relative z-10">
-          <Logo />
+          <Link to="/" aria-label="AI BOS — Accueil">
+            <BrandLogo variant="full" size="lg" theme="dark" decorative />
+          </Link>
         </div>
         <div className="relative z-10 space-y-4">
           <motion.h1
@@ -77,7 +79,9 @@ export function RegisterPage() {
       <div className="flex w-full items-center justify-center px-5 py-10 sm:p-8 lg:w-[52%]">
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden">
-            <Logo />
+            <Link to="/" aria-label="AI BOS — Accueil">
+              <BrandLogo variant="wordmark" size="md" theme="auto" decorative />
+            </Link>
           </div>
           <h2 className="text-2xl font-bold tracking-tight">{t('auth.signUpTitle')}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t('auth.signUpSubtitle')}</p>

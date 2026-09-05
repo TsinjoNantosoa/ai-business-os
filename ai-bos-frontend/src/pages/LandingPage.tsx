@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 function usePersistedToken(): string | null {
   const [token, setToken] = useState<string | null>(null);
@@ -45,11 +46,8 @@ export function LandingPage() {
       </div>
 
       <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
-        <Link to="/" className="flex items-center gap-3" aria-label="AI BOS — Accueil">
-          <span className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#8e80ff]/40 bg-[#6857ff]/15 text-[#9d91ff]" aria-hidden>
-            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m8 14 4-7 4 7M9.5 11.5h5"/></svg>
-          </span>
-          <span className="text-base font-bold tracking-[-0.02em] text-white">AI BOS</span>
+        <Link to="/" className="flex items-center" aria-label="AI BOS — Accueil">
+          <BrandLogo variant="wordmark" size="sm" theme="dark" decorative />
         </Link>
         <nav className="flex items-center gap-3" aria-label="Navigation principale">
           <Link to="/login" className="hidden rounded-md px-3 py-2 text-sm font-medium text-[#a7b3cc] transition-colors hover:text-white sm:inline-flex">Se connecter</Link>
@@ -59,6 +57,7 @@ export function LandingPage() {
 
       <main id="main" className="relative z-10 mx-auto grid min-h-[calc(100vh-5rem)] max-w-[1440px] items-center gap-14 px-5 pb-16 pt-10 sm:px-8 lg:grid-cols-[.92fr_1.08fr] lg:px-12 lg:pb-24 lg:pt-8">
         <div className="landing-fade-up max-w-2xl">
+          <BrandLogo variant="icon" size="xl" theme="dark" decorative className="mb-6 drop-shadow-[0_12px_28px_rgba(104,87,255,.28)]" />
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#6857ff]/25 bg-[#6857ff]/10 px-3 py-1.5 text-xs font-semibold text-[#b7afff]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#19c891]" />
             AI Business Operating System

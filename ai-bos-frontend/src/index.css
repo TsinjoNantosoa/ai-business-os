@@ -4,6 +4,10 @@
 
 @layer base {
   :root {
+    --brand-violet: #a777ff;
+    --brand-indigo: #6857ff;
+    --brand-blue: #367cff;
+    --brand-cyan: #23d5f5;
     --background: 40 14% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
@@ -151,7 +155,7 @@
   }
 
   .gradient-ai {
-    background: linear-gradient(135deg, #6857ff 0%, #7b61ff 58%, #5946e8 100%);
+    background: linear-gradient(135deg, var(--brand-violet) 0%, var(--brand-indigo) 48%, var(--brand-cyan) 100%);
   }
 
   .gradient-ai-text {
@@ -185,6 +189,13 @@
 
   .card-grid {
     @apply grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 xl:gap-4;
+  }
+
+  .brand-gradient-text {
+    background: linear-gradient(110deg, var(--brand-violet), var(--brand-indigo) 48%, var(--brand-cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .surface-elevated {

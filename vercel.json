@@ -4,7 +4,7 @@
   "installCommand": "cd ai-bos-frontend && npm ci",
   "framework": null,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!robots\\.txt|sitemap\\.xml|favicon\\.ico|manifest\\.webmanifest|brand/|assets/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

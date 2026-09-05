@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { CommandDialog, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '@/components/ui/command';
 import { NAV_GROUPS } from '@/lib/navigation';
 import { cn, initials, formatRelativeTime } from '@/lib/utils';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void }) {
   const { user, organizations, orgId, setOrg, logout, token } = useAuth();
@@ -67,6 +68,7 @@ export function Topbar({ onMobileMenuClick }: { onMobileMenuClick: () => void })
     <>
       <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-2 border-b border-border/75 bg-background/90 px-3 backdrop-blur-md sm:h-16 sm:gap-3 sm:px-4 lg:px-6">
         <Button variant="ghost" size="icon" onClick={onMobileMenuClick} className="shrink-0 lg:hidden" aria-label="Ouvrir le menu"><Menu className="h-5 w-5" /></Button>
+        <BrandLogo variant="wordmark" size="xs" theme="auto" className="hidden min-[360px]:inline-flex lg:hidden" />
         <button type="button" onClick={() => setSearchOpen(true)} aria-label={t('common.search')} className="group flex h-10 min-w-0 flex-1 max-w-md items-center gap-2 rounded-md border border-border bg-card/70 px-3 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:bg-card">
           <Search className="h-4 w-4 shrink-0" /><span className="hidden truncate sm:inline">{t('common.search')}...</span>
           <kbd className="ml-auto hidden rounded-sm border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold sm:block">Ctrl K</kbd>

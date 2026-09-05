@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Sparkles, Send, Mic, Volume2, Plus, MessageSquare,
+  Send, Mic, Volume2, Plus, MessageSquare,
   TrendingUp, Wallet, Calendar, Zap, Bot, BookOpen, History, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -16,6 +16,7 @@ import { streamCopilotResponse, type CopilotApprovalEvent, type CopilotSource, t
 import { cn, initials } from '@/lib/utils';
 import { ApprovalCard } from '@/components/copilot/ApprovalCard';
 import { MarkdownContent } from '@/components/shared/MarkdownContent';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 interface Message {
   id: string;
@@ -250,8 +251,8 @@ export function CopilotPage() {
           <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4">
             {messages.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl gradient-ai">
-                  <Sparkles className="h-8 w-8 text-white" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[.07] shadow-ai">
+                  <BrandLogo variant="icon" size="lg" theme="auto" decorative />
                 </div>
                 <h3 className="text-lg font-semibold">{t('ai.copilot')}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{t('ai.askAnything')}</p>
@@ -281,8 +282,8 @@ export function CopilotPage() {
                 className={cn('flex gap-3', msg.role === 'user' && 'flex-row-reverse')}
               >
                 {msg.role === 'assistant' ? (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg gradient-ai">
-                    <Sparkles className="h-4 w-4 text-white" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/[.07]">
+                    <BrandLogo variant="icon" size="sm" theme="auto" decorative />
                   </div>
                 ) : (
                   <Avatar className="h-8 w-8 shrink-0">

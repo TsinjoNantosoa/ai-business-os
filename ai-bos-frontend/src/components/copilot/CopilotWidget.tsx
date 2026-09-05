@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, Send, Bot, User as UserIcon, TrendingUp, Wallet, Zap,
+  Send, Bot, User as UserIcon, TrendingUp, Wallet, Zap,
   BookOpen, Shield, RotateCcw, ChevronDown, Users, Receipt, CheckSquare, FolderKanban,
   CheckCircle2, XCircle,
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import {
 import { ApprovalCard } from '@/components/copilot/ApprovalCard';
 import { MarkdownContent } from '@/components/shared/MarkdownContent';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import './copilot-widget.css';
 
 interface Message {
@@ -236,8 +237,7 @@ export function CopilotWidget() {
             exit={{ opacity: 0, scale: 0.85 }}
           >
             <button type="button" className="bos-fab" onClick={() => setOpen(true)} aria-label="Ouvrir le Copilot">
-              <span className="bos-fab-pulse" />
-              <Sparkles className="h-7 w-7" />
+              <BrandLogo variant="icon" size="md" theme="dark" decorative />
             </button>
           </motion.div>
         )}
@@ -256,7 +256,7 @@ export function CopilotWidget() {
             <header className="bos-header">
               <div className="bos-header-left">
                 <div className="bos-avatar-square">
-                  <Sparkles className="h-5 w-5 text-amber-300" />
+                  <BrandLogo variant="icon" size="md" theme="dark" decorative />
                 </div>
                 <div className="bos-header-info">
                   <span className="bos-title">Chat with</span>
@@ -313,7 +313,7 @@ export function CopilotWidget() {
                     <div className={cn('bos-msg-row', msg.role === 'user' ? 'user' : 'bot')}>
                       {msg.role === 'assistant' && (
                         <div className="bos-bot-avatar">
-                          <Sparkles className="h-3.5 w-3.5" />
+                          <BrandLogo variant="icon" size="xs" theme="dark" decorative />
                         </div>
                       )}
                       <div className={cn('bos-bubble', msg.role === 'user' ? 'user' : 'bot')}>

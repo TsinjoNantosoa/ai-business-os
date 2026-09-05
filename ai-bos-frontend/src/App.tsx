@@ -1,5 +1,5 @@
-import { Suspense, lazy, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy, type ReactNode, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { PageLoader } from '@/components/shared/PageLoader';
@@ -29,6 +29,51 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
 });
 
+const ROUTE_TITLES: Record<string, string> = {
+  dashboard: 'Dashboard',
+  copilot: 'Copilote IA',
+  inbox: 'Boîte de réception',
+  crm: 'CRM',
+  sales: 'Ventes',
+  marketing: 'Marketing',
+  finance: 'Finance',
+  projects: 'Projets',
+  tasks: 'Tâches',
+  calendar: 'Calendrier',
+  meetings: 'Réunions',
+  documents: 'Documents',
+  inventory: 'Inventaire',
+  procurement: 'Achats',
+  hr: 'Ressources humaines',
+  support: 'Support',
+  contracts: 'Contrats',
+  knowledge: 'Connaissances',
+  analytics: 'Analytics',
+  bi: 'Business Intelligence',
+  forecasts: 'Prévisions',
+  workflows: 'Workflows',
+  agents: 'Agents IA',
+  settings: 'Paramètres',
+  admin: 'Administration',
+};
+
+function DocumentTitle() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (pathname === '/') document.title = 'AI BOS — Business Operating System';
+    else if (pathname === '/login') document.title = 'Connexion | AI BOS';
+    else if (pathname === '/register') document.title = 'Créer un compte | AI BOS';
+    else if (pathname === '/forgot-password') document.title = 'Mot de passe oublié | AI BOS';
+    else if (pathname === '/reset-password') document.title = 'Réinitialiser le mot de passe | AI BOS';
+    else if (pathname === '/onboarding') document.title = 'Configuration | AI BOS';
+    else {
+      const section = pathname.split('/').filter(Boolean)[1];
+      document.title = `${ROUTE_TITLES[section] || 'AI BOS'} | AI BOS`;
+    }
+  }, [pathname]);
+  return null;
+}
+
 function Lazy({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
 }
@@ -37,6 +82,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <DocumentTitle />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Lazy><LoginPage /></Lazy>} />
