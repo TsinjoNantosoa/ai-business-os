@@ -68,6 +68,24 @@ def test_refresh_rotation_reuse_and_logout() -> None:
     assert client.post("/api/v1/auth/refresh", json={"refreshToken": fresh["refreshToken"]}).status_code == 401
 
 
+def test_refresh_token_is_only_stored_as_hash() -> None:
+    from app.core.database import SessionLocal
+    from app.core.security import decode_token
+    from app.models.refresh_session import RefreshSession
+
+    payload = client.post(
+        "/api/v1/auth/login",
+        json={"email": "ceo@demo.aibos.io", "password": "demo1234"},
+    ).json()
+    raw = payload["refreshToken"]
+    sid = decode_token(raw)["sid"]
+    with SessionLocal() as db:
+        row = db.get(RefreshSession, sid)
+        assert row is not None
+        assert row.token_hash != raw
+        assert len(row.token_hash) == 64
+
+
 def test_me_requires_bearer() -> None:
     response = client.get("/api/v1/auth/me")
     assert response.status_code == 401

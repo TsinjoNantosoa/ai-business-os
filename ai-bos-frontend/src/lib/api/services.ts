@@ -45,6 +45,21 @@ export async function register(input: {
   });
 }
 
+export async function logoutSession(refreshToken?: string | null): Promise<void> {
+  if (USE_MOCKS) return;
+  await fetch(`${API_URL}/api/v1/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+  });
+}
+
+export async function logoutEverywhere(): Promise<void> {
+  if (USE_MOCKS) return;
+  await apiFetch<void>('/api/v1/auth/logout-all', { method: 'POST' });
+}
+
 export async function forgotPassword(email: string): Promise<{ status: string; message: string }> {
   if (USE_MOCKS) {
     return {

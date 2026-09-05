@@ -92,3 +92,19 @@ def test_unsigned_stripe_webhook_is_rejected_by_default(monkeypatch) -> None:
         headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 400
+
+
+def test_stripe_webhook_delivery_is_idempotent(monkeypatch) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "allow_unsigned_stripe_webhooks", True)
+    payload = {
+        "id": "evt_idempotent_test",
+        "type": "checkout.session.completed",
+        "data": {"object": {"metadata": {"org_id": "org-1", "plan_code": "enterprise"}},},
+    }
+    first = client.post("/api/v1/billing/webhooks/stripe", content=json.dumps(payload))
+    second = client.post("/api/v1/billing/webhooks/stripe", content=json.dumps(payload))
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.json()["duplicate"] == "true"

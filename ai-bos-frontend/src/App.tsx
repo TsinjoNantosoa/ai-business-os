@@ -4,26 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { PageLoader } from '@/components/shared/PageLoader';
 import { LandingPage } from '@/pages/LandingPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { ForbiddenPage } from '@/pages/ForbiddenPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 
 const AppShell = lazy(() => import('@/routes/AppShell'));
-const LoginPage = lazy(() =>
-  import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
-);
-const RegisterPage = lazy(() =>
-  import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
-);
-const ForgotPasswordPage = lazy(() =>
-  import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })),
-);
-const ResetPasswordPage = lazy(() =>
-  import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
-);
-const ForbiddenPage = lazy(() =>
-  import('@/pages/ForbiddenPage').then((m) => ({ default: m.ForbiddenPage })),
-);
-const NotFoundPage = lazy(() =>
-  import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
-);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1 } },

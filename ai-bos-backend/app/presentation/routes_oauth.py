@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr, Field
 
 from app.core.config import settings
-from app.presentation.routes_auth import AuthResponse
+from app.presentation.routes_auth import AuthResponse, set_refresh_cookie
 from app.services.auth_service import AuthService
 from app.services.oauth_service import (
     SUPPORTED_PROVIDERS,
@@ -105,7 +105,7 @@ def build_oauth_router(auth_service: AuthService) -> APIRouter:
         return RedirectResponse(f"{settings.app_public_url}/login?{query}")
 
     @router.post("/exchange", response_model=AuthResponse)
-    def oauth_exchange(body: OAuthExchangeBody):
+    def oauth_exchange(body: OAuthExchangeBody, response: Response):
         payload = pop_oauth_login_code(body.code)
         if not payload:
             raise HTTPException(
@@ -114,11 +114,12 @@ def build_oauth_router(auth_service: AuthService) -> APIRouter:
             )
         token = payload["token"]
         refresh = payload["refresh_token"]
+        set_refresh_cookie(response, refresh)
         user = auth_service.me_from_access_token(token)
         return AuthResponse(user=user, token=token, refreshToken=refresh)
 
     @router.post("/{provider}/mock-login", response_model=AuthResponse)
-    def oauth_mock_login(provider: str, body: OAuthMockLoginBody):
+    def oauth_mock_login(provider: str, body: OAuthMockLoginBody, response: Response):
         provider = provider.lower()
         if provider not in SUPPORTED_PROVIDERS:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Provider inconnu")
@@ -142,6 +143,7 @@ def build_oauth_router(auth_service: AuthService) -> APIRouter:
             first_name=profile["first_name"],
             last_name=profile["last_name"],
         )
+        set_refresh_cookie(response, refresh)
         user = auth_service.me_from_access_token(token)
         return AuthResponse(user=user, token=token, refreshToken=refresh)
 

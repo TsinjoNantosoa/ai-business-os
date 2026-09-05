@@ -2,20 +2,20 @@
 
 AI BOS is an AI-first, modular, cloud-native platform intended to unify business operations across multiple vertical applications.
 
-This repository is a starting point: documentation + a backend foundation (FastAPI) + a frontend shell (React) with JWT-based auth (login / refresh / me) and RBAC-style permission checks.
+This repository contains the production-oriented AI BOS application: FastAPI, React, PostgreSQL tenant isolation, persistent authentication sessions, agent tools, explainable business insights, workflows, and hybrid RAG.
 
 ## Key ideas
 
 - Not a classic ERP: AI BOS is the platform (operating system) on top of which vertical apps plug in.
 - AI-first: agents and workflows are first-class concepts.
 - Modular CORE: shared foundations (identity, authorization, observability, etc.) are reusable.
-- Multi-tenant by design: each organization is isolated by `org_id` (future work extends this).
+- Multi-tenant by design: application filters are backed by PostgreSQL forced RLS and request-scoped tenant context.
 
 ## Docs (source of truth)
 
 All enterprise documentation lives in:
 
-- `Document/INDEX.md` (main entry)
+- `Document/README_00_Vision.md` (product entry point)
 
 Suggested reading order:
 
@@ -23,6 +23,7 @@ Suggested reading order:
 2. `Document/README_02_Architecture.md`
 3. `Document/README_05_Core.md`
 4. `Document/README_40_ImplementationRoadmap.md`
+5. `Document/README_41_ProductionConsolidation.md` (implemented V2 security/AI/workflow state)
 
 ## Repo structure
 
@@ -56,11 +57,12 @@ Backend endpoints implemented in this starter:
 - Auth:
   - `POST /api/v1/auth/login`
   - `POST /api/v1/auth/refresh`
+  - `POST /api/v1/auth/logout`, `POST /api/v1/auth/logout-all`
   - `GET /api/v1/auth/me`
 - RBAC endpoints (minimal):
   - `GET /api/v1/rbac/permissions`, `GET /api/v1/rbac/roles`, `GET /api/v1/rbac/users`
 - Observability:
-  - `GET /health`, `GET /health/details`
+  - `GET /health`, `GET /ready`, `GET /health/details`
 - Minimal real module endpoints for the frontend shell (so pages work when mocks are disabled):
   - `/api/v1/platform/organizations`, `/api/v1/platform/notifications`
   - `/api/v1/finance/*` (overview/invoices/transactions)
@@ -113,6 +115,9 @@ Use these to test RBAC (owner sees more modules than staff).
 | `LOG_LEVEL` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 | `SEED_DEMO_DATA` | Seed demo org/users (default `false` in production) |
 | `OPENAI_API_KEY` | Optional LLM |
+| `EMBEDDING_PROVIDER` | `local_hash` for offline/tests or `openai` |
+| `STRIPE_WEBHOOK_SECRET` | Required when Stripe is enabled in production |
+| `WORKFLOW_HTTP_ALLOWLIST` | Exact hosts allowed for outbound workflow HTTP actions |
 | `SMTP_*` | Transactional email (`SMTP_USERNAME` or `SMTP_USER`) |
 
 ### Frontend (`ai-bos-frontend/.env.example`)
@@ -207,8 +212,9 @@ Redeploy after changing `VITE_*` (they are compile-time).
 
 ### Known production limits
 
-- Refresh sessions are **in-memory** → stay on **1 worker / 1 instance** until Redis/DB sessions exist.
+- OAuth state and one-use SPA exchange codes are process-local; use a shared short-lived store before horizontal OAuth callback scaling.
 - Document storage defaults to local disk; use S3/MinIO env vars for durable uploads on Render.
+- RAG vectors are stored as portable JSON today; `EMBEDDING_PROVIDER=openai` improves embeddings but an indexed pgvector/Qdrant backend remains the next scale step.
 - OpenAPI `/docs` is disabled when `ENVIRONMENT=production`.
 
 ## Testing

@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.database import SessionLocal, get_db
+from app.core.database import SessionLocal
 from app.core.security import decode_token
 from app.core.tenant import set_current_org_id, validate_tenant_header
 from app.presentation.chatbot_rate_limit import ChatbotRateLimiter

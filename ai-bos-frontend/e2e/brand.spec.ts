@@ -11,14 +11,21 @@ test.describe('AI BOS official branding', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
     }
 
-    for (const path of ['/login', '/register', '/forgot-password']) {
+    const publicRoutes = [
+      { path: '/login', heading: /Bienvenue|Welcome back/i },
+      { path: '/register', heading: /Créer un compte|Create an account/i },
+      { path: '/forgot-password', heading: /Réinitialiser le mot de passe|Reset your password/i },
+    ];
+    for (const { path, heading } of publicRoutes) {
       await page.goto(path);
+      await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 15_000 });
       await expect(page.locator('picture:visible img[src*="ai-bos-"]').first()).toBeVisible();
       await expect(page).toHaveTitle(/AI BOS/);
     }
 
     await page.evaluate(() => localStorage.setItem('aibos-theme', JSON.stringify({ state: { mode: 'light' }, version: 0 })));
     await page.goto('/forgot-password');
+    await expect(page.getByRole('heading', { name: /Réinitialiser le mot de passe|Reset your password/i })).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('html')).not.toHaveClass(/dark/);
     await expect(page.getByRole('img', { name: 'AI BOS' })).toBeVisible();
   });

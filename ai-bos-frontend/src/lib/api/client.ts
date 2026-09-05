@@ -34,6 +34,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   const auth = await getAuthState();
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       Authorization: auth.token ? `Bearer ${auth.token}` : '',
@@ -73,7 +74,7 @@ export function readJwtExp(token: string | null | undefined): number | null {
 /** Refresh access token if missing/expired/near expiry (default 90s skew). */
 export async function ensureFreshAccessToken(skewSeconds = 90): Promise<boolean> {
   const auth = await getAuthState();
-  if (!auth.token && !auth.refreshToken) return false;
+  if (!auth.token && USE_MOCKS && !auth.refreshToken) return false;
   const exp = readJwtExp(auth.token);
   const now = Math.floor(Date.now() / 1000);
   if (auth.token && exp !== null && exp > now + skewSeconds) return true;
@@ -88,11 +89,11 @@ export async function tryRefresh(): Promise<boolean> {
   refreshPromise = (async () => {
     try {
       const auth = await getAuthState();
-      if (!auth.refreshToken) return false;
       const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: auth.refreshToken }),
+        credentials: 'include',
+        body: JSON.stringify(auth.refreshToken ? { refreshToken: auth.refreshToken } : {}),
       });
       if (!res.ok) return false;
       const data = await res.json();

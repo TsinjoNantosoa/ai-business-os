@@ -134,6 +134,10 @@ def upgrade() -> None:
         USING (lower(email) = lower(current_setting('app.auth_email', true)))
     """))
     op.execute(sa.text("""
+        CREATE POLICY auth_lookup_invitations_token ON invitations FOR SELECT
+        USING (token = current_setting('app.auth_invitation_token', true))
+    """))
+    op.execute(sa.text("""
         CREATE POLICY stripe_lookup_subscriptions ON subscriptions
         USING (stripe_subscription_id = current_setting('app.stripe_subscription_id', true))
         WITH CHECK (stripe_subscription_id = current_setting('app.stripe_subscription_id', true))
@@ -150,6 +154,7 @@ def downgrade() -> None:
     if bind.dialect.name == "postgresql":
         op.execute(sa.text("DROP POLICY IF EXISTS stripe_lookup_billing_invoices ON billing_invoices"))
         op.execute(sa.text("DROP POLICY IF EXISTS stripe_lookup_subscriptions ON subscriptions"))
+        op.execute(sa.text("DROP POLICY IF EXISTS auth_lookup_invitations_token ON invitations"))
         op.execute(sa.text("DROP POLICY IF EXISTS auth_lookup_invitations_email ON invitations"))
         op.execute(sa.text("DROP POLICY IF EXISTS auth_lookup_oauth_identity ON oauth_identities"))
         op.execute(sa.text("DROP POLICY IF EXISTS auth_lookup_users_id ON users"))

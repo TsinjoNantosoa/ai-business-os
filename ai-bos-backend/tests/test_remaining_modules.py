@@ -133,5 +133,5 @@ def test_procurement_shape() -> None:
     # Other CRUD tests intentionally add tenant suppliers; assert the seeded
     # baseline without making this test order-dependent.
     assert len(suppliers) >= 14
-    assert len(orders) == 22
+    assert len(orders) >= 22
     assert orders[0]["poNumber"].startswith("PO-")

@@ -2,8 +2,26 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 from datetime import datetime, timezone
+
+_SENSITIVE_KEY = re.compile(r"password|secret|token|authorization|cookie|api.?key|stripe.?signature", re.I)
+_BEARER = re.compile(r"(?i)bearer\s+[A-Za-z0-9._~+\-/]+=*")
+_API_KEY = re.compile(r"aibos_sk_[A-Za-z0-9_\-]+")
+
+
+def sanitize_log_value(value):
+    if isinstance(value, dict):
+        return {
+            str(key): "[REDACTED]" if _SENSITIVE_KEY.search(str(key)) else sanitize_log_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [sanitize_log_value(item) for item in value]
+    if isinstance(value, str):
+        return _API_KEY.sub("[REDACTED_API_KEY]", _BEARER.sub("Bearer [REDACTED]", value))[:4000]
+    return value
 
 
 class JsonFormatter(logging.Formatter):
@@ -12,11 +30,11 @@ class JsonFormatter(logging.Formatter):
             "ts": datetime.now(tz=timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": sanitize_log_value(record.getMessage()),
         }
         # Keep any "extra" fields that were explicitly provided in log_event
         for k, v in getattr(record, "extra_fields", {}).items():
-            payload[k] = v
+            payload[k] = sanitize_log_value(v)
         return json.dumps(payload, ensure_ascii=True)
 
 
@@ -53,6 +71,6 @@ def configure_logging(*, force: bool = False) -> None:
 
 
 def log_event(logger: logging.Logger, level: int, event: str, **extra) -> None:
-    record = {"event": event, **extra}
+    record = sanitize_log_value({"event": event, **extra})
     logger.log(level, event, extra={"extra_fields": record})
 

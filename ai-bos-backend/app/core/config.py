@@ -225,3 +225,9 @@ if settings.is_production and settings.allow_unsigned_stripe_webhooks:
 
 if settings.is_production and settings.stripe_secret_key and not settings.stripe_webhook_secret:
     raise RuntimeError("STRIPE_WEBHOOK_SECRET is required when Stripe is enabled in production.")
+
+if settings.embedding_provider not in {"local_hash", "openai"}:
+    raise RuntimeError("EMBEDDING_PROVIDER must be 'local_hash' or 'openai'.")
+
+if settings.is_production and settings.embedding_provider == "openai" and not settings.openai_api_key:
+    raise RuntimeError("OPENAI_API_KEY is required for EMBEDDING_PROVIDER=openai.")

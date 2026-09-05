@@ -95,7 +95,7 @@ def execute_notify(session: Session, *, org_id: str, context: dict[str, Any], wo
         message=str(context.get("message") or context.get("title") or "Action workflow exécutée"),
         link="/app/workflows",
     )
-    return ActionResult("Notifier", True, "notification in-app publiée")
+    return ActionResult("Notifier Slack", True, "notification in-app publiée")
 
 
 def execute_update_crm(session: Session, *, org_id: str, context: dict[str, Any], workflow_name: str) -> ActionResult:

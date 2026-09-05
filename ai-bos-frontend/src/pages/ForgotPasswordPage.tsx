@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Logo } from '@/components/layout/Logo';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 
 
 export function ForgotPasswordPage() {
@@ -35,11 +35,11 @@ export function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <Logo />
+          <BrandLogo variant="wordmark" size="md" theme="auto" />
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>{t('auth.forgotTitle')}</CardTitle>
+            <CardTitle><h1>{t('auth.forgotTitle')}</h1></CardTitle>
             <CardDescription>{t('auth.forgotSubtitle')}</CardDescription>
           </CardHeader>
           <CardContent>

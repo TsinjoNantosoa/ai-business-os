@@ -5,10 +5,11 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, status
+from sqlalchemy import text
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.middleware.gzip import GZipMiddleware
 
 from app.core.config import settings
@@ -159,7 +160,9 @@ app.include_router(build_events_router())
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     correlation_id = getattr(request.state, "correlation_id", None) or request.headers.get("X-Correlation-ID")
-    headers = {"X-Correlation-ID": correlation_id} if correlation_id else {}
+    headers = dict(exc.headers or {})
+    if correlation_id:
+        headers["X-Correlation-ID"] = correlation_id
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -218,7 +221,15 @@ async def request_context_middleware(request, call_next):
     request.state.correlation_id = correlation_id
     started = time.perf_counter()
     try:
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except RuntimeError as exc:
+            if str(exc) != "No response returned.":
+                raise
+            # Starlette raises this when the client cancels navigation while a
+            # response is in flight. Treat it as a client-closed request, not a
+            # server failure that pollutes production error telemetry.
+            response = Response(status_code=499)
     finally:
         clear_current_org_id()
     elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
@@ -260,6 +271,19 @@ def root() -> dict[str, object]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness() -> dict[str, str]:
+    try:
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database not ready",
+        ) from exc
+    return {"status": "ready", "database": "ok"}
 
 
 @app.get("/health/details")

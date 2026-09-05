@@ -5,11 +5,12 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password
-from app.presentation.deps import claims_org_id, claims_user_id, require_auth, require_permission
+from app.presentation.deps import apply_tenant_rls, claims_org_id, claims_user_id, require_auth, require_permission
 from app.presentation.schemas import InvitationAcceptBody, InvitationCreateBody, OrganizationUpdateBody
 from app.presentation.serializers import (
     audit_log_to_dict,
@@ -175,6 +176,8 @@ def build_platform_router(email_service: EmailService | None = None) -> APIRoute
 
     @router.get("/invitations/by-token/{token}")
     def invitation_by_token(token: str, db: Session = Depends(get_db)) -> dict:
+        if not settings.is_sqlite:
+            db.execute(text("SELECT set_config('app.auth_invitation_token', :value, true)"), {"value": token})
         invitation = InvitationRepository(db).get_by_token(token)
         if not invitation:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invitation introuvable")
@@ -193,6 +196,8 @@ def build_platform_router(email_service: EmailService | None = None) -> APIRoute
 
     @router.post("/invitations/accept", status_code=status.HTTP_201_CREATED)
     def accept_invitation(body: InvitationAcceptBody, db: Session = Depends(get_db)) -> dict:
+        if not settings.is_sqlite:
+            db.execute(text("SELECT set_config('app.auth_invitation_token', :value, true)"), {"value": body.token})
         inv_repo = InvitationRepository(db)
         invitation = inv_repo.get_by_token(body.token)
         if not invitation:
@@ -204,6 +209,7 @@ def build_platform_router(email_service: EmailService | None = None) -> APIRoute
         if invitation.status != "pending" or expires_at < datetime.now(timezone.utc):
             raise HTTPException(status_code=status.HTTP_410_GONE, detail="Invitation expirée ou déjà utilisée")
 
+        apply_tenant_rls(db, invitation.org_id)
         user_repo = UserRepository(db)
         if user_repo.get_by_email(invitation.email):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Un utilisateur avec cet email existe déjà")

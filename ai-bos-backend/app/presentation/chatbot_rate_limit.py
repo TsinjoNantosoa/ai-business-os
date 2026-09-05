@@ -33,3 +33,7 @@ class ChatbotRateLimiter:
     def reset(self) -> None:
         with self._lock:
             self._windows.clear()
+
+    def reset_key(self, key: str) -> None:
+        with self._lock:
+            self._windows.pop(key, None)

@@ -205,6 +205,7 @@ class AuthService:
         user = UserRepository(session).get_by_email(email)
         if not user or not user.active:
             raise invalid
+        self._set_auth_lookup(session, "app.current_org_id", user.org_id)
 
         reset_repo = PasswordResetRepository(session)
         reset = reset_repo.get_active_for_user(user.id)
@@ -268,7 +269,7 @@ class AuthService:
             if not user:
                 user = user_repo.get_by_email(email)
             if not user:
-                # New OAuth users join demo org-1 as staff (invitation flow preferred in prod).
+                # Unknown identities may join only the organization named by a valid invitation.
                 invitation = InvitationRepository(session).get_pending_by_email_any_org(email)
                 now = datetime.now(timezone.utc)
                 invitation_expiry = invitation.expires_at if invitation else None
@@ -352,20 +353,17 @@ class AuthService:
         user_id = str(payload.get("sub", ""))
         session = self._sessions.get(session_id)
 
-        # After a backend restart the in-memory store is empty while the refresh JWT
-        # can still be cryptographically valid — recreate the session so the SPA
-        # does not force a full re-login every time uvicorn reloads.
         if not session or session.user_id != user_id or session.token_hash != hash_refresh_token(refresh_token):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session invalide")
         if session.revoked:
             self._sessions.revoke_family(session.family_id, session.org_id)
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="RÃ©utilisation de refresh token dÃ©tectÃ©e")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Réutilisation de refresh token détectée")
         expires_at = session.expires_at
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         if expires_at <= datetime.now(timezone.utc):
             self._sessions.revoke(session_id)
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expirÃ©e")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expirée")
 
         user = self._get_user_by_id(user_id)
         if not user:

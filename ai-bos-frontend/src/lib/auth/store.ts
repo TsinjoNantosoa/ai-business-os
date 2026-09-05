@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Organization, AuthResponse } from '@/lib/api/types';
-import { login as apiLogin, register as apiRegister, getOrganizations } from '@/lib/api/services';
+import {
+  login as apiLogin,
+  register as apiRegister,
+  getOrganizations,
+  logoutEverywhere,
+  logoutSession,
+} from '@/lib/api/services';
 import { checkAnyPermission, checkPermission } from '@/lib/auth/permissions';
 
 interface AuthState {
@@ -21,8 +27,8 @@ interface AuthState {
     organizationName: string;
   }) => Promise<void>;
   applyAuthResponse: (res: AuthResponse) => Promise<void>;
-  logout: () => void;
-  logoutAll: () => void;
+  logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
   setTokens: (token: string, refreshToken: string) => void;
   setUser: (user: User) => void;
   setOrg: (orgId: string) => void;
@@ -76,12 +82,21 @@ export const useAuth = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        set({ user: null, token: null, refreshToken: null, orgId: null, organizations: [] });
+      logout: async () => {
+        const refresh = get().refreshToken;
+        try {
+          await logoutSession(refresh);
+        } finally {
+          set({ user: null, token: null, refreshToken: null, orgId: null, organizations: [] });
+        }
       },
 
-      logoutAll: () => {
-        set({ user: null, token: null, refreshToken: null, orgId: null, organizations: [] });
+      logoutAll: async () => {
+        try {
+          await logoutEverywhere();
+        } finally {
+          set({ user: null, token: null, refreshToken: null, orgId: null, organizations: [] });
+        }
       },
 
       setTokens: (token, refreshToken) => set({ token, refreshToken }),
@@ -115,8 +130,6 @@ export const useAuth = create<AuthState>()(
       name: 'aibos-auth',
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
-        refreshToken: state.refreshToken,
         orgId: state.orgId,
         organizations: state.organizations,
       }),
