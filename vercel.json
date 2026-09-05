@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ai-bos-frontend && npm ci && npm run build",
+  "buildCommand": "cd ai-bos-frontend && npm run build",
   "outputDirectory": "ai-bos-frontend/dist",
   "installCommand": "cd ai-bos-frontend && npm ci",
   "framework": null,
